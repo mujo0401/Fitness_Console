@@ -1,848 +1,0 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Card, 
-  CardContent, 
-  Typography, 
-  Grid, 
-  FormControl, 
-  InputLabel, 
-  Select, 
-  MenuItem, 
-  TextField, 
-  CircularProgress,
-  Button,
-  Paper,
-  Chip,
-  Divider,
-  useTheme,
-  alpha,
-  LinearProgress,
-  IconButton,
-  Tooltip,
-  Stack
-} from '@mui/material';
-import { motion } from 'framer-motion';
-import { format, isValid } from 'date-fns';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import FavoriteIcon from '@mui/icons-material/Favorite';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import TrendingDownIcon from '@mui/icons-material/TrendingDown';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import HistoryIcon from '@mui/icons-material/History';
-import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
-import TimerIcon from '@mui/icons-material/Timer';
-import SyncIcon from '@mui/icons-material/Sync';
-import { heartRateService } from '../services/api';
-import HeartRateChart from '../components/charts/HeartRateChart';
-import { useAuth } from '../context/AuthContext';
-
-// Calculate heart rate variability
-const calculateHRV = (heartRateData) => {
-  if (!heartRateData || heartRateData.length < 2) return 0;
-  
-  // Get consecutive heart rate values
-  const values = heartRateData
-    .filter(item => item.avg || item.value)
-    .map(item => item.avg || item.value);
-  
-  if (values.length < 2) return 0;
-  
-  // Calculate differences between adjacent values
-  const differences = [];
-  for (let i = 1; i < values.length; i++) {
-    differences.push(Math.abs(values[i] - values[i-1]));
-  }
-  
-  // Calculate root mean square of differences
-  const squaredDiffs = differences.map(diff => diff * diff);
-  const meanSquaredDiff = squaredDiffs.reduce((sum, val) => sum + val, 0) / squaredDiffs.length;
-  const rmssd = Math.sqrt(meanSquaredDiff);
-  
-  return Math.round(rmssd);
-};
-
-// Heart rate zones with better colors
-const HR_ZONES = [
-  { 
-    name: 'Rest', 
-    min: 0, 
-    max: 60, 
-    color: '#3f51b5', 
-    gradient: 'linear-gradient(135deg, #3f51b5 0%, #5c6bc0 100%)',
-    description: 'Resting heart rate - your heart at complete rest'
-  },
-  { 
-    name: 'Fat Burn', 
-    min: 60, 
-    max: 70, 
-    color: '#2196f3', 
-    gradient: 'linear-gradient(135deg, #2196f3 0%, #4dabf5 100%)',
-    description: 'Low intensity exercise, optimal for fat burning'
-  },
-  { 
-    name: 'Cardio', 
-    min: 70, 
-    max: 85, 
-    color: '#009688', 
-    gradient: 'linear-gradient(135deg, #009688 0%, #4db6ac 100%)',
-    description: 'Medium-high intensity, improves cardiovascular fitness'
-  },
-  { 
-    name: 'Peak', 
-    min: 85, 
-    max: 100, 
-    color: '#ff9800', 
-    gradient: 'linear-gradient(135deg, #ff9800 0%, #ffb74d 100%)',
-    description: 'High intensity exercise, increases performance and speed'
-  },
-  { 
-    name: 'Extreme', 
-    min: 100, 
-    max: 220, 
-    color: '#f44336', 
-    gradient: 'linear-gradient(135deg, #f44336 0%, #ef5350 100%)',
-    description: 'Maximum effort, short-duration exercise'
-  }
-];
-
-// Get zone for a heart rate
-const getHeartRateZone = (value) => {
-  if (!value) return null;
-  return HR_ZONES.find(zone => value >= zone.min && value < zone.max);
-};
-
-// Statistic card component
-const StatCard = ({ title, value, unit, color, icon }) => {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-    >
-      <Card 
-        elevation={2}
-        sx={{ 
-          height: '100%', 
-          borderRadius: 3, 
-          background: color ? `linear-gradient(145deg, ${alpha(color, 0.8)}, ${alpha(color, 0.4)})` : 'white',
-          color: color ? 'white' : 'inherit',
-          transition: 'all 0.3s ease',
-          '&:hover': {
-            transform: 'translateY(-5px)',
-            boxShadow: '0 12px 20px rgba(0,0,0,0.1)'
-          }
-        }}
-      >
-        <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, opacity: 0.8 }}>
-            {icon}
-            <Typography variant="subtitle2">{title}</Typography>
-          </Box>
-          
-          <Box sx={{ display: 'flex', alignItems: 'baseline' }}>
-            <Typography variant="h4" fontWeight="bold">
-              {value}
-            </Typography>
-            {unit && (
-              <Typography variant="body2" sx={{ ml: 1, opacity: 0.8 }}>
-                {unit}
-              </Typography>
-            )}
-          </Box>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-};
-
-const HeartTab = () => {
-  const theme = useTheme();
-  const { isAuthenticated } = useAuth();
-  const [period, setPeriod] = useState('day');
-  const [date, setDate] = useState(new Date());
-  const [heartData, setHeartData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [abnormalEvents, setAbnormalEvents] = useState([]);
-  const [hrv, setHrv] = useState(0);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  useEffect(() => {
-    // Always fetch data, regardless of authentication state
-    // When not authenticated, it will use mock data
-    console.log('HeartTab useEffect triggered, fetching data...');
-    fetchHeartData();
-  }, [period, date]);
-
-  const fetchHeartData = async () => {
-    if (!isValid(date)) return;
-
-    setLoading(true);
-    setError(null);
-    try {
-      const formattedDate = format(date, "yyyy-MM-dd");
-      console.log(`🔍 Fetching heart rate data for period: ${period}, date: ${formattedDate}`);
-
-      let data;
-      let dataSource = "api"; // Track where the data came from: "api", "test-mock", or "generated"
-
-      // Step 1: Try the regular endpoint first
-      try {
-        console.log("🔄 Attempting to fetch data from regular endpoint");
-        data = await heartRateService.getHeartRateData(period, formattedDate);
-        console.log("📊 API Response from regular endpoint:", data);
-      } catch (apiError) {
-        console.error("🔴 API Error from regular endpoint:", apiError);
-
-        // Step 2: If it fails with 401, try the test-mock endpoint
-        if (apiError.response && apiError.response.status === 401) {
-          console.log("🔄 Regular endpoint returned 401, attempting to fetch from test-mock endpoint");
-          try {
-            data = await heartRateService.getTestMockData();
-            dataSource = "test-mock";
-            console.log("📊 API Response from test-mock endpoint:", data);
-          } catch (mockApiError) {
-            console.error("🔴 API Error from test-mock endpoint:", mockApiError);
-
-            // Step 3: Only if both fail, fall back to the generateMockHeartRateData function
-            console.log("⚠️ Both endpoints failed, falling back to generated mock data");
-            data = generateMockHeartRateData(period);
-            dataSource = "generated";
-            console.log("📊 Generated mock data:", data);
-          }
-        } else {
-          // Not a 401 error, fall back to mock data
-          console.log("⚠️ API error is not a 401, falling back to generated mock data");
-          data = generateMockHeartRateData(period);
-          dataSource = "generated";
-          console.log("📊 Generated mock data:", data);
-        }
-      }
-
-      if (data && data.data && data.data.length > 0) {
-        console.log(`✅ Received ${data.data.length} heart rate data points from ${dataSource}`);
-        console.log("📋 Sample data point:", data.data[0]);
-
-        setHeartData(data.data);
-        setAbnormalEvents(data.abnormal_events || []);
-
-        // Calculate heart rate variability
-        const hrvValue = calculateHRV(data.data);
-        setHrv(hrvValue);
-      } else {
-        console.warn("⚠️ Received empty heart rate data, using generated mock data");
-        // If no data, generate mock data for demonstration
-        const mockData = generateMockHeartRateData(period);
-        setHeartData(mockData.data);
-        setAbnormalEvents(mockData.abnormal_events || []);
-
-        // Calculate heart rate variability from mock data
-        const hrvValue = calculateHRV(mockData.data);
-        setHrv(hrvValue);
-      }
-    } catch (err) {
-      console.error("🔴 Unexpected error in fetchHeartData:", err);
-      setError("Failed to load heart rate data. Using demo data for visualization.");
-
-      // In case of error, generate mock data for demonstration
-      const mockData = generateMockHeartRateData(period);
-      setHeartData(mockData.data);
-      setAbnormalEvents(mockData.abnormal_events || []);
-
-      // Calculate heart rate variability from mock data
-      const hrvValue = calculateHRV(mockData.data);
-      setHrv(hrvValue);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  // Generate mock heart rate data for demonstration
-  const generateMockHeartRateData = (dataPeriod) => {
-    console.log(`🔄 Generating mock data for period: ${dataPeriod}`);
-    const mockData = [];
-    const mockAbnormalEvents = [];
-    
-    if (dataPeriod === 'day') {
-      // Generate hourly data for day period
-      for (let hour = 0; hour < 24; hour++) {
-        // Generate realistic heart rate patterns
-        // Morning rise, afternoon activity, evening relaxation
-        let baseHeartRate;
-        if (hour < 6) {
-          baseHeartRate = 55 + Math.random() * 10; // Sleeping/resting
-        } else if (hour < 9) {
-          baseHeartRate = 65 + Math.random() * 20; // Waking up/morning activity
-        } else if (hour < 12) {
-          baseHeartRate = 75 + Math.random() * 15; // Morning work
-        } else if (hour < 14) {
-          baseHeartRate = 85 + Math.random() * 20; // Lunch activity
-        } else if (hour < 17) {
-          baseHeartRate = 70 + Math.random() * 25; // Afternoon work/exercise
-        } else if (hour < 20) {
-          baseHeartRate = 75 + Math.random() * 15; // Evening activities
-        } else {
-          baseHeartRate = 65 + Math.random() * 10; // Winding down
-        }
-        
-        // Add some variation
-        const variation = 15;
-        const minHR = Math.max(40, Math.round(baseHeartRate - variation * Math.random()));
-        const maxHR = Math.round(baseHeartRate + variation * Math.random());
-        const avgHR = Math.round((minHR + maxHR) / 2);
-        
-        // Create simulated values array
-        const values = [];
-        for (let i = 0; i < 10; i++) {
-          values.push(Math.round(minHR + Math.random() * (maxHR - minHR)));
-        }
-        
-        mockData.push({
-          time: `${hour % 12 || 12}:00 ${hour < 12 ? 'AM' : 'PM'}`,
-          date: format(date, 'yyyy-MM-dd'),
-          avg: avgHR,
-          min: minHR,
-          max: maxHR,
-          values: values
-        });
-        
-        // Add some abnormal events
-        if ((hour === 14 || hour === 19) && Math.random() > 0.5) {
-          mockAbnormalEvents.push({
-            date: format(date, 'yyyy-MM-dd'),
-            time: `${hour % 12 || 12}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')} ${hour < 12 ? 'AM' : 'PM'}`,
-            type: Math.random() > 0.5 ? 'High heart rate' : 'Sudden change',
-            value: `${Math.round(110 + Math.random() * 40)} BPM`,
-            severity: Math.random() > 0.7 ? 'High' : 'Medium'
-          });
-        }
-      }
-    } else {
-      // Generate daily data for longer periods (week, month, etc.)
-      const days = dataPeriod === 'week' ? 7 : dataPeriod === 'month' ? 30 : 90;
-      
-      for (let i = 0; i < days; i++) {
-        const day = new Date(date);
-        day.setDate(day.getDate() - i);
-        
-        // Randomize with some weekly patterns
-        const dayOfWeek = day.getDay();
-        let restingHR = 58 + Math.random() * 8;
-        let maxHR = 120 + Math.random() * 40;
-        
-        // Weekend vs weekday patterns
-        if (dayOfWeek === 0 || dayOfWeek === 6) {
-          // Weekend - potentially more active
-          if (Math.random() > 0.5) {
-            maxHR += 10; // More activity on some weekends
-          } else {
-            restingHR -= 2; // More rest on some weekends
-          }
-        } else if (dayOfWeek === 1 || dayOfWeek === 4) {
-          // Monday/Thursday might have higher activity
-          maxHR += 5 + Math.random() * 10;
-        }
-        
-        mockData.push({
-          date: format(day, 'yyyy-MM-dd'),
-          restingHeartRate: Math.round(restingHR),
-          min: Math.round(restingHR - 5 + Math.random() * 10),
-          max: Math.round(maxHR)
-        });
-        
-        // Add some abnormal events with less frequency
-        if (Math.random() > 0.8) {
-          mockAbnormalEvents.push({
-            date: format(day, 'yyyy-MM-dd'),
-            time: (() => {
-              const randomHour = Math.floor(Math.random() * 24);
-              const hour12 = randomHour % 12 || 12;
-              const ampm = randomHour < 12 ? 'AM' : 'PM';
-              return `${hour12}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')} ${ampm}`;
-            })(),
-            type: Math.random() > 0.5 ? 'High heart rate' : 'Sudden change',
-            value: `${Math.round(110 + Math.random() * 40)} BPM`,
-            severity: Math.random() > 0.7 ? 'High' : 'Medium'
-          });
-        }
-      }
-    }
-    
-    console.log(`✅ Generated ${mockData.length} mock data points and ${mockAbnormalEvents.length} abnormal events`);
-    
-    return {
-      data: mockData,
-      abnormal_events: mockAbnormalEvents,
-      period: dataPeriod,
-      start_date: format(date, 'yyyy-MM-dd'),
-      end_date: format(date, 'yyyy-MM-dd')
-    };
-  };
-
-  const handlePeriodChange = (event) => {
-    setPeriod(event.target.value);
-  };
-
-  const handleDateChange = (newDate) => {
-    if (isValid(newDate)) {
-      setDate(newDate);
-    }
-  };
-
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    fetchHeartData().finally(() => {
-      setTimeout(() => setIsRefreshing(false), 600); // Add a slight delay for visual feedback
-    });
-  };
-  
-  // Calculate statistics
-  const getStats = () => {
-    if (!heartData || heartData.length === 0) {
-      return { avgHR: 0, maxHR: 0, minHR: 0, restingHR: 0 };
-    }
-    
-    const avgHR = Math.round(
-      heartData.reduce((sum, item) => sum + (item.avg || item.restingHeartRate || 0), 0) / 
-      heartData.length
-    );
-    
-    const maxHR = Math.max(...heartData.map(item => item.max || 0));
-    
-    const validMinRates = heartData.filter(item => (item.min || 0) > 0).map(item => item.min);
-    const minHR = validMinRates.length > 0 ? Math.min(...validMinRates) : 0;
-    
-    const validRestingRates = heartData.filter(item => item.restingHeartRate);
-    const restingHR = validRestingRates.length > 0 
-      ? Math.round(validRestingRates.reduce((sum, item) => sum + item.restingHeartRate, 0) / validRestingRates.length)
-      : 0;
-      
-    return { avgHR, maxHR, minHR, restingHR };
-  };
-  // We always show data now, even when not authenticated
-  // If not authenticated, we will show mock data instead
-  
-  
-      </motion.div>
-    );
-  }
-  
-  const { avgHR, maxHR, minHR, restingHR } = getStats();
-  const currentZone = getHeartRateZone(avgHR);
-
-  return (
-    <Box sx={{ p: 2 }}>
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <Card sx={{ 
-          borderRadius: 4, 
-          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-          overflow: 'hidden',
-          mb: 3
-        }}>
-          <Box sx={{ 
-            background: 'linear-gradient(135deg, #3f51b5, #2196f3)', 
-            py: 2.5, 
-            px: 3,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
-            <Typography 
-              variant="h5" 
-              component="h2" 
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 1,
-                fontWeight: 'bold',
-                color: 'white'
-              }}
-            >
-              <FavoriteIcon sx={{ filter: 'drop-shadow(0 2px 4px rgba(255,255,255,0.3))' }} /> 
-              Heart Rate Analytics
-            </Typography>
-              
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <FormControl 
-                size="small" 
-                sx={{ 
-                  minWidth: 120, 
-                  bgcolor: 'rgba(255,255,255,0.1)',
-                  borderRadius: 2,
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
-                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.8)' },
-                  '& .MuiSelect-select': { color: 'white' },
-                  '& .MuiSvgIcon-root': { color: 'white' }
-                }}
-              >
-                <InputLabel>Period</InputLabel>
-                <Select
-                  value={period}
-                  label="Period"
-                  onChange={handlePeriodChange}
-                >
-                  <MenuItem value="day" sx={{ display: 'flex', gap: 1 }}>
-                    <CalendarTodayIcon fontSize="small" /> 1 Day
-                  </MenuItem>
-                  <MenuItem value="week" sx={{ display: 'flex', gap: 1 }}>
-                    <CalendarTodayIcon fontSize="small" /> 1 Week
-                  </MenuItem>
-                  <MenuItem value="month" sx={{ display: 'flex', gap: 1 }}>
-                    <CalendarTodayIcon fontSize="small" /> 1 Month
-                  </MenuItem>
-                  <MenuItem value="3month" sx={{ display: 'flex', gap: 1 }}>
-                    <HistoryIcon fontSize="small" /> 3 Months
-                  </MenuItem>
-                </Select>
-              </FormControl>
-              
-              <TextField
-                label="Date"
-                type="date"
-                size="small"
-                value={date ? format(date, 'yyyy-MM-dd') : ''}
-                onChange={(e) => handleDateChange(new Date(e.target.value))}
-                InputLabelProps={{ shrink: true }}
-                sx={{ 
-                  bgcolor: 'rgba(255,255,255,0.1)', 
-                  borderRadius: 2,
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
-                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.8)' },
-                  '& .MuiInputBase-input': { color: 'white' }
-                }}
-              />
-              
-              <Tooltip title="Refresh Data">
-                <IconButton
-                  onClick={handleRefresh}
-                  sx={{ 
-                    bgcolor: 'rgba(255,255,255,0.2)',
-                    color: 'white',
-                    '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }
-                  }}
-                >
-                  {isRefreshing ? <SyncIcon className="rotating-icon" /> : <RefreshIcon />}
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </Box>
-          
-          <CardContent sx={{ p: 0 }}>
-            {loading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', p: 8, flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                <CircularProgress size={60} thickness={4} />
-                <Typography variant="body2" color="text.secondary">
-                  Loading heart rate data...
-                </Typography>
-              </Box>
-            ) : error ? (
-              <Box sx={{ p: 4, textAlign: 'center' }}>
-                <Typography color="error" variant="h6" gutterBottom>
-                  {error}
-                </Typography>
-                <Button 
-                  variant="outlined" 
-                  onClick={handleRefresh} 
-                  startIcon={<RefreshIcon />}
-                  sx={{ mt: 2 }}
-                >
-                  Try Again
-                </Button>
-              </Box>
-            ) : !heartData || heartData.length === 0 ? (
-              <Box sx={{ p: 4, textAlign: 'center' }}>
-                <Typography color="text.secondary">
-                  No heart rate data available for the selected period.
-                </Typography>
-                <Button 
-                  variant="outlined" 
-                  onClick={handleRefresh}
-                  startIcon={<RefreshIcon />}
-                  sx={{ mt: 2 }}
-                >
-                  Refresh
-                </Button>
-              </Box>
-            ) : (
-              <Box>
-                <Box sx={{ px: 3, py: 2 }}>
-                  <Grid container spacing={3}>
-                    <Grid item xs={12} sm={6} md={3}>
-                      <StatCard 
-                        title="Average Heart Rate" 
-                        value={avgHR} 
-                        unit="BPM"
-                        color={currentZone?.color || '#3f51b5'}
-                        icon={<FavoriteIcon />}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                      <StatCard 
-                        title="Max Heart Rate" 
-                        value={maxHR} 
-                        unit="BPM"
-                        color="#f44336"
-                        icon={<TrendingUpIcon />}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                      <StatCard 
-                        title="Min Heart Rate" 
-                        value={minHR} 
-                        unit="BPM"
-                        color="#2196f3"
-                        icon={<TrendingDownIcon />}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                      <StatCard 
-                        title="Resting Heart Rate" 
-                        value={restingHR} 
-                        unit="BPM"
-                        color="#3f51b5"
-                        icon={<TimerIcon />}
-                      />
-                    </Grid>
-                  </Grid>
-                </Box>
-                
-                <Box sx={{ mt: 2 }}>
-                  <HeartRateChart data={heartData} period={period} />
-                </Box>
-                
-                {abnormalEvents && abnormalEvents.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: 0.2 }}
-                  >
-                    <Paper 
-                      sx={{ 
-                        mx: 3,
-                        mb: 3,
-                        p: 3, 
-                        bgcolor: alpha(theme.palette.warning.light, 0.2),
-                        borderRadius: 3,
-                        border: `1px solid ${theme.palette.warning.light}`
-                      }}
-                    >
-                      <Typography variant="h6" sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: 1, 
-                        mb: 2, 
-                        color: theme.palette.warning.dark,
-                        fontWeight: 'bold'
-                      }}>
-                        <WarningAmberIcon /> Detected Abnormal Rhythms
-                      </Typography>
-                      <Grid container spacing={1}>
-                        {abnormalEvents.map((event, index) => (
-                          <Grid item key={index}>
-                            <Chip
-                              label={`${event.type}: ${event.value} (${event.date} ${event.time})`}
-                              color={event.severity === 'High' ? 'error' : 'warning'}
-                              sx={{ 
-                                fontWeight: 'medium',
-                                borderRadius: '12px',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                py: 0.5
-                              }}
-                            />
-                          </Grid>
-                        ))}
-                      </Grid>
-                    </Paper>
-                  </motion.div>
-                )}
-                
-                <Box sx={{ px: 3, pb: 3 }}>
-                  <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: 0.3 }}
-                      >
-                        <Card elevation={3} sx={{ 
-                          borderRadius: 3,
-                          background: 'linear-gradient(145deg, #fafafa, #f0f0f0)',
-                          height: '100%'
-                        }}>
-                          <CardContent>
-                            <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <LocalFireDepartmentIcon color="primary" />
-                              Heart Rate Zones
-                            </Typography>
-                            <Divider sx={{ my: 2 }} />
-                            
-                            <Stack spacing={2}>
-                              {HR_ZONES.map((zone) => {
-                                const isActiveZone = 
-                                  avgHR >= zone.min && avgHR < zone.max;
-                                  
-                                return (
-                                  <Box key={zone.name}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Box 
-                                          sx={{ 
-                                            width: 12, 
-                                            height: 12, 
-                                            borderRadius: '50%', 
-                                            bgcolor: zone.color
-                                          }}
-                                        />
-                                        <Typography variant="body2" fontWeight={isActiveZone ? 'bold' : 'normal'}>
-                                          {zone.name} ({zone.min}-{zone.max} BPM)
-                                        </Typography>
-                                      </Box>
-                                      
-                                      {isActiveZone && (
-                                        <Chip 
-                                          size="small" 
-                                          label="Current" 
-                                          sx={{ 
-                                            bgcolor: zone.color, 
-                                            color: 'white',
-                                            fontWeight: 'medium'
-                                          }}
-                                        />
-                                      )}
-                                    </Box>
-                                    
-                                    <LinearProgress 
-                                      variant="determinate" 
-                                      value={isActiveZone ? 100 : 0} 
-                                      sx={{ 
-                                        height: 8, 
-                                        borderRadius: 4,
-                                        bgcolor: alpha(zone.color, 0.2),
-                                        '& .MuiLinearProgress-bar': { bgcolor: zone.color }
-                                      }}
-                                    />
-                                  </Box>
-                                );
-                              })}
-                            </Stack>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    </Grid>
-                    
-                    <Grid item xs={12} md={6}>
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: 0.4 }}
-                      >
-                        <Card elevation={3} sx={{ 
-                          borderRadius: 3,
-                          background: 'linear-gradient(145deg, #e8f5e9, #f1f8e9)',
-                          height: '100%'
-                        }}>
-                          <CardContent>
-                            <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', color: 'success.dark' }}>
-                              Insights
-                            </Typography>
-                            <Divider sx={{ my: 2 }} />
-                            
-                            {heartData && heartData.length > 0 ? (
-                              <Box>
-                                <Box sx={{ 
-                                  display: 'flex', 
-                                  alignItems: 'center', 
-                                  borderRadius: 2, 
-                                  bgcolor: 'rgba(255,255,255,0.5)', 
-                                  p: 2,
-                                  mb: 2
-                                }}>
-                                  <Typography variant="body1" color="text.primary">
-                                    {abnormalEvents && abnormalEvents.length > 0 ? (
-                                      <>Found <b>{abnormalEvents.length}</b> potential abnormal heart rate events. Check the chart for details.</>
-                                    ) : (
-                                      "No abnormal heart rate patterns detected in the selected period."
-                                    )}
-                                  </Typography>
-                                </Box>
-                                
-                                <Box sx={{ 
-                                  display: 'flex', 
-                                  alignItems: 'center', 
-                                  justifyContent: 'space-between',
-                                  borderRadius: 2, 
-                                  bgcolor: 'rgba(255,255,255,0.5)', 
-                                  p: 2
-                                }}>
-                                  <Box>
-                                    <Typography variant="subtitle2" color="text.secondary">
-                                      Heart Rate Variability (HRV)
-                                    </Typography>
-                                    <Typography variant="h4" color="primary.dark">
-                                      {hrv} <Typography component="span" variant="body2">ms</Typography>
-                                    </Typography>
-                                  </Box>
-                                  
-                                  <Chip 
-                                    label={hrv > 50 ? "Excellent" : hrv > 30 ? "Good" : "Fair"} 
-                                    color={hrv > 50 ? "success" : hrv > 30 ? "info" : "warning"}
-                                  />
-                                </Box>
-                                
-                                <LinearProgress 
-                                  variant="determinate" 
-                                  value={Math.min(hrv, 100)} 
-                                  sx={{ 
-                                    mt: 1,
-                                    height: 8, 
-                                    borderRadius: 4,
-                                    bgcolor: 'rgba(0,0,0,0.1)'
-                                  }}
-                                />
-                                
-                                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                                  {hrv > 50 
-                                    ? "Excellent HRV indicates good cardiovascular health and recovery."
-                                    : hrv > 30 
-                                      ? "Good HRV shows balanced autonomic nervous system function."
-                                      : "Moderate HRV - consider recovery activities to improve."}
-                                </Typography>
-                              </Box>
-                            ) : (
-                              <Typography variant="body2" color="text.secondary">
-                                No data available for insights.
-                              </Typography>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    </Grid>
-                  </Grid>
-                </Box>
-              </Box>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
-      
-      {/* Add CSS for the rotating icon */}
-      <style>{`
-        @keyframes rotate {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .rotating-icon {
-          animation: rotate 1s linear infinite;
-        }
-      `}</style>
-    </Box>
-  );
-};
-
-export default HeartTab;

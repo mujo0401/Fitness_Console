@@ -235,7 +235,7 @@ const Dashboard = () => {
               letterSpacing: '0.5px'
             }}
           >
-            Health Dashboard
+            Health Console
           </Typography>
           <Typography variant="subtitle1" color="text.secondary">
             View and analyze your personal health metrics

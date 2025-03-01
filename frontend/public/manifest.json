@@ -1,6 +1,6 @@
 {
-  "short_name": "Fitbit Dashboard",
-  "name": "Fitbit Health Dashboard",
+  "short_name": "Health Console",
+  "name": "Health Console",
   "icons": [
     {
       "src": "favicon.ico",
