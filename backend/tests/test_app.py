@@ -7,7 +7,8 @@ from unittest.mock import patch, MagicMock
 # Add the parent directory to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-from backend.app import app
+# Import app directly since we're already in the backend directory
+from app import app
 
 
 class TestApp(unittest.TestCase):
