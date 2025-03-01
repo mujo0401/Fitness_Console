@@ -3,7 +3,7 @@ services:
     name: fitness-console
     env: python
     buildCommand: pip install -r requirements.txt && cd frontend && export NODE_VERSION=18 && npm install --no-audit --no-fund && CI=false npm run build && cd .. && mkdir -p backend/static && cp -r frontend/build/* backend/static/
-    startCommand: cd backend && gunicorn app:app
+    startCommand: cd backend && gunicorn app:app --log-level debug --timeout 120
     healthCheckPath: /api/status
     envVars:
       - key: FLASK_DEBUG
@@ -15,8 +15,8 @@ services:
       - key: FITBIT_CLIENT_SECRET
         sync: false
       - key: FRONTEND_URL
-        value: "https://fitness-console.onrender.com"
+        value: "https://fitness-console-gtxc.onrender.com"
       - key: FITBIT_REDIRECT_URI
-        value: "https://fitness-console.onrender.com/api/auth/callback"
+        value: "https://fitness-console-gtxc.onrender.com/api/auth/callback"
       - key: APPLE_FITNESS_REDIRECT_URI
-        value: "https://fitness-console.onrender.com/api/apple-fitness/callback"
+        value: "https://fitness-console-gtxc.onrender.com/api/apple-fitness/callback"
