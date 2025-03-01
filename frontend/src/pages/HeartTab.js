@@ -40,6 +40,7 @@ import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import { heartRateService, authService, fitbitService } from '../services/api';
 import HeartRateChart from '../components/charts/HeartRateChart';
 import { useAuth } from '../context/AuthContext';
+import InfoIcon from '@mui/icons-material/Info';
 
 // Statistic card component
 const StatCard = ({ title, value, unit, color, icon }) => {
@@ -162,7 +163,7 @@ const getHeartRateZone = (value) => {
 
 const HeartTab = ({ showAdvancedAnalysis = true }) => {
   const theme = useTheme();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, tokenScopes } = useAuth();
   const [period, setPeriod] = useState('day');
   const [date, setDate] = useState(new Date());
   const [heartData, setHeartData] = useState(null);
@@ -606,14 +607,82 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
                   <Typography color={error ? "error" : "text.secondary"} variant="h6" gutterBottom>
                     {error || "No heart rate data available for the selected period."}
                   </Typography>
-                  <Button 
-                    variant="outlined" 
-                    onClick={handleRefresh} 
-                    startIcon={<RefreshIcon />}
-                    sx={{ mt: 2 }}
+                  
+                  {/* Debug panel to show token scopes */}
+                  <Paper 
+                    sx={{ 
+                      p: 2, 
+                      my: 3, 
+                      mx: 'auto',
+                      maxWidth: 600,
+                      bgcolor: alpha(theme.palette.info.light, 0.1),
+                      border: `1px dashed ${theme.palette.info.main}`
+                    }}
                   >
-                    {error ? "Try Again" : "Refresh"}
-                  </Button>
+                    <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <InfoIcon color="info" /> Token Scopes Debug
+                    </Typography>
+                    <Typography variant="body2" align="left">
+                      Current scopes: {tokenScopes.length > 0 ? tokenScopes.join(', ') : 'No scopes found'}
+                    </Typography>
+                    <Typography variant="body2" color="error" sx={{ mt: 1 }} align="left">
+                      Has 'heartrate' scope: {tokenScopes.includes('heartrate') ? 'Yes' : 'No - this is required for heart rate data'}
+                    </Typography>
+                    <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1 }}>
+                      <Button 
+                        variant="outlined" 
+                        color="info"
+                        onClick={() => authService.debugSession().then(data => console.log('Session debug:', data))}
+                        size="small"
+                      >
+                        Debug Session (Check Console)
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="warning"
+                        onClick={async () => {
+                          try {
+                            await fetch('http://localhost:5000/api/fitbit/debug-heart', { credentials: 'include' })
+                              .then(res => res.json())
+                              .then(data => console.log('Heart debug data:', data));
+                            alert('Debug info logged to console - please check the browser console');
+                          } catch (e) {
+                            console.error('Error calling debug endpoint:', e);
+                            alert('Error calling debug endpoint - see console');
+                          }
+                        }}
+                        size="small"
+                      >
+                        Debug Heart API (Check Console)
+                      </Button>
+                    </Box>
+                  </Paper>
+                  
+                  <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
+                    <Button 
+                      variant="outlined" 
+                      onClick={handleRefresh} 
+                      startIcon={<RefreshIcon />}
+                    >
+                      {error ? "Try Again" : "Refresh"}
+                    </Button>
+                    
+                    <Button 
+                      variant="contained" 
+                      color="primary"
+                      onClick={() => {
+                        authService.logout().then(() => {
+                          // After logging out, redirect to Fitbit auth
+                          setTimeout(() => authService.login(), 500);
+                        }).catch(err => {
+                          console.error('Error during reauth flow:', err);
+                          alert('Error during reauthentication: ' + err.message);
+                        });
+                      }}
+                    >
+                      Re-authenticate (Fix Permissions)
+                    </Button>
+                  </Box>
                 </Box>
                 
                 {/* Show charts and UI even when there's no data */}

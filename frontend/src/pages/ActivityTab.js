@@ -35,7 +35,8 @@ import WhatshotIcon from '@mui/icons-material/Whatshot';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import TerrainIcon from '@mui/icons-material/Terrain';
-import { activityService } from '../services/api';
+import InfoIcon from '@mui/icons-material/Info';
+import { activityService, fitbitService, authService } from '../services/api';
 import ActivityChart from '../components/charts/ActivityChart';
 import { useAuth } from '../context/AuthContext';
 
@@ -133,7 +134,7 @@ const formatDuration = (minutes) => {
 // Main component
 const ActivityTab = () => {
   const theme = useTheme();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, tokenScopes } = useAuth();
   const [period, setPeriod] = useState('day');
   const [date, setDate] = useState(new Date());
   const [activityData, setActivityData] = useState(null);
@@ -153,11 +154,32 @@ const ActivityTab = () => {
   const fetchActivityData = async () => {
     if (!isValid(date)) return;
     
+    if (!isAuthenticated) {
+      setLoading(false);
+      setError("Authentication required to view activity data.");
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     try {
+      // Format date properly as a string
       const formattedDate = format(date, 'yyyy-MM-dd');
       console.log(`🔍 Fetching activity data for period: ${period}, date: ${formattedDate}`);
+      
+      // Check authentication first (same as HeartTab)
+      try {
+        const connectionStatus = await fitbitService.checkStatus();
+        console.log("Fitbit connection status:", connectionStatus);
+        
+        if (!connectionStatus.connected) {
+          setError("Your Fitbit connection is not active. Please log in again.");
+          setLoading(false);
+          return;
+        }
+      } catch (statusError) {
+        console.error("🔴 Fitbit status check error:", statusError);
+      }
       
       // Fetch real data from API, fall back to mock data only if needed
       let data;
@@ -169,6 +191,14 @@ const ActivityTab = () => {
       } catch (apiError) {
         console.error("🔴 API Error:", apiError);
         useMockData = true;
+        
+        // If it's a 401 error, show specific message about scope permission
+        if (apiError.response?.status === 401) {
+          console.warn("⚠️ 401 Unauthorized: May need activity scope permission");
+          setError("Activity data access requires additional permissions. This could be because the 'activity' scope was not granted during authentication. Using mock data for demonstration.");
+        } else {
+          setError(`Failed to fetch activity data: ${apiError.message || 'Unknown error'}. Using mock data for demonstration.`);
+        }
       }
       
       if (useMockData || !data || !data.data || data.data.length === 0) {
@@ -181,13 +211,22 @@ const ActivityTab = () => {
         console.log(`✅ Received ${data.data.length} activity data points`);
         setActivityData(data.data);
       } else {
+        console.warn('⚠️ Received empty activity data even after mock generation');
         setError("No activity data available. Using demo data for visualization.");
         const mockData = generateMockActivityData(period);
         setActivityData(mockData.data);
       }
     } catch (err) {
       console.error("🔴 Error in fetchActivityData:", err);
-      setError("Failed to load activity data. Using demo data for visualization.");
+      
+      // Use the same error handling style as HeartTab
+      const errorMessage = err.response?.status === 401
+        ? "Authentication required to view activity data. Using mock data for demonstration."
+        : err.response?.status === 429
+          ? "Rate limit exceeded. Please try again later. Using mock data for demonstration."
+          : "Failed to load activity data. Using mock data for demonstration.";
+      
+      setError(errorMessage);
       
       // In case of error, generate mock data for demonstration
       const mockData = generateMockActivityData(period);
@@ -562,14 +601,64 @@ const ActivityTab = () => {
                 <Typography color="error" variant="h6" gutterBottom>
                   {error}
                 </Typography>
-                <Button 
-                  variant="outlined" 
-                  onClick={handleRefresh} 
-                  startIcon={<RefreshIcon />}
-                  sx={{ mt: 2 }}
+                
+                {/* Debug panel to show token scopes */}
+                <Paper 
+                  sx={{ 
+                    p: 2, 
+                    my: 3, 
+                    mx: 'auto',
+                    maxWidth: 600,
+                    bgcolor: alpha(theme.palette.info.light, 0.1),
+                    border: `1px dashed ${theme.palette.info.main}`
+                  }}
                 >
-                  Try Again
-                </Button>
+                  <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <InfoIcon color="info" /> Token Scopes Debug
+                  </Typography>
+                  <Typography variant="body2" align="left">
+                    Current scopes: {tokenScopes.length > 0 ? tokenScopes.join(', ') : 'No scopes found'}
+                  </Typography>
+                  <Typography variant="body2" color="error" sx={{ mt: 1 }} align="left">
+                    Has 'activity' scope: {tokenScopes.includes('activity') ? 'Yes' : 'No - this is required for activity data'}
+                  </Typography>
+                  <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1 }}>
+                    <Button 
+                      variant="outlined" 
+                      color="info"
+                      onClick={() => authService.debugSession().then(data => console.log('Session debug:', data))}
+                      size="small"
+                    >
+                      Debug Session (Check Console)
+                    </Button>
+                  </Box>
+                </Paper>
+                
+                <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
+                  <Button 
+                    variant="outlined" 
+                    onClick={handleRefresh} 
+                    startIcon={<RefreshIcon />}
+                  >
+                    Try Again
+                  </Button>
+                  
+                  <Button 
+                    variant="contained" 
+                    color="primary"
+                    onClick={() => {
+                      authService.logout().then(() => {
+                        // After logging out, redirect to Fitbit auth
+                        setTimeout(() => authService.login(), 500);
+                      }).catch(err => {
+                        console.error('Error during reauth flow:', err);
+                        alert('Error during reauthentication: ' + err.message);
+                      });
+                    }}
+                  >
+                    Re-authenticate (Fix Permissions)
+                  </Button>
+                </Box>
               </Box>
             ) : !activityData || activityData.length === 0 ? (
               <Box sx={{ p: 4, textAlign: 'center' }}>
