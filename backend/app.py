@@ -18,8 +18,8 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
-# Initialize Flask app
-app = Flask(__name__, static_folder='static')
+# Initialize Flask app with no static folder initially
+app = Flask(__name__)
 app.config.from_object(Config)
 
 # Configure session
@@ -103,53 +103,80 @@ def test():
 def ping():
     return jsonify({"message": "pong"})
 
-# Define static folder for serving frontend files
-app.static_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+# Define the path to the static files directory
+STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+app.logger.info(f"Static directory path: {STATIC_DIR}")
 
-# Serve static files (CSS, JS, etc.)
+# List files in the static directory for debugging
+try:
+    app.logger.info(f"Static directory contents: {os.listdir(STATIC_DIR)}")
+    static_dir_files = os.listdir(os.path.join(STATIC_DIR, 'static'))
+    app.logger.info(f"Static/static directory contents: {static_dir_files}")
+except Exception as e:
+    app.logger.error(f"Error listing static directory: {str(e)}")
+
+# Serve specific static files
+@app.route('/static/js/<path:filename>')
+def serve_js(filename):
+    try:
+        return send_from_directory(os.path.join(STATIC_DIR, 'static', 'js'), filename)
+    except Exception as e:
+        app.logger.error(f"Error serving JS file: {str(e)}")
+        return jsonify({"error": str(e)}), 404
+
+@app.route('/static/css/<path:filename>')
+def serve_css(filename):
+    try:
+        return send_from_directory(os.path.join(STATIC_DIR, 'static', 'css'), filename)
+    except Exception as e:
+        app.logger.error(f"Error serving CSS file: {str(e)}")
+        return jsonify({"error": str(e)}), 404
+
+@app.route('/static/media/<path:filename>')
+def serve_media(filename):
+    try:
+        return send_from_directory(os.path.join(STATIC_DIR, 'static', 'media'), filename)
+    except Exception as e:
+        app.logger.error(f"Error serving media file: {str(e)}")
+        return jsonify({"error": str(e)}), 404
+
+# Serve other static files
 @app.route('/static/<path:filename>')
-def serve_static(filename):
+def serve_static_files(filename):
     try:
         app.logger.info(f"Serving static file: {filename}")
-        return send_from_directory(os.path.join(app.static_folder, 'static'), filename)
+        return send_from_directory(os.path.join(STATIC_DIR, 'static'), filename)
     except Exception as e:
-        app.logger.error(f"Error serving static file: {str(e)}")
-        return jsonify({
-            "error": "Unable to serve static file", 
-            "details": str(e), 
-            "path": filename
-        })
+        app.logger.error(f"Error serving static file {filename}: {str(e)}")
+        return jsonify({"error": str(e)}), 404
+
+# Serve root files like manifest.json, robots.txt, etc.
+@app.route('/<path:filename>')
+def serve_root_files(filename):
+    # Skip API routes
+    if filename.startswith('api/'):
+        return jsonify({"error": "Not found"}), 404
+        
+    try:
+        if os.path.exists(os.path.join(STATIC_DIR, filename)):
+            app.logger.info(f"Serving root file: {filename}")
+            return send_from_directory(STATIC_DIR, filename)
+        else:
+            app.logger.info(f"Root file not found, serving index.html: {filename}")
+            return send_from_directory(STATIC_DIR, 'index.html')
+    except Exception as e:
+        app.logger.error(f"Error serving root file {filename}: {str(e)}")
+        return jsonify({"error": str(e)}), 404
 
 # Serve frontend in production
 @app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def serve(path):
+def serve_index(path):
     try:
-        app.logger.info(f"Serving path: {path}")
-        app.logger.info(f"Static folder: {app.static_folder}")
-        
-        # Special handling for index.html
-        if path == "":
-            app.logger.info("Serving index.html")
-            return send_from_directory(app.static_folder, 'index.html')
-            
-        # Check if file exists at requested path
-        if os.path.exists(os.path.join(app.static_folder, path)):
-            app.logger.info(f"Serving file: {path}")
-            return send_from_directory(app.static_folder, path)
-        else:
-            # File not found, fallback to index.html for client-side routing
-            app.logger.info(f"File not found, serving index.html instead of {path}")
-            return send_from_directory(app.static_folder, 'index.html')
+        app.logger.info("Serving index.html")
+        return send_from_directory(STATIC_DIR, 'index.html')
     except Exception as e:
-        app.logger.error(f"Error serving file {path}: {str(e)}")
-        return jsonify({
-            "error": "Unable to serve file", 
-            "details": str(e), 
-            "path": path,
-            "static_folder": app.static_folder,
-            "exists": os.path.exists(app.static_folder)
-        })
+        app.logger.error(f"Error serving index.html: {str(e)}")
+        return jsonify({"error": str(e)}), 404
 
 if __name__ == '__main__':
     app.logger.info("Starting Flask app...")
