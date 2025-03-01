@@ -98,6 +98,11 @@ def test():
         'message': 'API is working correctly'
     })
 
+# Add a simple root route for testing
+@app.route('/ping')
+def ping():
+    return jsonify({"message": "pong"})
+
 # Define static folder for serving frontend files
 app.static_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
 
@@ -105,10 +110,25 @@ app.static_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'st
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve(path):
-    if path != "" and os.path.exists(app.static_folder + '/' + path):
-        return send_from_directory(app.static_folder, path)
-    else:
-        return send_from_directory(app.static_folder, 'index.html')
+    try:
+        app.logger.info(f"Serving path: {path}")
+        app.logger.info(f"Static folder: {app.static_folder}")
+        
+        if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+            app.logger.info(f"Serving file: {path}")
+            return send_from_directory(app.static_folder, path)
+        else:
+            app.logger.info("Serving index.html")
+            return send_from_directory(app.static_folder, 'index.html')
+    except Exception as e:
+        app.logger.error(f"Error serving static file: {str(e)}")
+        return jsonify({
+            "error": "Unable to serve static file", 
+            "details": str(e), 
+            "path": path,
+            "static_folder": app.static_folder,
+            "exists": os.path.exists(app.static_folder)
+        })
 
 if __name__ == '__main__':
     app.logger.info("Starting Flask app...")
