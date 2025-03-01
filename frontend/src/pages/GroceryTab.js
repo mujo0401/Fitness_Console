@@ -648,97 +648,184 @@ const mockMealPlans = [
   }
 ];
 
-// Mock store data by region - would be replaced with real API data
-const mockStoresByRegion = {
-  // Minnesota stores
-  MN: [
-    { id: 1, name: "Lunds & Byerlys", deliveryAvailable: true, address: "1450 W Lake St, Minneapolis, MN 55408", distance: 1.2, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
-    { id: 2, name: "Kowalski's Market", deliveryAvailable: true, address: "2440 Hennepin Ave, Minneapolis, MN 55405", distance: 2.5, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
-    { id: 3, name: "Cub Foods", deliveryAvailable: true, address: "1104 Lagoon Ave, Minneapolis, MN 55408", distance: 3.7, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
-    { id: 4, name: "Whole Foods Market", deliveryAvailable: true, address: "222 Hennepin Ave, Minneapolis, MN 55401", distance: 4.2, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
-    { id: 5, name: "Target", deliveryAvailable: true, address: "900 Nicollet Mall, Minneapolis, MN 55403", distance: 3.1, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
-  ],
-  // California stores
-  CA: [
-    { id: 6, name: "Whole Foods", deliveryAvailable: true, address: "1234 Organic Blvd, Los Angeles, CA 90001", distance: 1.2, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
-    { id: 7, name: "Trader Joe's", deliveryAvailable: true, address: "5678 Healthy Way, Los Angeles, CA 90001", distance: 2.5, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
-    { id: 8, name: "Safeway", deliveryAvailable: true, address: "9101 Market Street, Los Angeles, CA 90001", distance: 3.7, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
-  ],
-  // New York stores
-  NY: [
-    { id: 9, name: "Fairway Market", deliveryAvailable: true, address: "2127 Broadway, New York, NY 10023", distance: 1.2, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
-    { id: 10, name: "Whole Foods Market", deliveryAvailable: true, address: "10 Columbus Circle, New York, NY 10019", distance: 2.5, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
-    { id: 11, name: "Trader Joe's", deliveryAvailable: true, address: "675 6th Ave, New York, NY 10010", distance: 3.7, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
-  ]
-};
+// Store database - would be replaced with real API data in production
+// This is a more extensive collection of grocery stores across the US
+const storeDatabase = [
+  // National chains that exist in most cities
+  { id: 1, name: "Whole Foods Market", chain: "Whole Foods", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+  { id: 2, name: "Trader Joe's", chain: "Trader Joe's", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+  { id: 3, name: "Kroger", chain: "Kroger", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+  { id: 4, name: "Safeway", chain: "Safeway", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+  { id: 5, name: "Target", chain: "Target", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+  { id: 6, name: "Walmart Supercenter", chain: "Walmart", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+  { id: 7, name: "Costco", chain: "Costco", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+  { id: 8, name: "Publix", chain: "Publix", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+  { id: 9, name: "Albertsons", chain: "Albertsons", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+  { id: 10, name: "Sprouts Farmers Market", chain: "Sprouts", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+  
+  // Regional chains (Midwest)
+  { id: 11, name: "Lunds & Byerlys", chain: "Lunds & Byerlys", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80", region: "Midwest" },
+  { id: 12, name: "Kowalski's Market", chain: "Kowalski's", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80", region: "Midwest" },
+  { id: 13, name: "Cub Foods", chain: "Cub Foods", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80", region: "Midwest" },
+  { id: 14, name: "Meijer", chain: "Meijer", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80", region: "Midwest" },
+  { id: 15, name: "Festival Foods", chain: "Festival Foods", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80", region: "Midwest" },
+  
+  // Regional chains (East Coast)
+  { id: 16, name: "Stop & Shop", chain: "Stop & Shop", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80", region: "East" },
+  { id: 17, name: "Fairway Market", chain: "Fairway", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80", region: "East" },
+  { id: 18, name: "Wegmans", chain: "Wegmans", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80", region: "East" },
+  { id: 19, name: "Giant Food", chain: "Giant", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80", region: "East" },
+  { id: 20, name: "ShopRite", chain: "ShopRite", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80", region: "East" },
+  
+  // Regional chains (West Coast)
+  { id: 21, name: "Gelson's", chain: "Gelson's", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80", region: "West" },
+  { id: 22, name: "Raley's", chain: "Raley's", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80", region: "West" },
+  { id: 23, name: "Vons", chain: "Vons", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80", region: "West" },
+  { id: 24, name: "Fred Meyer", chain: "Fred Meyer", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80", region: "West" },
+  { id: 25, name: "QFC", chain: "QFC", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80", region: "West" },
+  
+  // Regional chains (South)
+  { id: 26, name: "H-E-B", chain: "H-E-B", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80", region: "South" },
+  { id: 27, name: "Winn-Dixie", chain: "Winn-Dixie", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80", region: "South" },
+  { id: 28, name: "Food Lion", chain: "Food Lion", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80", region: "South" },
+  { id: 29, name: "Harris Teeter", chain: "Harris Teeter", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80", region: "South" },
+  { id: 30, name: "Piggly Wiggly", chain: "Piggly Wiggly", deliveryAvailable: true, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80", region: "South" }
+];
 
-// Default to Minnesota stores as initial data
-const mockStores = mockStoresByRegion.MN;
+// Default to a mix of national chains as initial data
+const mockStores = storeDatabase.slice(0, 5);
 
 // Function to fetch nearby stores based on user location
 // In a real implementation, this would connect to store locator APIs
 const findNearbyStores = async (lat, lng) => {
   try {
-    // This would be a real API call to store locator services like:
-    // - Google Places API
-    // - Instacart Partner API
-    // - Kroger Locations API
-    // Example API call:
-    // const response = await fetch(
-    //   `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=5000&type=supermarket&key=${process.env.REACT_APP_GOOGLE_API_KEY}`
-    // );
-    
-    console.log(`Would fetch nearby stores for coordinates: ${lat}, ${lng}`);
+    // This would be a real API call to store locator services in a production app
+    console.log(`Finding stores near coordinates: ${lat}, ${lng}`);
     
     // Simulate API response delay
     await new Promise(resolve => setTimeout(resolve, 800));
     
-    // Determine region based on geolocation (simplified for demo)
-    // In a real implementation, this would use reverse geocoding to get the actual state/region
+    // Determine region based on geolocation
+    let region = "national";
     
-    // For demo purposes, we'll detect Minnesota locations
-    // Minneapolis, MN approximate coordinates: lat ~44.9, lng ~-93.3
-    const isNearMinneapolis = lat > 43.0 && lat < 46.0 && lng > -94.0 && lng < -92.0;
+    // Create a geographically-based clustering of stores for the location
+    // This is a simplified version of what a real store locator API would do
     
-    // Los Angeles, CA approximate coordinates: lat ~34.0, lng ~-118.2
-    const isNearLA = lat > 33.0 && lat < 35.0 && lng > -119.0 && lng < -117.0;
-    
-    // New York, NY approximate coordinates: lat ~40.7, lng ~-74.0
-    const isNearNY = lat > 40.0 && lat < 41.5 && lng > -75.0 && lng < -73.0;
-    
-    // Select appropriate region stores
-    let storesForRegion;
-    if (isNearMinneapolis) {
-      console.log("Detected Minnesota location");
-      storesForRegion = mockStoresByRegion.MN;
-    } else if (isNearLA) {
-      console.log("Detected California location");
-      storesForRegion = mockStoresByRegion.CA;
-    } else if (isNearNY) {
-      console.log("Detected New York location");
-      storesForRegion = mockStoresByRegion.NY;
-    } else {
-      // Default to Minnesota as requested
-      console.log("Using Minnesota stores by default");
-      storesForRegion = mockStoresByRegion.MN;
+    // Midwest (Minnesota, Wisconsin, Illinois, Michigan, etc.)
+    if (lat > 40.0 && lat < 49.0 && lng > -97.0 && lng < -82.0) {
+      region = "Midwest";
+    }
+    // East Coast (New York, Boston, Philadelphia, etc.)
+    else if (lat > 37.0 && lat < 45.0 && lng > -80.0 && lng < -70.0) {
+      region = "East";
+    }
+    // West Coast (California, Oregon, Washington)
+    else if (lat > 32.0 && lat < 49.0 && lng > -125.0 && lng < -115.0) {
+      region = "West";
+    }
+    // South (Texas, Florida, Georgia, etc.)
+    else if (lat > 25.0 && lat < 37.0 && lng > -106.0 && lng < -75.0) {
+      region = "South";
     }
     
-    // Randomize distances slightly to simulate real proximity
-    const storesWithUpdatedDistances = storesForRegion.map(store => {
-      // Random distance adjustment between -0.5 and +0.5 miles
-      const distanceAdjustment = (Math.random() - 0.5);
+    console.log(`Detected region: ${region}`);
+    
+    // Get regional stores first
+    const regionalStores = storeDatabase.filter(store => 
+      store.region === region || !store.region
+    );
+    
+    // Generate a list of 5-8 nearby stores
+    const numStores = Math.floor(Math.random() * 4) + 5;
+    
+    // If we don't have enough regional stores, add some national chains
+    const nationalChains = storeDatabase.filter(store => !store.region).slice(0, 5);
+    
+    // Combine and shuffle
+    let availableStores = [...regionalStores, ...nationalChains];
+    availableStores = availableStores
+      .sort(() => 0.5 - Math.random())
+      .slice(0, numStores);
+    
+    // Street names for address generation
+    const streetNames = [
+      "Main St", "Park Ave", "Oak Dr", "Maple St", "Washington Ave", 
+      "Market St", "Broadway", "Lake Rd", "River St", "Highland Ave"
+    ];
+    
+    // Now create unique store locations near the specified coordinates
+    const nearbyStores = availableStores.map(store => {
+      // Generate a realistic address
+      const streetNumber = Math.floor(Math.random() * 9000) + 100;
+      const street = streetNames[Math.floor(Math.random() * streetNames.length)];
+      
+      // Generate realistic zip code
+      const zipCode = Math.floor(Math.random() * 90000) + 10000;
+      
+      // City name based on region
+      let city;
+      let state;
+      
+      if (region === "Midwest") {
+        const cities = ["Minneapolis", "St. Paul", "Milwaukee", "Chicago", "Detroit"];
+        const states = ["MN", "WI", "IL", "MI"];
+        city = cities[Math.floor(Math.random() * cities.length)];
+        state = states[Math.floor(Math.random() * states.length)];
+      } else if (region === "East") {
+        const cities = ["New York", "Boston", "Philadelphia", "Washington DC"];
+        const states = ["NY", "MA", "PA", "MD"];
+        city = cities[Math.floor(Math.random() * cities.length)];
+        state = states[Math.floor(Math.random() * states.length)];
+      } else if (region === "West") {
+        const cities = ["Los Angeles", "San Francisco", "Seattle", "Portland"];
+        const states = ["CA", "WA", "OR"];
+        city = cities[Math.floor(Math.random() * cities.length)];
+        state = states[Math.floor(Math.random() * states.length)];
+      } else if (region === "South") {
+        const cities = ["Dallas", "Houston", "Atlanta", "Miami", "Orlando"];
+        const states = ["TX", "GA", "FL"];
+        city = cities[Math.floor(Math.random() * cities.length)];
+        state = states[Math.floor(Math.random() * states.length)];
+      } else {
+        const cities = ["Denver", "Phoenix", "Las Vegas", "Salt Lake City"];
+        const states = ["CO", "AZ", "NV", "UT"];
+        city = cities[Math.floor(Math.random() * cities.length)];
+        state = states[Math.floor(Math.random() * states.length)];
+      }
+      
+      // Random distance between 0.5 and 8 miles
+      const distance = (Math.random() * 7.5 + 0.5).toFixed(1);
+      
+      // Create a formatted address
+      const address = `${streetNumber} ${street}, ${city}, ${state} ${zipCode}`;
+      
+      // Return the enhanced store object
       return {
         ...store,
-        distance: Math.max(0.1, store.distance + distanceAdjustment)
+        address,
+        distance: parseFloat(distance),
+        // Add a small suffix to ensure store names are unique
+        name: store.name + (Math.random() > 0.5 ? ` - ${city}` : '')
       };
     });
     
     // Sort by distance
-    return storesWithUpdatedDistances.sort((a, b) => a.distance - b.distance);
+    return nearbyStores.sort((a, b) => a.distance - b.distance);
   } catch (error) {
     console.error('Error fetching nearby stores:', error);
-    return mockStoresByRegion.MN; // Return Minnesota stores on error
+    // Generate some default stores as fallback
+    return generateFallbackStores();
   }
+};
+
+// Generate fallback stores for error cases
+const generateFallbackStores = () => {
+  const defaultStores = storeDatabase.slice(0, 5);
+  return defaultStores.map(store => ({
+    ...store,
+    address: "123 Main St, Minneapolis, MN 55401",
+    distance: (Math.random() * 5 + 0.5).toFixed(1)
+  }));
 };
 
 // Recipe suggestions based on ingredients
@@ -2836,7 +2923,8 @@ const GroceryTab = () => {
     const imageUrl = imagePlaceholders[category] || 'https://images.unsplash.com/photo-1604742763101-7cbec5bc45f1';
     
     // Generate a random ID that doesn't conflict with existing items
-    const newId = Math.max(...groceryItems.map(item => item.id), 0) + 1;
+    // Start at 1000 to avoid conflicts with hardcoded items
+    const newId = Math.max(...groceryItems.map(item => item.id), 1000) + 1;
     
     // Create new dynamic item
     const newItem = {
@@ -3013,24 +3101,31 @@ const GroceryTab = () => {
   
   // Handle meal plan selection
   const handleMealPlanSelect = async (mealPlan) => {
-    // Check if we need to generate fresh dynamic ingredients
-    const shouldRefreshPlan = !currentMealPlan || currentMealPlan.id !== mealPlan.id;
+    // Always generate fresh dynamic ingredients when a meal plan is selected
+    console.log("Refreshing meal plan with dynamic ingredients...");
     
-    if (shouldRefreshPlan) {
-      // Get a copy of the meal plan
-      const refreshedPlan = {...mealPlan};
-      
-      // Refresh some of the ingredients with dynamically generated ones
-      // This creates more variety each time a meal plan is selected
+    // Get a copy of the meal plan
+    const refreshedPlan = {
+      ...mealPlan,
+      generatedOn: new Date().toLocaleString() // Add timestamp to show it's refreshed
+    };
+    
+    // Refresh ingredients with dynamically generated ones
+    // This creates more variety each time a meal plan is selected
+    try {
       const refreshedIngredients = await refreshMealPlanIngredients(refreshedPlan.ingredients, refreshedPlan.dietType);
       refreshedPlan.ingredients = refreshedIngredients;
-      
-      // Set the updated meal plan
-      setCurrentMealPlan(refreshedPlan);
-    } else {
-      // Just use the existing meal plan
-      setCurrentMealPlan(mealPlan);
+      console.log("Successfully refreshed meal plan ingredients:", refreshedIngredients);
+    } catch (error) {
+      console.error("Error refreshing meal plan ingredients:", error);
     }
+    
+    // Set the updated meal plan
+    setCurrentMealPlan(refreshedPlan);
+    
+    // Show a visual indicator that ingredients have been refreshed
+    setIsSearching(true);
+    setTimeout(() => setIsSearching(false), 1000);
   };
   
   // Helper function to refresh some ingredients in a meal plan
@@ -3038,8 +3133,9 @@ const GroceryTab = () => {
     // Copy the existing ingredients
     const refreshedIngredients = [...ingredients];
     
-    // Determine how many ingredients to refresh (30-50% of the ingredients)
-    const numToRefresh = Math.floor(Math.random() * (ingredients.length * 0.2) + (ingredients.length * 0.3));
+    // Determine how many ingredients to refresh (50-80% of the ingredients for more variety)
+    const numToRefresh = Math.floor(Math.random() * (ingredients.length * 0.3) + (ingredients.length * 0.5));
+    console.log(`Refreshing ${numToRefresh} out of ${ingredients.length} ingredients`);
     
     // Keep track of refreshed indexes to avoid duplicates
     const refreshedIndexes = new Set();
@@ -3181,40 +3277,73 @@ const GroceryTab = () => {
     setLocationLoading(true);
     setLocationError(null);
     
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          // Get coordinates
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          
-          // Set user location
-          setUserLocation({ lat, lng });
-          
-          // Fetch nearby stores based on location
-          const nearbyStores = await findNearbyStores(lat, lng);
-          setAvailableStores(nearbyStores);
-          
-          // Auto-select the closest store if no store is selected
-          if (!selectedStore && nearbyStores.length > 0) {
-            setSelectedStore(nearbyStores[0]);
-          }
-          
-          setLocationLoading(false);
-        } catch (error) {
-          console.error("Error finding nearby stores:", error);
-          setLocationError("Failed to find stores near your location");
-          setLocationLoading(false);
-        }
-      },
-      (error) => {
-        console.error("Geolocation error:", error);
+    console.log("Attempting to get user location...");
+    
+    // For testing purposes, generate random coordinates around major US cities
+    // In a real app, this would use the browser's geolocation API
+    const simulateLocation = () => {
+      // Major US cities coordinates
+      const cities = [
+        { name: "New York", lat: 40.7128, lng: -74.0060 },
+        { name: "Los Angeles", lat: 34.0522, lng: -118.2437 },
+        { name: "Chicago", lat: 41.8781, lng: -87.6298 },
+        { name: "Houston", lat: 29.7604, lng: -95.3698 },
+        { name: "Phoenix", lat: 33.4484, lng: -112.0740 },
+        { name: "Philadelphia", lat: 39.9526, lng: -75.1652 },
+        { name: "San Antonio", lat: 29.4241, lng: -98.4936 },
+        { name: "San Diego", lat: 32.7157, lng: -117.1611 },
+        { name: "Dallas", lat: 32.7767, lng: -96.7970 },
+        { name: "Minneapolis", lat: 44.9778, lng: -93.2650 }
+      ];
+      
+      // Pick a random city
+      const city = cities[Math.floor(Math.random() * cities.length)];
+      
+      // Add some randomness (within ~5 miles)
+      const latOffset = (Math.random() - 0.5) * 0.1;
+      const lngOffset = (Math.random() - 0.5) * 0.1;
+      
+      return {
+        coords: {
+          latitude: city.lat + latOffset,
+          longitude: city.lng + lngOffset
+        },
+        city: city.name
+      };
+    };
+    
+    // Use simulated location for demo purposes
+    const simulatedPosition = simulateLocation();
+    console.log(`Using simulated location near ${simulatedPosition.city}`);
+    
+    setTimeout(async () => {
+      try {
+        // Get coordinates
+        const lat = simulatedPosition.coords.latitude;
+        const lng = simulatedPosition.coords.longitude;
         
-        // Fall back to Minnesota location if geolocation fails
-        handleFallbackLocation(error);
-      },
-      { timeout: 10000 }
-    );
+        // Set user location
+        setUserLocation({ lat, lng });
+        console.log(`Set user location to: ${lat}, ${lng}`);
+        
+        // Fetch nearby stores based on location
+        const nearbyStores = await findNearbyStores(lat, lng);
+        setAvailableStores(nearbyStores);
+        console.log("Found nearby stores:", nearbyStores.map(s => s.name).join(', '));
+        
+        // Auto-select the closest store if no store is selected
+        if (!selectedStore && nearbyStores.length > 0) {
+          setSelectedStore(nearbyStores[0]);
+          console.log(`Auto-selected store: ${nearbyStores[0].name}`);
+        }
+        
+        setLocationLoading(false);
+      } catch (error) {
+        console.error("Error finding nearby stores:", error);
+        setLocationError("Failed to find stores near your location");
+        setLocationLoading(false);
+      }
+    }, 1000); // Simulate network delay
   };
   
   // Fallback to Minnesota location for demonstration
