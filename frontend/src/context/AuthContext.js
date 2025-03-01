@@ -20,6 +20,9 @@ export const AuthProvider = ({ children }) => {
     fitbit: false,
     appleFitness: false
   });
+  
+  // Track token scopes for debugging
+  const [tokenScopes, setTokenScopes] = useState([]);
 
   // Check if user is authenticated
   const checkAuthStatus = useCallback(async () => {
@@ -28,6 +31,20 @@ export const AuthProvider = ({ children }) => {
       console.log('Checking authentication status...');
       const response = await authService.checkAuth();
       console.log('Auth check response:', response);
+      
+      // Store token scopes if available
+      if (response.authenticated && response.token && response.token.scopes) {
+        setTokenScopes(response.token.scopes);
+        
+        // Check for missing scopes
+        const requiredScopes = ['heartrate', 'activity', 'sleep', 'profile'];
+        const missingScopes = requiredScopes.filter(scope => !response.token.scopes.includes(scope));
+        
+        if (missingScopes.length > 0) {
+          console.warn(`⚠️ Missing required scopes: ${missingScopes.join(', ')}`);
+          console.warn('Some features may not work correctly due to missing permissions.');
+        }
+      }
       
       if (response.authenticated) {
         setIsAuthenticated(true);
@@ -80,6 +97,7 @@ export const AuthProvider = ({ children }) => {
         console.log('User is not authenticated');
         setIsAuthenticated(false);
         setUser(null);
+        setTokenScopes([]);
         setConnectedServices({
           fitbit: false,
           appleFitness: false
@@ -92,6 +110,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Authentication check failed:', error);
       setIsAuthenticated(false);
       setUser(null);
+      setTokenScopes([]);
       setConnectedServices({
         fitbit: false,
         appleFitness: false
@@ -178,6 +197,7 @@ export const AuthProvider = ({ children }) => {
       await authService.logout();
       setIsAuthenticated(false);
       setUser(null);
+      setTokenScopes([]);
       setConnectedServices({
         fitbit: false,
         appleFitness: false
@@ -193,6 +213,26 @@ export const AuthProvider = ({ children }) => {
     try {
       const status = await fitbitService.checkStatus();
       console.log('Fitbit connection status check result:', status);
+      
+      // Get token info to check scopes
+      try {
+        const tokenInfo = await authService.checkAuth();
+        console.log('Token info with scopes:', tokenInfo);
+        
+        // Check if 'heartrate' scope is granted
+        if (tokenInfo.authenticated && tokenInfo.token && tokenInfo.token.scopes) {
+          setTokenScopes(tokenInfo.token.scopes);
+          const hasHeartrateScope = tokenInfo.token.scopes.includes('heartrate');
+          console.log(`Heartrate scope granted: ${hasHeartrateScope}`);
+          
+          if (!hasHeartrateScope) {
+            console.warn('⚠️ Heartrate scope is missing from the token. Heart rate features will use mock data.');
+          }
+        }
+      } catch (scopeError) {
+        console.error('Failed to check token scopes:', scopeError);
+      }
+      
       setConnectedServices(prev => ({...prev, fitbit: status.connected}));
       return status.connected;
     } catch (error) {
@@ -229,6 +269,7 @@ export const AuthProvider = ({ children }) => {
     isLoading,
     user,
     authError,
+    tokenScopes, // Add scopes to context for component access
     login,
     loginFitbit,
     loginAppleFitness,
