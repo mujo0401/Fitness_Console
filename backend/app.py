@@ -106,6 +106,20 @@ def ping():
 # Define static folder for serving frontend files
 app.static_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
 
+# Serve static files (CSS, JS, etc.)
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    try:
+        app.logger.info(f"Serving static file: {filename}")
+        return send_from_directory(os.path.join(app.static_folder, 'static'), filename)
+    except Exception as e:
+        app.logger.error(f"Error serving static file: {str(e)}")
+        return jsonify({
+            "error": "Unable to serve static file", 
+            "details": str(e), 
+            "path": filename
+        })
+
 # Serve frontend in production
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
@@ -114,16 +128,23 @@ def serve(path):
         app.logger.info(f"Serving path: {path}")
         app.logger.info(f"Static folder: {app.static_folder}")
         
-        if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        # Special handling for index.html
+        if path == "":
+            app.logger.info("Serving index.html")
+            return send_from_directory(app.static_folder, 'index.html')
+            
+        # Check if file exists at requested path
+        if os.path.exists(os.path.join(app.static_folder, path)):
             app.logger.info(f"Serving file: {path}")
             return send_from_directory(app.static_folder, path)
         else:
-            app.logger.info("Serving index.html")
+            # File not found, fallback to index.html for client-side routing
+            app.logger.info(f"File not found, serving index.html instead of {path}")
             return send_from_directory(app.static_folder, 'index.html')
     except Exception as e:
-        app.logger.error(f"Error serving static file: {str(e)}")
+        app.logger.error(f"Error serving file {path}: {str(e)}")
         return jsonify({
-            "error": "Unable to serve static file", 
+            "error": "Unable to serve file", 
             "details": str(e), 
             "path": path,
             "static_folder": app.static_folder,
