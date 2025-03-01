@@ -31,7 +31,7 @@ class Config:
     APPLE_FITNESS_API_BASE_URL = 'https://api.apple-fitness.apple.com'
     
     # For development, use localhost. For production, use your actual domain
-    FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+    FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://fitness-console-gtxc.onrender.com')
     FITBIT_REDIRECT_URI = os.environ.get('FITBIT_REDIRECT_URI', 'http://localhost:5000/api/auth/callback')
     APPLE_FITNESS_REDIRECT_URI = os.environ.get('APPLE_FITNESS_REDIRECT_URI', 'http://localhost:5000/api/apple-fitness/callback')
     

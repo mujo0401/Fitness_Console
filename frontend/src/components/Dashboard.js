@@ -390,29 +390,7 @@ const Dashboard = () => {
                   }
                 }}
               />
-              <Tab 
-                label="Apple Health" 
-                icon={<AppleIcon />} 
-                iconPosition="start" 
-                disabled={!isAuthenticated}
-                sx={{
-                  minHeight: 60,
-                  borderRadius: '10px 10px 0 0',
-                  fontWeight: 600,
-                  transition: 'all 0.2s ease',
-                  '&.Mui-selected': {
-                    color: '#E57373',
-                    fontWeight: 700,
-                  },
-                  '&:hover': {
-                    bgcolor: 'rgba(229, 115, 115, 0.04)',
-                    color: '#E57373'
-                  },
-                  '&.Mui-disabled': {
-                    opacity: 0.6,
-                  }
-                }}
-              />
+            
               {/* Always accessible tabs */}
               <Tab 
                 label="Fitness Plan" 

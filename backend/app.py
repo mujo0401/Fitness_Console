@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, send_from_directory, session
+from flask import Flask, jsonify, send_from_directory, session, request
 from flask_cors import CORS
 import os
 import logging
@@ -49,16 +49,23 @@ Session(app)
 apply_session_fix(app)
 
 # Enable CORS with specific configurations
+# Allow both local and production frontend
+allowed_origins = [
+    'http://localhost:3000',
+    'https://fitness-console-gtxc.onrender.com'
+]
 CORS(app, 
      supports_credentials=True, 
-     origins=[app.config['FRONTEND_URL']],
+     origins=allowed_origins,
      allow_headers=["Content-Type", "Authorization"],
      methods=["GET", "POST", "OPTIONS"])
 
 # Add CORS headers to all responses
 @app.after_request
 def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', app.config['FRONTEND_URL'])
+    origin = request.headers.get('Origin')
+    if origin in allowed_origins:
+        response.headers.set('Access-Control-Allow-Origin', origin)
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS,PUT,DELETE')
     response.headers.add('Access-Control-Allow-Credentials', 'true')
@@ -184,5 +191,5 @@ if __name__ == '__main__':
     app.logger.info(f"FITBIT_REDIRECT_URI: {app.config['FITBIT_REDIRECT_URI']}")
     app.logger.info(f"APPLE_FITNESS_CLIENT_ID: {app.config['APPLE_FITNESS_CLIENT_ID']}")
     app.logger.info(f"APPLE_FITNESS_REDIRECT_URI: {app.config['APPLE_FITNESS_REDIRECT_URI']}")
-    app.logger.info(f"CORS configured to allow origin: {app.config['FRONTEND_URL']}")
+    app.logger.info(f"CORS configured to allow origins: {allowed_origins}")
     app.run(host='0.0.0.0', port=5000, debug=True)
