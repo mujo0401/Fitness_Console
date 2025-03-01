@@ -2689,7 +2689,13 @@ const GroceryTab = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedStore, setSelectedStore] = useState(null);
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
-  const [availableStores, setAvailableStores] = useState(mockStores);
+  // Initialize with some default stores from our store database
+  const defaultStores = storeDatabase.slice(0, 5).map(store => ({
+    ...store,
+    address: "123 Main St, Minneapolis, MN 55401",
+    distance: Math.round((Math.random() * 5 + 0.5) * 10) / 10
+  }));
+  const [availableStores, setAvailableStores] = useState(defaultStores);
   const [locationLoading, setLocationLoading] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
   const [locationError, setLocationError] = useState(null);
@@ -3038,11 +3044,11 @@ const GroceryTab = () => {
     }
   }, [activeTab, cartItems.length, userLocation, locationLoading]);
   
-  // Initialize with Minnesota stores on component mount
+  // Initialize with default stores on component mount
   useEffect(() => {
-    // Since you mentioned you live in MN, ensure the component starts with MN stores
+    // Ensure the component starts with some default stores
     if (!availableStores || availableStores.length === 0) {
-      setAvailableStores(mockStoresByRegion.MN);
+      setAvailableStores(generateFallbackStores());
     }
   }, []);
   
