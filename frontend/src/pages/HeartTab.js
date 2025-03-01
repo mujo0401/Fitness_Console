@@ -642,7 +642,12 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
                         color="warning"
                         onClick={async () => {
                           try {
-                            await fetch('http://localhost:5000/api/fitbit/debug-heart', { credentials: 'include' })
+                            // Create URL based on environment
+                            const apiBaseUrl = process.env.NODE_ENV === 'production' 
+                              ? '' // Empty string for same-domain in production
+                              : 'http://localhost:5000';
+                              
+                            await fetch(`${apiBaseUrl}/api/fitbit/debug-heart`, { credentials: 'include' })
                               .then(res => res.json())
                               .then(data => console.log('Heart debug data:', data));
                             alert('Debug info logged to console - please check the browser console');

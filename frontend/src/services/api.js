@@ -147,13 +147,9 @@ export const heartRateService = {
       // Simplify the request as much as possible
       console.log(`Making simple request to: ${API_BASE_URL}/fitbit/heart-rate?period=${period}&date=${formattedDate}`);
       
-      // Make a simple GET request with the parameters in the URL
-      const response = await axios.get(`${API_BASE_URL}/fitbit/heart-rate?period=${period}&date=${formattedDate}`, {
-        withCredentials: true,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
+      // Make a simple GET request with the parameters in the URL using the configured apiClient
+      const response = await apiClient.get(`/fitbit/heart-rate`, {
+        params: { period, date: formattedDate }
       });
       
       // Log success
