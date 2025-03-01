@@ -48,6 +48,8 @@ import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import LocalDiningIcon from '@mui/icons-material/LocalDining';
 import RepeatIcon from '@mui/icons-material/Repeat';
+import WomanIcon from '@mui/icons-material/Woman';
+import ManIcon from '@mui/icons-material/Man';
 import { Canvas, useThree, extend, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { OrbitControls as ThreeOrbitControls } from 'three/examples/jsm/controls/OrbitControls';
@@ -502,11 +504,12 @@ const ExerciseAddSection = ({ onAddExercise }) => {
 // Main ABM Tab component
 const ABMTab = () => {
   const theme = useTheme();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [tabValue, setTabValue] = useState(0);
   const [loading, setLoading] = useState(true);
   const [foodLog, setFoodLog] = useState([]);
   const [exerciseLog, setExerciseLog] = useState([]);
+  const [modelGender, setModelGender] = useState('male'); // Default to male
   const [stats, setStats] = useState({
     bodyWeight: 70.0,
     bodyFatPercentage: 20.0,
@@ -535,6 +538,30 @@ const ABMTab = () => {
   });
   const [showSkeleton, setShowSkeleton] = useState(false);
   const canvasRef = useRef();
+  
+  // Set gender based on user profile if available
+  useEffect(() => {
+    if (user && user.gender) {
+      // Fitbit gender field is usually 'MALE' or 'FEMALE'
+      const gender = user.gender.toLowerCase();
+      if (gender === 'female') {
+        setModelGender('female');
+        // Adjust default stats for female
+        setStats(prev => ({
+          ...prev,
+          bodyWeight: 60.0,
+          bodyFatPercentage: 25.0,
+          muscleMass: 25.0,
+          metabolicRate: 1600
+        }));
+      } else {
+        setModelGender('male');
+      }
+      console.log(`Set 3D model gender to: ${gender} based on user profile`);
+    } else {
+      console.log('No gender in profile, using default male model');
+    }
+  }, [user]);
   
   useEffect(() => {
     // Simulated loading time for 3D model
@@ -798,6 +825,31 @@ const ABMTab = () => {
                 Reset Model
               </Button>
               
+              <ToggleButtonGroup
+                value={modelGender}
+                exclusive
+                onChange={(e, value) => value && setModelGender(value)}
+                size="small"
+                sx={{ 
+                  bgcolor: 'rgba(255,255,255,0.1)',
+                  '& .MuiToggleButton-root': {
+                    color: 'white',
+                    borderColor: 'rgba(255,255,255,0.2)',
+                    '&.Mui-selected': {
+                      bgcolor: 'rgba(255,255,255,0.3)',
+                      color: 'white'
+                    }
+                  }
+                }}
+              >
+                <ToggleButton value="male">
+                  <ManIcon />
+                </ToggleButton>
+                <ToggleButton value="female">
+                  <WomanIcon />
+                </ToggleButton>
+              </ToggleButtonGroup>
+              
               <FormControlLabel
                 control={
                   <Switch 
@@ -849,6 +901,7 @@ const ABMTab = () => {
                       <BodyModel 
                         state={bodyModelState} 
                         showSkeleton={showSkeleton}
+                        gender={modelGender}
                       />
                       
                       <Controls 
