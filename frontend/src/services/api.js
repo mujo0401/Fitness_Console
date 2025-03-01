@@ -352,6 +352,60 @@ export const appleFitnessService = {
       throw error;
     }
   },
+  
+  // Get heart rate data from Apple Health
+  getHeartRateData: async (period = 'day', date = new Date().toISOString().split('T')[0]) => {
+    try {
+      console.log(`Fetching Apple Health heart rate data for ${period} on ${date}`);
+      const response = await apiClient.get('/apple-fitness/heart-rate', {
+        params: { period, date }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching Apple Health heart rate data:', error);
+      throw error;
+    }
+  },
+  
+  // Get activity data from Apple Health
+  getActivityData: async (period = 'day', date = new Date().toISOString().split('T')[0]) => {
+    try {
+      console.log(`Fetching Apple Health activity data for ${period} on ${date}`);
+      const response = await apiClient.get('/apple-fitness/activity', {
+        params: { period, date }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching Apple Health activity data:', error);
+      throw error;
+    }
+  },
+  
+  // Get workout data from Apple Health
+  getWorkoutData: async (period = 'week', date = new Date().toISOString().split('T')[0]) => {
+    try {
+      console.log(`Fetching Apple Health workout data for ${period} on ${date}`);
+      const response = await apiClient.get('/apple-fitness/workouts', {
+        params: { period, date }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching Apple Health workout data:', error);
+      throw error;
+    }
+  },
+  
+  // Logout from Apple Fitness
+  logout: async () => {
+    try {
+      console.log('Logging out from Apple Fitness...');
+      const response = await apiClient.post('/apple-fitness/logout');
+      return response.data;
+    } catch (error) {
+      console.error('Error logging out from Apple Fitness:', error);
+      throw error;
+    }
+  }
 };
 
 const apiServices = {

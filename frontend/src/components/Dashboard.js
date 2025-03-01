@@ -29,6 +29,7 @@ import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import ChatIcon from '@mui/icons-material/Chat';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import AppleIcon from '@mui/icons-material/Apple';
 import { useAuth } from '../context/AuthContext';
 import ApiTester from './ApiTester'; 
 import HeartTab from '../pages/HeartTab'; 
@@ -39,6 +40,7 @@ import TrendsTab from '../pages/TrendsTab';
 import GroceryTab from '../pages/GroceryTab';
 import HealthAssistantTab from '../pages/HealthAssistantTab';
 import ABMTab from '../pages/ABMTab';
+import AppleHealthTab from './AppleHealthTab';
 
 import '../styles/Dashboard.css';
 
@@ -388,6 +390,29 @@ const Dashboard = () => {
                   }
                 }}
               />
+              <Tab 
+                label="Apple Health" 
+                icon={<AppleIcon />} 
+                iconPosition="start" 
+                disabled={!isAuthenticated}
+                sx={{
+                  minHeight: 60,
+                  borderRadius: '10px 10px 0 0',
+                  fontWeight: 600,
+                  transition: 'all 0.2s ease',
+                  '&.Mui-selected': {
+                    color: '#E57373',
+                    fontWeight: 700,
+                  },
+                  '&:hover': {
+                    bgcolor: 'rgba(229, 115, 115, 0.04)',
+                    color: '#E57373'
+                  },
+                  '&.Mui-disabled': {
+                    opacity: 0.6,
+                  }
+                }}
+              />
               {/* Always accessible tabs */}
               <Tab 
                 label="Fitness Plan" 
@@ -513,17 +538,26 @@ const Dashboard = () => {
             )
           )}
           
+          {/* Apple Health tab content - needs auth */}
+          {currentTab === 4 && (
+            isAuthenticated ? (
+              <AppleHealthTab />
+            ) : (
+              <LoginPromptCard handleConnectClick={handleConnectClick} />
+            )
+          )}
+          
           {/* Fitness Plan tab - always accessible */}
-          {currentTab === 4 && <FitnessTab />}
+          {currentTab === 5 && <FitnessTab />}
           
           {/* Grocery Shop tab - always accessible */}
-          {currentTab === 5 && <GroceryTab />}
+          {currentTab === 6 && <GroceryTab />}
           
           {/* Trends tab - always accessible */}
-          {currentTab === 6 && <TrendsTab />}
+          {currentTab === 7 && <TrendsTab />}
           
           {/* Assistant tab - always accessible */}
-          {currentTab === 7 && <HealthAssistantTab />}
+          {currentTab === 8 && <HealthAssistantTab />}
         </motion.div>
       </Box>
       
