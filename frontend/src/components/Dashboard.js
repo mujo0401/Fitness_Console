@@ -29,7 +29,6 @@ import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import ChatIcon from '@mui/icons-material/Chat';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
-import AppleIcon from '@mui/icons-material/Apple';
 import { useAuth } from '../context/AuthContext';
 import ApiTester from './ApiTester'; 
 import HeartTab from '../pages/HeartTab'; 
@@ -40,7 +39,6 @@ import TrendsTab from '../pages/TrendsTab';
 import GroceryTab from '../pages/GroceryTab';
 import HealthAssistantTab from '../pages/HealthAssistantTab';
 import ABMTab from '../pages/ABMTab';
-import AppleHealthTab from './AppleHealthTab';
 
 import '../styles/Dashboard.css';
 
@@ -66,7 +64,7 @@ const Dashboard = () => {
     const authStatus = urlParams.get('auth');
     
     if (authStatus === 'success') {
-      setAlertMessage('Successfully connected to Fitbit!');
+      setAlertMessage('Successfully connected to Fitbit\!');
       setAlertSeverity('success');
       setAlertOpen(true);
       
@@ -130,7 +128,7 @@ const Dashboard = () => {
   };
 
   const handleRefreshAuth = () => {
-    setManualAuthCheck(prev => !prev);
+    setManualAuthCheck(prev => \!prev);
     checkAuthStatus();
     setAlertMessage('Manually refreshed authentication status');
     setAlertSeverity('info');
@@ -302,7 +300,7 @@ const Dashboard = () => {
                 label="Heart Rate" 
                 icon={<FavoriteIcon />} 
                 iconPosition="start" 
-                disabled={!isAuthenticated}
+                disabled={\!isAuthenticated}
                 sx={{
                   minHeight: 60,
                   borderRadius: '10px 10px 0 0',
@@ -325,7 +323,7 @@ const Dashboard = () => {
                 label="Activity" 
                 icon={<DirectionsRunIcon />} 
                 iconPosition="start" 
-                disabled={!isAuthenticated}
+                disabled={\!isAuthenticated}
                 sx={{
                   minHeight: 60,
                   borderRadius: '10px 10px 0 0',
@@ -348,7 +346,7 @@ const Dashboard = () => {
                 label="Sleep" 
                 icon={<BedtimeIcon />} 
                 iconPosition="start" 
-                disabled={!isAuthenticated}
+                disabled={\!isAuthenticated}
                 sx={{
                   minHeight: 60,
                   borderRadius: '10px 10px 0 0',
@@ -371,7 +369,7 @@ const Dashboard = () => {
                 label="ABM" 
                 icon={<PersonOutlineIcon />} 
                 iconPosition="start" 
-                disabled={!isAuthenticated}
+                disabled={\!isAuthenticated}
                 sx={{
                   minHeight: 60,
                   borderRadius: '10px 10px 0 0',
@@ -390,7 +388,6 @@ const Dashboard = () => {
                   }
                 }}
               />
-            
               {/* Always accessible tabs */}
               <Tab 
                 label="Fitness Plan" 
@@ -516,26 +513,17 @@ const Dashboard = () => {
             )
           )}
           
-          {/* Apple Health tab content - needs auth */}
-          {currentTab === 4 && (
-            isAuthenticated ? (
-              <AppleHealthTab />
-            ) : (
-              <LoginPromptCard handleConnectClick={handleConnectClick} />
-            )
-          )}
-          
           {/* Fitness Plan tab - always accessible */}
-          {currentTab === 5 && <FitnessTab />}
+          {currentTab === 4 && <FitnessTab />}
           
           {/* Grocery Shop tab - always accessible */}
-          {currentTab === 6 && <GroceryTab />}
+          {currentTab === 5 && <GroceryTab />}
           
           {/* Trends tab - always accessible */}
-          {currentTab === 7 && <TrendsTab />}
+          {currentTab === 6 && <TrendsTab />}
           
           {/* Assistant tab - always accessible */}
-          {currentTab === 8 && <HealthAssistantTab />}
+          {currentTab === 7 && <HealthAssistantTab />}
         </motion.div>
       </Box>
       
