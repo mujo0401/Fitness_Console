@@ -2616,44 +2616,248 @@ const GroceryTab = () => {
   // Function to fetch real grocery data from external API
   const fetchRealGroceryData = async (searchQuery) => {
     try {
-      // This is where you would integrate with real grocery APIs
-      // For example, using Spoonacular API (would require API key):
-      // const apiKey = process.env.REACT_APP_SPOONACULAR_API_KEY;
-      // const response = await fetch(`https://api.spoonacular.com/food/products/search?query=${searchQuery}&apiKey=${apiKey}`);
-      
-      // For Edamam Food Database API:
-      // const appId = process.env.REACT_APP_EDAMAM_APP_ID;
-      // const appKey = process.env.REACT_APP_EDAMAM_APP_KEY;
-      // const response = await fetch(`https://api.edamam.com/api/food-database/v2/parser?ingr=${searchQuery}&app_id=${appId}&app_key=${appKey}`);
-      
-      // For demonstration, we'll just filter the mock data as if it came from an API
-      // In a real implementation, remove this and use the actual API call above
-      console.log(`Would fetch real grocery data for: ${searchQuery}`);
-      
-      // Simulating API response delay
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Filter mock data to simulate API response
-      const filtered = mockGroceryItems.filter(item => {
+      // First, look for any matches in our existing mock data
+      let filtered = mockGroceryItems.filter(item => {
         const itemNameLower = item.name.toLowerCase();
         const searchTermLower = searchQuery.toLowerCase();
         return itemNameLower.includes(searchTermLower);
       });
       
-      // Log to console what the real API integration would look like
-      console.log('API integration would return real product data including:');
-      console.log('- Accurate current pricing');
-      console.log('- Real-time inventory/availability');
-      console.log('- Store-specific information');
-      console.log('- Nutritional data from USDA or similar databases');
+      // If we find matches in our existing data, use those
+      if (filtered.length > 0) {
+        return filtered;
+      }
       
-      return filtered;
+      // If no matches found, generate dynamic grocery items for the search term
+      console.log(`Generating dynamic grocery data for: ${searchQuery}`);
+      
+      // Simulating API response delay
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Create a dynamic item based on the search query
+      // This simulates what would happen with a real API
+      const dynamicItems = generateDynamicGroceryItems(searchQuery);
+      
+      // Add these dynamically generated items to our existing items
+      // so they'll be available for future searches
+      setGroceryItems(prevItems => [...prevItems, ...dynamicItems]);
+      
+      return dynamicItems;
     } catch (error) {
       console.error('Error fetching grocery data:', error);
       return []; // Return empty array on error
     }
   };
   
+  // Function to generate dynamic grocery items based on search term
+  const generateDynamicGroceryItems = (searchQuery) => {
+    // Categories we can assign to new items
+    const categories = ['Produce', 'Protein', 'Dairy', 'Grains', 'Snacks', 'Beverages', 'Nuts & Seeds', 'Condiments', 'Baking', 'Canned Goods'];
+    
+    // Diet types we can assign
+    const dietTypes = ['Vegan', 'Vegetarian', 'Keto', 'Paleo', 'Gluten-Free', 'Low-Fat', 'High-Protein', 'Mediterranean', 'Whole30', 'Dairy-Free'];
+    
+    // Store sections
+    const storeSections = ['Produce', 'Meat', 'Dairy', 'Bakery', 'Dry Goods', 'Frozen', 'Canned Goods', 'Snacks', 'International', 'Health Foods'];
+    
+    // Generate a random price between $1.99 and $15.99
+    const randomPrice = (Math.random() * 14 + 1.99).toFixed(2);
+    
+    // Random units based on category
+    const units = ["lb", "oz", "each", "pack", "bunch", "qt", "gal", "dozen"];
+    const randomUnit = units[Math.floor(Math.random() * units.length)];
+    
+    // Capitalize the search term for item name
+    const capitalizedName = searchQuery
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+    
+    // Randomly assign a category that makes sense for the search term
+    // This is a simple approach; a real API would have more sophisticated categorization
+    let category = categories[Math.floor(Math.random() * categories.length)];
+    
+    // Try to make smarter category assignments based on keywords
+    const foodKeywords = {
+      fruit: ['apple', 'banana', 'berry', 'orange', 'grape', 'melon', 'pear', 'peach', 'plum', 'fruit'],
+      vegetable: ['broccoli', 'carrot', 'spinach', 'lettuce', 'tomato', 'potato', 'onion', 'pepper', 'vegetable'],
+      protein: ['chicken', 'beef', 'pork', 'fish', 'tofu', 'turkey', 'lamb', 'eggs', 'protein'],
+      dairy: ['milk', 'cheese', 'yogurt', 'butter', 'cream', 'dairy'],
+      grain: ['bread', 'rice', 'pasta', 'cereal', 'oat', 'quinoa', 'grain']
+    };
+    
+    // Try to determine a more appropriate category
+    const searchLower = searchQuery.toLowerCase();
+    for (const [key, keywords] of Object.entries(foodKeywords)) {
+      if (keywords.some(keyword => searchLower.includes(keyword))) {
+        // Map our internal categories to displayable categories
+        if (key === 'fruit' || key === 'vegetable') category = 'Produce';
+        else if (key === 'protein') category = 'Protein';
+        else if (key === 'dairy') category = 'Dairy';
+        else if (key === 'grain') category = 'Grains';
+        break;
+      }
+    }
+    
+    // Generate random nutrition facts that make sense for the category
+    let nutrition;
+    switch(category) {
+      case 'Produce':
+        nutrition = {
+          calories: Math.floor(Math.random() * 100) + 20,
+          protein: Math.floor(Math.random() * 3) + 1,
+          carbs: Math.floor(Math.random() * 20) + 5,
+          fat: Math.floor(Math.random() * 2) + 0.1,
+          fiber: Math.floor(Math.random() * 5) + 2
+        };
+        break;
+      case 'Protein':
+        nutrition = {
+          calories: Math.floor(Math.random() * 150) + 100,
+          protein: Math.floor(Math.random() * 25) + 15,
+          carbs: Math.floor(Math.random() * 5),
+          fat: Math.floor(Math.random() * 15) + 2,
+          fiber: 0
+        };
+        break;
+      case 'Dairy':
+        nutrition = {
+          calories: Math.floor(Math.random() * 120) + 60,
+          protein: Math.floor(Math.random() * 8) + 3,
+          carbs: Math.floor(Math.random() * 12) + 1,
+          fat: Math.floor(Math.random() * 10) + 2,
+          fiber: 0
+        };
+        break;
+      case 'Grains':
+        nutrition = {
+          calories: Math.floor(Math.random() * 150) + 100,
+          protein: Math.floor(Math.random() * 5) + 2,
+          carbs: Math.floor(Math.random() * 30) + 20,
+          fat: Math.floor(Math.random() * 3) + 0.5,
+          fiber: Math.floor(Math.random() * 5) + 1
+        };
+        break;
+      case 'Nuts & Seeds':
+        nutrition = {
+          calories: Math.floor(Math.random() * 100) + 150,
+          protein: Math.floor(Math.random() * 8) + 5,
+          carbs: Math.floor(Math.random() * 10) + 5,
+          fat: Math.floor(Math.random() * 15) + 8,
+          fiber: Math.floor(Math.random() * 5) + 2
+        };
+        break;
+      default:
+        nutrition = {
+          calories: Math.floor(Math.random() * 200) + 100,
+          protein: Math.floor(Math.random() * 10) + 1,
+          carbs: Math.floor(Math.random() * 25) + 5,
+          fat: Math.floor(Math.random() * 10) + 1,
+          fiber: Math.floor(Math.random() * 4) + 0
+        };
+    }
+    
+    // Generate between 2-4 random diet types that make sense for the category
+    const numDietTypes = Math.floor(Math.random() * 3) + 2;
+    const randomDietTypes = [];
+    
+    // Add diet types that might make sense based on category
+    if (category === 'Produce') {
+      randomDietTypes.push('Vegan', 'Vegetarian', 'Gluten-Free');
+    } else if (category === 'Protein' && !searchLower.includes('tofu')) {
+      randomDietTypes.push('Keto', 'Paleo', 'High-Protein');
+    } else if (category === 'Grains' && !searchLower.includes('wheat')) {
+      randomDietTypes.push('Vegetarian', 'Mediterranean');
+    }
+    
+    // Fill remaining diet type slots with random ones
+    while (randomDietTypes.length < numDietTypes) {
+      const randomDiet = dietTypes[Math.floor(Math.random() * dietTypes.length)];
+      if (!randomDietTypes.includes(randomDiet)) {
+        randomDietTypes.push(randomDiet);
+      }
+    }
+    
+    // Random store sections based on category
+    let relevantStoreSections;
+    switch(category) {
+      case 'Produce':
+        relevantStoreSections = ['Produce'];
+        break;
+      case 'Protein':
+        relevantStoreSections = ['Meat', 'Refrigerated', 'Frozen'];
+        break;
+      case 'Dairy':
+        relevantStoreSections = ['Dairy', 'Refrigerated'];
+        break;
+      case 'Grains':
+        relevantStoreSections = ['Dry Goods', 'Bakery', 'Baking'];
+        break;
+      default:
+        relevantStoreSections = storeSections;
+    }
+    
+    // Pick 1-2 store sections
+    const numSections = Math.floor(Math.random() * 2) + 1;
+    const productStoreSections = [];
+    for (let i = 0; i < numSections; i++) {
+      const randomIndex = Math.floor(Math.random() * relevantStoreSections.length);
+      const section = relevantStoreSections[randomIndex];
+      if (!productStoreSections.includes(section)) {
+        productStoreSections.push(section);
+      }
+    }
+    
+    // Generate store locations
+    const storeLocations = [
+      { 
+        store: "Whole Foods", 
+        aisle: `${Math.floor(Math.random() * 20) + 1}`, 
+        section: productStoreSections[0] 
+      },
+      { 
+        store: "Trader Joe's", 
+        aisle: `${Math.floor(Math.random() * 10) + 1}`, 
+        section: productStoreSections[0] 
+      }
+    ];
+    
+    // Generate a placeholder image based on category
+    // In a real implementation, this would be a real product image
+    const imagePlaceholders = {
+      'Produce': 'https://images.unsplash.com/photo-1610348725531-843dff563e2c',
+      'Protein': 'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f',
+      'Dairy': 'https://images.unsplash.com/photo-1628088062854-d1870b4553da',
+      'Grains': 'https://images.unsplash.com/photo-1586201375761-83865001e31c',
+      'Snacks': 'https://images.unsplash.com/photo-1621939514649-280e2ee25f60',
+      'Beverages': 'https://images.unsplash.com/photo-1550583724-b2692b85b150'
+    };
+    
+    const imageUrl = imagePlaceholders[category] || 'https://images.unsplash.com/photo-1604742763101-7cbec5bc45f1';
+    
+    // Generate a random ID that doesn't conflict with existing items
+    const newId = Math.max(...groceryItems.map(item => item.id), 0) + 1;
+    
+    // Create new dynamic item
+    const newItem = {
+      id: newId,
+      name: capitalizedName,
+      category: category,
+      price: parseFloat(randomPrice),
+      unit: randomUnit,
+      nutrition: nutrition,
+      dietTypes: randomDietTypes,
+      isOrganic: Math.random() > 0.5, // 50% chance of being organic
+      storeSections: productStoreSections,
+      storeLocations: storeLocations,
+      image: `${imageUrl}?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80`
+    };
+    
+    // Return as an array of one new item
+    // In a real API, this would be multiple matching items
+    return [newItem];
+  };
+
   // State for search loading indicators
   const [isSearching, setIsSearching] = useState(false);
   
@@ -2668,61 +2872,30 @@ const GroceryTab = () => {
         setIsSearching(true);
         
         try {
-          // In a real implementation, this would call an API with the search term
-          // and replace our mock data with real grocery data
+          // This will search existing items AND generate new ones if nothing is found
           const searchResults = await fetchRealGroceryData(searchTerm);
           
-          // If we got results from the "API", use those
+          // Always use the search results (they'll either be existing items
+          // or dynamically generated ones)
           if (searchResults && searchResults.length > 0) {
             items = searchResults;
           } else {
-            // Fallback to our local filtering if API returned no results
+            // Fallback if the search and generation failed
+            setIsSearching(false);
+            console.error('Search returned no results, even after item generation attempt');
+            
+            // Just do a basic filter on the existing items as a last resort
             const search = searchTerm.toLowerCase().trim();
             
             // Split search into words to handle multiple search terms
             const searchTerms = search.split(/\s+/).filter(term => term.length > 0);
             
             if (searchTerms.length > 0) {
-              items = items.filter(item => {
+              items = groceryItems.filter(item => {
                 // Check if any search term matches
                 return searchTerms.some(term => {
-                  const itemName = item.name.toLowerCase();
-                  const itemCategory = item.category.toLowerCase();
-                  const itemDietTypes = item.dietTypes.map(diet => diet.toLowerCase());
-                  const itemStoreSections = item.storeSections.map(section => section.toLowerCase());
-                  
-                  // Check name (including partial matches)
-                  if (itemName.includes(term)) return true;
-                  
-                  // Check category
-                  if (itemCategory.includes(term)) return true;
-                  
-                  // Check diet types
-                  if (itemDietTypes.some(diet => diet.includes(term))) return true;
-                  
-                  // Check store sections
-                  if (itemStoreSections.some(section => section.includes(term))) return true;
-                  
-                  // Additional check for common food keywords
-                  const commonFoodTerms = {
-                    "fruit": ["apple", "banana", "strawberry", "blueberry", "berries", "pear", "grape"],
-                    "vegetable": ["broccoli", "spinach", "lettuce", "carrot", "tomato", "potato", "onion"],
-                    "protein": ["chicken", "beef", "turkey", "fish", "salmon", "tofu", "eggs"],
-                    "grain": ["rice", "bread", "pasta", "quinoa", "oatmeal"],
-                    "dairy": ["milk", "cheese", "yogurt"]
-                  };
-                  
-                  // Check if search term is a food category and item belongs to that category
-                  for (const [category, foods] of Object.entries(commonFoodTerms)) {
-                    if (term.includes(category) && foods.some(food => itemName.includes(food))) {
-                      return true;
-                    }
-                    if (foods.includes(term) && itemName.includes(term)) {
-                      return true;
-                    }
-                  }
-                  
-                  return false;
+                  return item.name.toLowerCase().includes(term) || 
+                         item.category.toLowerCase().includes(term);
                 });
               });
             }
@@ -2839,8 +3012,163 @@ const GroceryTab = () => {
   };
   
   // Handle meal plan selection
-  const handleMealPlanSelect = (mealPlan) => {
-    setCurrentMealPlan(mealPlan);
+  const handleMealPlanSelect = async (mealPlan) => {
+    // Check if we need to generate fresh dynamic ingredients
+    const shouldRefreshPlan = !currentMealPlan || currentMealPlan.id !== mealPlan.id;
+    
+    if (shouldRefreshPlan) {
+      // Get a copy of the meal plan
+      const refreshedPlan = {...mealPlan};
+      
+      // Refresh some of the ingredients with dynamically generated ones
+      // This creates more variety each time a meal plan is selected
+      const refreshedIngredients = await refreshMealPlanIngredients(refreshedPlan.ingredients, refreshedPlan.dietType);
+      refreshedPlan.ingredients = refreshedIngredients;
+      
+      // Set the updated meal plan
+      setCurrentMealPlan(refreshedPlan);
+    } else {
+      // Just use the existing meal plan
+      setCurrentMealPlan(mealPlan);
+    }
+  };
+  
+  // Helper function to refresh some ingredients in a meal plan
+  const refreshMealPlanIngredients = async (ingredients, dietType) => {
+    // Copy the existing ingredients
+    const refreshedIngredients = [...ingredients];
+    
+    // Determine how many ingredients to refresh (30-50% of the ingredients)
+    const numToRefresh = Math.floor(Math.random() * (ingredients.length * 0.2) + (ingredients.length * 0.3));
+    
+    // Keep track of refreshed indexes to avoid duplicates
+    const refreshedIndexes = new Set();
+    
+    // Refresh random ingredients
+    for (let i = 0; i < numToRefresh; i++) {
+      // Pick a random ingredient to refresh
+      let randomIndex;
+      do {
+        randomIndex = Math.floor(Math.random() * ingredients.length);
+      } while (refreshedIndexes.has(randomIndex));
+      
+      refreshedIndexes.add(randomIndex);
+      
+      // Get the existing ingredient
+      const ingredient = ingredients[randomIndex];
+      
+      try {
+        // Get a new replacement ingredient that fits the diet type
+        // First try to find a replacement from existing grocery items
+        const category = getCategoryFromName(ingredient.name);
+        
+        // Create search terms based on category and diet type
+        const searchTerms = [];
+        
+        // Add category-based search terms
+        if (category === 'protein') {
+          if (dietType === 'Vegan') {
+            searchTerms.push('tofu', 'tempeh', 'seitan', 'lentils', 'beans');
+          } else if (dietType === 'Vegetarian') {
+            searchTerms.push('eggs', 'tofu', 'cheese', 'yogurt', 'cottage cheese');
+          } else if (dietType === 'Keto') {
+            searchTerms.push('beef', 'chicken', 'salmon', 'tuna', 'eggs');
+          } else {
+            searchTerms.push('chicken', 'fish', 'beef', 'pork', 'turkey');
+          }
+        } else if (category === 'vegetable') {
+          searchTerms.push('broccoli', 'spinach', 'kale', 'peppers', 'cauliflower', 'brussels sprouts', 'asparagus');
+        } else if (category === 'fruit') {
+          if (dietType === 'Keto') {
+            searchTerms.push('avocado', 'olives', 'berries');
+          } else {
+            searchTerms.push('apple', 'orange', 'berries', 'pear', 'banana', 'kiwi');
+          }
+        } else if (category === 'grain') {
+          if (dietType === 'Keto' || dietType === 'Paleo') {
+            searchTerms.push('coconut flour', 'almond flour');
+          } else if (dietType === 'Gluten-Free') {
+            searchTerms.push('quinoa', 'rice', 'gluten-free oats', 'buckwheat');
+          } else {
+            searchTerms.push('quinoa', 'rice', 'farro', 'oats', 'barley');
+          }
+        } else if (category === 'nuts') {
+          searchTerms.push('almonds', 'walnuts', 'cashews', 'pecans', 'pistachios');
+        } else if (category === 'dairy') {
+          if (dietType === 'Vegan') {
+            searchTerms.push('almond milk', 'oat milk', 'soy milk', 'coconut yogurt');
+          } else if (dietType === 'Paleo' || dietType === 'Dairy-Free') {
+            searchTerms.push('coconut milk', 'almond milk');
+          } else {
+            searchTerms.push('yogurt', 'milk', 'cheese', 'cottage cheese');
+          }
+        } else {
+          // For unknown categories, use generic search terms
+          searchTerms.push('food', 'healthy', 'organic');
+        }
+        
+        // Pick a random search term
+        const searchTerm = searchTerms[Math.floor(Math.random() * searchTerms.length)];
+        
+        // Try to find or generate a new item
+        let newItems = await fetchRealGroceryData(searchTerm);
+        
+        // If we found matching items, pick one
+        if (newItems && newItems.length > 0) {
+          // Pick a random item from the results
+          const newItem = newItems[Math.floor(Math.random() * newItems.length)];
+          
+          // Update the ingredient with the new item
+          refreshedIngredients[randomIndex] = {
+            itemId: newItem.id,
+            name: newItem.name,
+            quantity: ingredient.quantity, // Keep the same quantity
+            unit: newItem.unit
+          };
+        }
+      } catch (error) {
+        console.error('Error refreshing ingredient:', error);
+        // If there's an error, keep the original ingredient
+      }
+    }
+    
+    return refreshedIngredients;
+  };
+  
+  // Helper function to determine category from item name
+  const getCategoryFromName = (name) => {
+    const nameLower = name.toLowerCase();
+    
+    // Simple keyword matching for determining category
+    if (nameLower.includes('chicken') || nameLower.includes('beef') || 
+        nameLower.includes('fish') || nameLower.includes('salmon') ||
+        nameLower.includes('tofu') || nameLower.includes('turkey') ||
+        nameLower.includes('egg')) {
+      return 'protein';
+    } else if (nameLower.includes('rice') || nameLower.includes('quinoa') ||
+               nameLower.includes('bread') || nameLower.includes('pasta') ||
+               nameLower.includes('oat')) {
+      return 'grain';
+    } else if (nameLower.includes('milk') || nameLower.includes('yogurt') ||
+               nameLower.includes('cheese')) {
+      return 'dairy';
+    } else if (nameLower.includes('spinach') || nameLower.includes('broccoli') ||
+               nameLower.includes('kale') || nameLower.includes('carrot') ||
+               nameLower.includes('lettuce') || nameLower.includes('potato') ||
+               nameLower.includes('onion')) {
+      return 'vegetable';
+    } else if (nameLower.includes('apple') || nameLower.includes('banana') ||
+               nameLower.includes('berry') || nameLower.includes('berries') ||
+               nameLower.includes('orange') || nameLower.includes('pear') ||
+               nameLower.includes('avocado')) {
+      return 'fruit';
+    } else if (nameLower.includes('almond') || nameLower.includes('cashew') ||
+               nameLower.includes('walnut') || nameLower.includes('pecan') ||
+               nameLower.includes('nut') || nameLower.includes('seed')) {
+      return 'nuts';
+    } else {
+      return 'other';
+    }
   };
   
   // Function to get user's current location
