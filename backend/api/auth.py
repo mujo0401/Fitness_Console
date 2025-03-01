@@ -6,6 +6,7 @@ import base64
 import time
 import traceback
 import secrets
+import os
 from urllib.parse import urlencode
 
 bp = Blueprint('auth', __name__)
@@ -32,13 +33,21 @@ def get_oauth_session(state=None, token=None):
 def login():
     """Initiate the OAuth 2.0 authorization flow with Fitbit"""
     try:
+        # Enhanced debugging - check environment variables and render config
+        current_app.logger.info("===== DEBUGGING FITBIT AUTH ISSUES =====")
+        current_app.logger.info(f"Environment FITBIT_CLIENT_ID: {os.environ.get('FITBIT_CLIENT_ID', 'NOT SET')}")
+        current_app.logger.info(f"Environment FITBIT_REDIRECT_URI: {os.environ.get('FITBIT_REDIRECT_URI', 'NOT SET')}")
+        current_app.logger.info(f"Environment FRONTEND_URL: {os.environ.get('FRONTEND_URL', 'NOT SET')}")
+        
         # Check if we have client credentials configured
         client_id = current_app.config.get('FITBIT_CLIENT_ID')
         client_secret = current_app.config.get('FITBIT_CLIENT_SECRET')
         
         # Add detailed debug logs
-        current_app.logger.info(f"Client ID: {client_id}")
-        current_app.logger.info(f"Client Secret: {'[REDACTED]' if client_secret else 'None'}")
+        current_app.logger.info(f"Config Client ID: {client_id}")
+        current_app.logger.info(f"Config Client Secret: {'[REDACTED]' if client_secret else 'None'}")
+        current_app.logger.info(f"Config FRONTEND_URL: {current_app.config.get('FRONTEND_URL')}")
+        current_app.logger.info(f"Config FITBIT_REDIRECT_URI: {current_app.config.get('FITBIT_REDIRECT_URI')}")
         
         if not client_id or not client_secret:
             current_app.logger.error("Missing Fitbit client credentials")
@@ -90,12 +99,28 @@ def callback():
     # Get authorization code from request
     code = request.args.get('code')
     state = request.args.get('state')
+    error = request.args.get('error')
+    error_description = request.args.get('error_description')
+    
+    # Extended debug for callback parameters
+    current_app.logger.info("===== FITBIT CALLBACK DEBUG =====")
+    current_app.logger.info(f"Full callback URL: {request.url}")
+    current_app.logger.info(f"Callback args: {request.args}")
+    current_app.logger.info(f"Error: {error}")
+    current_app.logger.info(f"Error description: {error_description}")
+    
+    # Check for error from Fitbit
+    if error:
+        current_app.logger.error(f"Fitbit returned an error: {error} - {error_description}")
+        frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:3000')
+        return redirect(f"{frontend_url}?auth=error&error={error}&error_description={error_description}")
     
     # Enhanced session debugging
     current_app.logger.info(f"Callback received - code: {'[REDACTED]' if code else 'None'}, state: {state}")
     current_app.logger.info(f"Session state: {session.get('oauth_state')}")
     current_app.logger.info(f"Session ID: {session.sid if hasattr(session, 'sid') else 'N/A'}")
     current_app.logger.info(f"Session contents at start of callback: {dict(session)}")
+    current_app.logger.info(f"Config FITBIT_REDIRECT_URI: {current_app.config.get('FITBIT_REDIRECT_URI')}")
     
     # State validation is temporarily commented out as it's causing problems
     # session_state = session.get('oauth_state')
@@ -114,6 +139,12 @@ def callback():
         client_secret = current_app.config['FITBIT_CLIENT_SECRET']
         redirect_uri = current_app.config['FITBIT_REDIRECT_URI']
         
+        # Log detailed configuration for debugging
+        current_app.logger.info("===== TOKEN EXCHANGE DEBUG =====")
+        current_app.logger.info(f"Token URL: {token_url}")
+        current_app.logger.info(f"Client ID: {client_id}")
+        current_app.logger.info(f"Redirect URI: {redirect_uri}")
+        
         # Create basic auth header
         auth_header = base64.b64encode(
             f"{client_id}:{client_secret}".encode()
@@ -131,10 +162,19 @@ def callback():
         }
         
         current_app.logger.info(f"Exchanging code for token at {token_url}")
-        current_app.logger.info(f"Redirect URI for exchange: {redirect_uri}")
+        current_app.logger.info(f"Request data: {data}")
+        current_app.logger.info(f"Request headers: {headers}")
         
         # Add timeout to prevent hanging requests
-        response = requests.post(token_url, headers=headers, data=data, timeout=10)
+        try:
+            response = requests.post(token_url, headers=headers, data=data, timeout=10)
+            current_app.logger.info(f"Response status code: {response.status_code}")
+            current_app.logger.info(f"Response headers: {response.headers}")
+            if response.status_code != 200:
+                current_app.logger.error(f"Response text: {response.text}")
+        except Exception as e:
+            current_app.logger.error(f"Exception during token request: {str(e)}")
+            raise
         
         current_app.logger.info(f"Token response status: {response.status_code}")
         
