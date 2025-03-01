@@ -19,7 +19,7 @@ logging.basicConfig(
 )
 
 # Initialize Flask app
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 app.config.from_object(Config)
 
 # Configure session
@@ -51,14 +51,14 @@ apply_session_fix(app)
 # Enable CORS with specific configurations
 CORS(app, 
      supports_credentials=True, 
-     origins=["http://localhost:3000"],
+     origins=[app.config['FRONTEND_URL']],
      allow_headers=["Content-Type", "Authorization"],
      methods=["GET", "POST", "OPTIONS"])
 
 # Add CORS headers to all responses
 @app.after_request
 def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+    response.headers.add('Access-Control-Allow-Origin', app.config['FRONTEND_URL'])
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS,PUT,DELETE')
     response.headers.add('Access-Control-Allow-Credentials', 'true')
@@ -98,6 +98,9 @@ def test():
         'message': 'API is working correctly'
     })
 
+# Define static folder for serving frontend files
+app.static_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+
 # Serve frontend in production
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
@@ -113,5 +116,5 @@ if __name__ == '__main__':
     app.logger.info(f"FITBIT_REDIRECT_URI: {app.config['FITBIT_REDIRECT_URI']}")
     app.logger.info(f"APPLE_FITNESS_CLIENT_ID: {app.config['APPLE_FITNESS_CLIENT_ID']}")
     app.logger.info(f"APPLE_FITNESS_REDIRECT_URI: {app.config['APPLE_FITNESS_REDIRECT_URI']}")
-    app.logger.info(f"CORS configured to allow origin: http://localhost:3000")
+    app.logger.info(f"CORS configured to allow origin: {app.config['FRONTEND_URL']}")
     app.run(host='0.0.0.0', port=5000, debug=True)

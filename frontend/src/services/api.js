@@ -15,7 +15,11 @@ const debounce = (func, wait) => {
 };
 
 // API base URL - pointing to the backend server
-const API_BASE_URL = 'http://localhost:5000/api';
+// In production, API requests go to the same domain (no need to specify a different domain)
+// In development, we need to point to the separate backend server
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? '/api'  // In production, API is on the same domain
+  : 'http://localhost:5000/api'; // In development, API is on a different port
 
 // Create axios instance with defaults
 const apiClient = axios.create({
