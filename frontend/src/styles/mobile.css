@@ -1,0 +1,81 @@
+/* Mobile-specific styles */
+
+@media (max-width: 600px) {
+  /* Global styles */
+  body {
+    font-size: 14px;
+  }
+
+  /* Smaller container padding */
+  .MuiContainer-root {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    padding-top: 16px !important;
+    padding-bottom: 16px !important;
+  }
+
+  /* Smaller tabs */
+  .MuiTab-root {
+    min-width: auto !important;
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+  }
+
+  /* Smaller icons */
+  .MuiTab-root .MuiSvgIcon-root {
+    font-size: 18px !important;
+    margin-right: 4px !important;
+  }
+
+  /* Adjust cards and papers */
+  .MuiCard-root, .MuiPaper-root {
+    padding: 12px !important;
+  }
+
+  /* Fix tab scrolling */
+  .MuiTabs-scrollButtons {
+    display: flex !important;
+  }
+  
+  /* Smaller buttons */
+  .MuiButton-root {
+    padding: 6px 12px !important;
+    font-size: 13px !important;
+  }
+
+  /* Stacked layouts for forms */
+  .MuiGrid-container {
+    flex-direction: column !important;
+  }
+
+  /* Adjust typography */
+  .MuiTypography-h4 {
+    font-size: 1.5rem !important;
+  }
+
+  .MuiTypography-h5 {
+    font-size: 1.2rem !important;
+  }
+
+  .MuiTypography-h6 {
+    font-size: 1.1rem !important;
+  }
+
+  /* Fix bottom spacing */
+  .dashboard-header {
+    margin-bottom: 16px !important;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 601px) and (max-width: 960px) {
+  .MuiContainer-root {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+  
+  .MuiTab-root {
+    min-width: 100px !important;
+    padding: 6px 12px !important;
+  }
+}
