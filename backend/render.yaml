@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: fitbit-dashboard
+    env: python
+    buildCommand: pip install -r requirements.txt && cd frontend && npm ci && npm run build && cd .. && mkdir -p backend/static && cp -r frontend/build/* backend/static/
+    startCommand: gunicorn backend.app:app
+    healthCheckPath: /api/status
+    envVars:
+      - key: FLASK_DEBUG
+        value: "False"
+      - key: FLASK_SECRET_KEY
+        sync: false
+      - key: FITBIT_CLIENT_ID
+        sync: false
+      - key: FITBIT_CLIENT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        value: "https://fitbit-dashboard.onrender.com"

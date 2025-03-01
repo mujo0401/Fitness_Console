@@ -1,0 +1,13 @@
+Flask==2.3.3
+Flask-Cors==4.0.0
+Flask-Session==0.5.0
+requests==2.31.0
+python-dotenv==1.0.0
+oauthlib==3.2.2
+requests-oauthlib==1.3.1
+Flask-RESTful==0.3.10
+cryptography==41.0.3
+PyJWT==2.8.0gunicorn==21.2.0
+pytest==7.4.2
+pytest-cov==4.1.0
+flake8==6.1.0
