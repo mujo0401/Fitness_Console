@@ -64,7 +64,7 @@ const Dashboard = () => {
     const authStatus = urlParams.get('auth');
     
     if (authStatus === 'success') {
-      setAlertMessage('Successfully connected to Fitbit\!');
+      setAlertMessage('Successfully connected to Fitbit!');
       setAlertSeverity('success');
       setAlertOpen(true);
       
@@ -128,7 +128,7 @@ const Dashboard = () => {
   };
 
   const handleRefreshAuth = () => {
-    setManualAuthCheck(prev => \!prev);
+    setManualAuthCheck(prev => !prev);
     checkAuthStatus();
     setAlertMessage('Manually refreshed authentication status');
     setAlertSeverity('info');
@@ -300,7 +300,7 @@ const Dashboard = () => {
                 label="Heart Rate" 
                 icon={<FavoriteIcon />} 
                 iconPosition="start" 
-                disabled={\!isAuthenticated}
+                disabled={!isAuthenticated}
                 sx={{
                   minHeight: 60,
                   borderRadius: '10px 10px 0 0',
@@ -323,7 +323,7 @@ const Dashboard = () => {
                 label="Activity" 
                 icon={<DirectionsRunIcon />} 
                 iconPosition="start" 
-                disabled={\!isAuthenticated}
+                disabled={!isAuthenticated}
                 sx={{
                   minHeight: 60,
                   borderRadius: '10px 10px 0 0',
@@ -346,7 +346,7 @@ const Dashboard = () => {
                 label="Sleep" 
                 icon={<BedtimeIcon />} 
                 iconPosition="start" 
-                disabled={\!isAuthenticated}
+                disabled={!isAuthenticated}
                 sx={{
                   minHeight: 60,
                   borderRadius: '10px 10px 0 0',
@@ -369,7 +369,7 @@ const Dashboard = () => {
                 label="ABM" 
                 icon={<PersonOutlineIcon />} 
                 iconPosition="start" 
-                disabled={\!isAuthenticated}
+                disabled={!isAuthenticated}
                 sx={{
                   minHeight: 60,
                   borderRadius: '10px 10px 0 0',
