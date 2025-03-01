@@ -3,7 +3,7 @@ services:
     name: fitness-console
     env: python
     buildCommand: pip install -r requirements.txt && cd frontend && export NODE_VERSION=18 && npm ci && npm run build && cd .. && mkdir -p backend/static && cp -r frontend/build/* backend/static/
-    startCommand: gunicorn backend.app:app
+    startCommand: cd backend && gunicorn app:app
     healthCheckPath: /api/status
     envVars:
       - key: FLASK_DEBUG
