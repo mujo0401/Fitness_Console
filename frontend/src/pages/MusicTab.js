@@ -301,6 +301,18 @@ const MusicTab = () => {
   
   // Initialize YouTube iframe API
   useEffect(() => {
+    // Define YT globally if it doesn't exist yet
+    if (!window.YT) {
+      window.YT = {
+        PlayerState: {
+          ENDED: 0,
+          PLAYING: 1,
+          PAUSED: 2,
+          BUFFERING: 3
+        }
+      };
+    }
+    
     // Load YouTube iframe API
     const tag = document.createElement('script');
     tag.src = 'https://www.youtube.com/iframe_api';
@@ -370,13 +382,13 @@ const MusicTab = () => {
   
   // Initialize YouTube player
   const initializeYouTubePlayer = () => {
-    if (typeof YT === 'undefined' || !YT.Player) {
+    if (typeof window.YT === 'undefined' || !window.YT.Player) {
       // If YT is not yet loaded, try again in 100ms
       setTimeout(initializeYouTubePlayer, 100);
       return;
     }
     
-    playerRef.current = new YT.Player('youtube-player', {
+    playerRef.current = new window.YT.Player('youtube-player', {
       height: '0',
       width: '0',
       playerVars: {
@@ -403,9 +415,9 @@ const MusicTab = () => {
   
   const onPlayerStateChange = (event) => {
     // 0 = ended, 1 = playing, 2 = paused, 3 = buffering
-    if (event.data === YT.PlayerState.ENDED) {
+    if (event.data === window.YT.PlayerState.ENDED) {
       handleSongEnd();
-    } else if (event.data === YT.PlayerState.PLAYING) {
+    } else if (event.data === window.YT.PlayerState.PLAYING) {
       setIsPlaying(true);
       
       // Start tracking progress
@@ -419,7 +431,7 @@ const MusicTab = () => {
           setCurrentTime(currentTime);
         }
       }, 1000);
-    } else if (event.data === YT.PlayerState.PAUSED) {
+    } else if (event.data === window.YT.PlayerState.PAUSED) {
       setIsPlaying(false);
       if (progressInterval.current) {
         clearInterval(progressInterval.current);
