@@ -6568,7 +6568,7 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
                   });
                   
                   // Add all items to cart
-                  addToCart(cartItems);
+                  cartItems.forEach(item => handleAddToCart(item, item.quantity || 1));
                   
                   // Optionally switch to the cart tab
                   setActiveTab(1);
