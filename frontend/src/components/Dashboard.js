@@ -30,6 +30,7 @@ import ChatIcon from '@mui/icons-material/Chat';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import HeadsetMicIcon from '@mui/icons-material/HeadsetMic';
+import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import { useAuth } from '../context/AuthContext';
 import ApiTester from './ApiTester'; 
 import HeartTab from '../pages/HeartTab'; 
@@ -41,6 +42,7 @@ import GroceryTab from '../pages/GroceryTab';
 import HealthAssistantTab from '../pages/HealthAssistantTab';
 import ABMTab from '../pages/ABMTab';
 import ExerciseCoach from './ExerciseCoach';
+import MusicTab from '../pages/MusicTab';
 
 import '../styles/Dashboard.css';
 
@@ -58,7 +60,7 @@ const Dashboard = () => {
   
   // Auto-redirect to Fitness Plan tab if not authenticated and on a protected tab
   useEffect(() => {
-    if (!isAuthenticated && [0, 1, 2, 3, 7].includes(currentTab)) {
+    if (!isAuthenticated && [0, 1, 2, 3, 8].includes(currentTab)) {
       // Redirect to Fitness Plan tab (index 4) if user tries to access protected tabs
       setCurrentTab(4);
     }
@@ -151,7 +153,7 @@ const Dashboard = () => {
 
   const handleTabChange = (event, newValue) => {
     // Only allow changing to protected tabs if authenticated
-    if (!isAuthenticated && [0, 1, 2, 3, 7].includes(newValue)) {
+    if (!isAuthenticated && [0, 1, 2, 3, 8].includes(newValue)) {
       // If not authenticated and trying to access protected tab, redirect to Fitness Plan tab
       setCurrentTab(4);
     } else {
@@ -416,6 +418,25 @@ const Dashboard = () => {
                 }}
               />
               <Tab 
+                label="Music" 
+                icon={<MusicNoteIcon />} 
+                iconPosition="start" 
+                sx={{
+                  minHeight: 60,
+                  borderRadius: '10px 10px 0 0',
+                  fontWeight: 600,
+                  transition: 'all 0.2s ease',
+                  '&.Mui-selected': {
+                    color: '#9c27b0',
+                    fontWeight: 700,
+                  },
+                  '&:hover': {
+                    bgcolor: 'rgba(156, 39, 176, 0.04)',
+                    color: '#9c27b0'
+                  }
+                }}
+              />
+              <Tab 
                 label="Grocery Shop" 
                 icon={<ShoppingCartIcon />} 
                 iconPosition="start" 
@@ -531,11 +552,14 @@ const Dashboard = () => {
           {/* Exercise Coach tab - always accessible but better with auth */}
           {currentTab === 5 && <ExerciseCoach />}
           
+          {/* Music tab - always accessible */}
+          {currentTab === 6 && <MusicTab />}
+          
           {/* Grocery Shop tab - always accessible */}
-          {currentTab === 6 && <GroceryTab />}
+          {currentTab === 7 && <GroceryTab />}
           
           {/* Trends tab - needs auth */}
-          {currentTab === 7 && (
+          {currentTab === 8 && (
             isAuthenticated ? (
               <TrendsTab />
             ) : (
@@ -544,7 +568,7 @@ const Dashboard = () => {
           )}
           
           {/* Assistant tab - always accessible */}
-          {currentTab === 8 && <HealthAssistantTab />}
+          {currentTab === 9 && <HealthAssistantTab />}
         </motion.div>
       </Box>
       
