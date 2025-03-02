@@ -32,6 +32,7 @@ import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import TimerIcon from '@mui/icons-material/Timer';
 import SpeedIcon from '@mui/icons-material/Speed';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
+import InfoIcon from '@mui/icons-material/Info';
 
 import { heartRateService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -43,37 +44,153 @@ const HR_ZONES = [
     min: 0, 
     max: 60, 
     color: '#3f51b5',
-    description: 'Resting heart rate - your heart at complete rest'
+    description: 'Resting heart rate - your heart at complete rest',
+    benefits: 'Recovery and relaxation',
+    calorieBurn: 'Low',
+    fatBurn: 'Low',
+    endurance: 'Minimal',
+    performance: 'Maintenance',
+    sustainableFor: 'Hours to all day'
   },
   { 
     name: 'Fat Burn', 
     min: 60, 
     max: 70, 
     color: '#2196f3',
-    description: 'Low intensity exercise, optimal for fat burning'
+    description: 'Low intensity exercise, optimal for fat burning',
+    benefits: 'Improved fat metabolism, base endurance building',
+    calorieBurn: 'Moderate',
+    fatBurn: 'Optimal',
+    endurance: 'Improving',
+    performance: 'Building base',
+    sustainableFor: '1-3 hours'
   },
   { 
     name: 'Cardio', 
     min: 70, 
     max: 85, 
     color: '#009688',
-    description: 'Medium-high intensity, improves cardiovascular fitness'
+    description: 'Medium-high intensity, improves cardiovascular fitness',
+    benefits: 'Improved heart and lung capacity, endurance',
+    calorieBurn: 'High',
+    fatBurn: 'Moderate',
+    endurance: 'Optimal training',
+    performance: 'Building',
+    sustainableFor: '30-60 minutes'
   },
   { 
     name: 'Peak', 
     min: 85, 
     max: 100, 
     color: '#ff9800',
-    description: 'High intensity exercise, increases performance and speed'
+    description: 'High intensity exercise, increases performance and speed',
+    benefits: 'Improved VO2 max, lactate threshold, and speed',
+    calorieBurn: 'Very high',
+    fatBurn: 'Low',
+    endurance: 'High impact',
+    performance: 'Optimal training',
+    sustainableFor: '5-20 minutes'
   },
   { 
     name: 'Extreme', 
     min: 100, 
     max: 220, 
     color: '#f44336',
-    description: 'Maximum effort, short-duration exercise'
+    description: 'Maximum effort, short-duration exercise',
+    benefits: 'Anaerobic capacity, power, sprint performance',
+    calorieBurn: 'Extremely high',
+    fatBurn: 'Minimal',
+    endurance: 'Sprint capacity',
+    performance: 'Peak/specialized training',
+    sustainableFor: 'Seconds to 2-3 minutes'
   }
 ];
+
+// Workout types with specific heart rate guidance
+const WORKOUT_TYPES = {
+  running: {
+    name: 'Running',
+    icon: DirectionsRunIcon,
+    recommendedZones: ['Fat Burn', 'Cardio', 'Peak'],
+    intervalStructure: {
+      warmup: { zone: 'Fat Burn', duration: 5 }, // minutes
+      main: { zone: 'Cardio', duration: 20 },
+      intervals: { high: 'Peak', low: 'Fat Burn', highDuration: 1, lowDuration: 2, sets: 5 },
+      cooldown: { zone: 'Rest', duration: 5 }
+    },
+    tips: [
+      "Land midfoot, not on your heel or toe",
+      "Keep your head up and back straight",
+      "Swing your arms forward and back, not across your body",
+      "Take shorter, quicker steps rather than long strides"
+    ]
+  },
+  cycling: {
+    name: 'Cycling',
+    icon: DirectionsRunIcon,
+    recommendedZones: ['Fat Burn', 'Cardio'],
+    intervalStructure: {
+      warmup: { zone: 'Fat Burn', duration: 5 },
+      main: { zone: 'Cardio', duration: 25 },
+      intervals: { high: 'Peak', low: 'Fat Burn', highDuration: 2, lowDuration: 3, sets: 4 },
+      cooldown: { zone: 'Rest', duration: 5 }
+    },
+    tips: [
+      "Maintain a cadence of 80-90 RPM for efficiency",
+      "Keep your shoulders relaxed and elbows slightly bent",
+      "Engage your core for stability",
+      "Position your knee over the ball of your foot at the bottom of the pedal stroke"
+    ]
+  },
+  hiit: {
+    name: 'HIIT Training',
+    icon: DirectionsRunIcon,
+    recommendedZones: ['Cardio', 'Peak'],
+    intervalStructure: {
+      warmup: { zone: 'Fat Burn', duration: 5 },
+      intervals: { high: 'Peak', low: 'Fat Burn', highDuration: 0.5, lowDuration: 1.5, sets: 10 },
+      cooldown: { zone: 'Rest', duration: 5 }
+    },
+    tips: [
+      "Push to maximum effort during high intervals",
+      "Focus on proper form even when fatigued",
+      "Breathe rhythmically through intense intervals",
+      "Allow full recovery during rest periods"
+    ]
+  },
+  strength: {
+    name: 'Strength Training',
+    icon: DirectionsRunIcon,
+    recommendedZones: ['Fat Burn', 'Cardio'],
+    intervalStructure: {
+      warmup: { zone: 'Fat Burn', duration: 5 },
+      main: { zone: 'Cardio', duration: 30 },
+      cooldown: { zone: 'Rest', duration: 5 }
+    },
+    tips: [
+      "Maintain a consistent breathing pattern, exhaling during exertion",
+      "Focus on controlled movements, not speed",
+      "Ensure proper form before increasing weight",
+      "Allow specific muscle groups to recover between sets"
+    ]
+  },
+  cardio: {
+    name: 'Cardio Workout',
+    icon: DirectionsRunIcon,
+    recommendedZones: ['Cardio'],
+    intervalStructure: {
+      warmup: { zone: 'Fat Burn', duration: 5 },
+      main: { zone: 'Cardio', duration: 30 },
+      cooldown: { zone: 'Fat Burn', duration: 5 }
+    },
+    tips: [
+      "Maintain steady, controlled breathing throughout",
+      "Find a sustainable rhythm you can maintain",
+      "Stay hydrated throughout your session",
+      "Gradually increase intensity as you build endurance"
+    ]
+  }
+};
 
 // Get heart rate zone based on percentage of max heart rate
 const getHeartRateZone = (value) => {
@@ -183,6 +300,13 @@ const ExerciseCoach = () => {
   const [hrHistory, setHrHistory] = useState([]);
   const [maxHR, setMaxHR] = useState(0);
   const [caloriesBurned, setCaloriesBurned] = useState(0);
+  
+  // Advanced workout features
+  const [workoutPhase, setWorkoutPhase] = useState('warmup'); // warmup, main, interval, cooldown
+  const [intervalMode, setIntervalMode] = useState(false);
+  const [currentIntervalNumber, setCurrentIntervalNumber] = useState(0);
+  const [intervalTimeRemaining, setIntervalTimeRemaining] = useState(0);
+  const [guidedWorkoutEnabled, setGuidedWorkoutEnabled] = useState(true);
   
   // Use refs for interval IDs
   const timerInterval = useRef(null);
@@ -324,12 +448,40 @@ const ExerciseCoach = () => {
     setMaxHR(0);
     setCaloriesBurned(0);
     setReachedMilestones({});
+    setWorkoutPhase('warmup');
+    setCurrentIntervalNumber(0);
+    
+    // Initialize guided workout if enabled
+    if (guidedWorkoutEnabled && WORKOUT_TYPES[exerciseType]) {
+      const workoutPlan = WORKOUT_TYPES[exerciseType];
+      
+      // Announce workout plan
+      if (feedbackEnabled) {
+        setTimeout(() => {
+          speakFeedback(`Starting a ${workoutPlan.name} workout. We'll begin with a ${workoutPlan.intervalStructure.warmup.duration} minute warm up.`);
+        }, 3000);
+      }
+      
+      // If workout has intervals, announce them
+      if (workoutPlan.intervalStructure.intervals) {
+        const { intervals } = workoutPlan.intervalStructure;
+        setTimeout(() => {
+          speakFeedback(`This workout includes ${intervals.sets} intervals, alternating between ${intervals.highDuration} minutes at ${intervals.high} intensity and ${intervals.lowDuration} minutes of ${intervals.low} intensity recovery.`);
+        }, 10000);
+      }
+    }
     
     // Start timer
     timerInterval.current = setInterval(() => {
       setElapsedTime(prev => {
         const newTime = prev + 1;
         checkTimeMilestones(newTime);
+        
+        // Update workout phase based on elapsed time if guided workout is enabled
+        if (guidedWorkoutEnabled && WORKOUT_TYPES[exerciseType]) {
+          updateWorkoutPhase(newTime);
+        }
+        
         return newTime;
       });
     }, 1000);
@@ -343,7 +495,45 @@ const ExerciseCoach = () => {
       heartRateInterval.current = setInterval(() => {
         // Make mock heart rate gradually increase and then plateau
         const timeModifier = Math.min(1, elapsedTime / 300); // Ramp up over 5 minutes
-        const baseRate = 60 + (timeModifier * 50); // Base rate between 60-110
+        
+        // For guided workouts, adjust the heart rate based on current phase
+        let baseRate = 60 + (timeModifier * 50); // Default: Base rate between 60-110
+        
+        if (guidedWorkoutEnabled && WORKOUT_TYPES[exerciseType]) {
+          const workoutPlan = WORKOUT_TYPES[exerciseType];
+          
+          // Adjust heart rate based on workout phase
+          switch (workoutPhase) {
+            case 'warmup':
+              // Gradually increasing heart rate during warmup
+              baseRate = 70 + (timeModifier * 20);
+              break;
+            case 'main':
+              // Steady cardio heart rate during main phase
+              baseRate = 100 + (Math.random() * 10);
+              break;
+            case 'interval':
+              // Oscillating heart rate during intervals
+              const intervalInfo = workoutPlan.intervalStructure.intervals;
+              const totalIntervalTime = (intervalInfo.highDuration + intervalInfo.lowDuration) * 60;
+              const currentIntervalTime = intervalTimeRemaining % totalIntervalTime;
+              const isHighIntensity = currentIntervalTime < intervalInfo.highDuration * 60;
+              
+              if (isHighIntensity) {
+                // High intensity part of interval
+                baseRate = 140 + (Math.random() * 20);
+              } else {
+                // Recovery part of interval
+                baseRate = 90 + (Math.random() * 10);
+              }
+              break;
+            case 'cooldown':
+              // Gradually decreasing heart rate during cooldown
+              baseRate = 100 - (timeModifier * 30);
+              break;
+          }
+        }
+        
         const variance = 5;
         const mockRate = generateMockHeartRate(baseRate, variance);
         
@@ -353,6 +543,84 @@ const ExerciseCoach = () => {
     
     // Initial voice feedback
     speakFeedback("Exercise session started. Let's get moving!");
+  };
+  
+  // Update workout phase based on elapsed time
+  const updateWorkoutPhase = (elapsedSeconds) => {
+    if (!WORKOUT_TYPES[exerciseType]) return;
+    
+    const plan = WORKOUT_TYPES[exerciseType].intervalStructure;
+    const elapsedMinutes = elapsedSeconds / 60;
+    
+    // Calculate phase transition times
+    const warmupEnd = plan.warmup.duration;
+    const mainEnd = plan.main ? warmupEnd + plan.main.duration : warmupEnd;
+    const intervalEnd = plan.intervals ? mainEnd + (plan.intervals.sets * (plan.intervals.highDuration + plan.intervals.lowDuration)) : mainEnd;
+    
+    // Update workout phase
+    let newPhase = workoutPhase;
+    
+    if (elapsedMinutes < warmupEnd) {
+      newPhase = 'warmup';
+    } else if (!plan.intervals && plan.main && elapsedMinutes < mainEnd) {
+      newPhase = 'main';
+    } else if (plan.intervals && elapsedMinutes < intervalEnd) {
+      newPhase = 'interval';
+      
+      // Calculate current interval and time remaining
+      const intervalElapsedMinutes = elapsedMinutes - warmupEnd;
+      const intervalDuration = plan.intervals.highDuration + plan.intervals.lowDuration;
+      const currentInterval = Math.floor(intervalElapsedMinutes / intervalDuration) + 1;
+      const timeInCurrentInterval = (intervalElapsedMinutes % intervalDuration) * 60;
+      const remainingInInterval = (intervalDuration * 60) - timeInCurrentInterval;
+      
+      // Update interval state if changed
+      if (currentInterval !== currentIntervalNumber) {
+        setCurrentIntervalNumber(currentInterval);
+        
+        // Announce new interval
+        if (feedbackEnabled && currentInterval <= plan.intervals.sets) {
+          speakFeedback(`Starting interval ${currentInterval} of ${plan.intervals.sets}.`);
+        }
+      }
+      
+      // Update interval time remaining
+      setIntervalTimeRemaining(remainingInInterval);
+      
+      // Check if we're in high or low part of the interval
+      const isHighIntensity = timeInCurrentInterval < (plan.intervals.highDuration * 60);
+      
+      // Provide audio cues for interval transitions
+      if (feedbackEnabled && timeInCurrentInterval < 2 && currentInterval <= plan.intervals.sets) {
+        if (isHighIntensity) {
+          speakFeedback(`Push hard for ${plan.intervals.highDuration} minutes!`);
+        } else {
+          speakFeedback(`Recovery for ${plan.intervals.lowDuration} minutes.`);
+        }
+      }
+    } else {
+      newPhase = 'cooldown';
+    }
+    
+    // If phase changed, update state and provide feedback
+    if (newPhase !== workoutPhase) {
+      setWorkoutPhase(newPhase);
+      
+      // Provide audio feedback on phase change
+      if (feedbackEnabled) {
+        switch (newPhase) {
+          case 'main':
+            speakFeedback(`Warm up complete. Moving into the main workout phase.`);
+            break;
+          case 'interval':
+            speakFeedback(`Beginning interval training. Get ready for your first high intensity interval!`);
+            break;
+          case 'cooldown':
+            speakFeedback(`Great work! Starting your ${plan.cooldown.duration} minute cooldown.`);
+            break;
+        }
+      }
+    }
   };
   
   // Pause or resume exercise session
@@ -411,13 +679,82 @@ const ExerciseCoach = () => {
     }
   };
   
+  // Advanced heart rate analysis
+  const analyzeHeartRateRecovery = () => {
+    if (hrHistory.length < 60) return null; // Need at least 60 seconds of data
+    
+    // Look at the last 60 seconds
+    const recentData = hrHistory.slice(-60);
+    const maxInPeriod = Math.max(...recentData.map(item => item.value));
+    const minInPeriod = Math.min(...recentData.map(item => item.value));
+    const recovery = maxInPeriod - minInPeriod;
+    
+    // Check if there's significant recovery after a peak
+    const peakIndex = recentData.findIndex(item => item.value === maxInPeriod);
+    if (peakIndex > 10 && peakIndex < recentData.length - 10) {
+      const postPeakMin = Math.min(...recentData.slice(peakIndex).map(item => item.value));
+      const dropAfterPeak = maxInPeriod - postPeakMin;
+      
+      if (dropAfterPeak > 15) {
+        return {
+          recovery: dropAfterPeak,
+          message: `Good recovery! Your heart rate dropped by ${dropAfterPeak} BPM after that intense effort.`
+        };
+      }
+    }
+    
+    return null;
+  };
+  
+  // Analyze training effect based on heart rate data
+  const analyzeTrainingEffect = () => {
+    if (hrHistory.length < 120) return null; // Need at least 2 minutes of data
+    
+    // Calculate time spent in each zone
+    let cardioMinutes = 0;
+    let peakMinutes = 0;
+    
+    // Count seconds in each zone
+    hrHistory.forEach(item => {
+      const hrPercent = (item.value / estimatedMaxHeartRate) * 100;
+      if (hrPercent >= 70 && hrPercent < 85) cardioMinutes += 1/60;
+      if (hrPercent >= 85) peakMinutes += 1/60;
+    });
+    
+    // Determine training effect
+    if (peakMinutes > 5) {
+      return "This workout is providing excellent high-intensity interval training effect, improving your VO2 max and anaerobic capacity.";
+    } else if (cardioMinutes > 10) {
+      return "You're getting a good cardio workout, improving your aerobic base and endurance.";
+    } else if (elapsedTime > 300) { // 5+ minutes
+      return "You're maintaining a steady pace that's building basic endurance.";
+    }
+    
+    return null;
+  };
+  
+  // Check hydration needs based on duration and intensity
+  const checkHydration = () => {
+    // Every 10 minutes, provide hydration reminder
+    if (elapsedTime % 600 === 0 && elapsedTime > 0) {
+      return "Remember to stay hydrated. Consider taking a quick water break.";
+    }
+    
+    // More frequent reminders during high intensity
+    if (currentZone?.name === 'Peak' && elapsedTime % 300 === 0 && elapsedTime > 0) {
+      return "You're working at high intensity. Make sure to hydrate at your next opportunity.";
+    }
+    
+    return null;
+  };
+  
   // Provide feedback based on heart rate zone
   const provideZoneFeedback = (newZone, oldZone) => {
     if (!newZone) return;
     
     // Only provide feedback if enough time has passed since last feedback
     const now = Date.now();
-    if (now - lastFeedbackTime < 15000) return; // Minimum 15 seconds between feedback
+    if (now - lastFeedbackTime < 45000) return; // Minimum 45 seconds between feedback (increased from 15s)
     
     // Get appropriate feedback message
     const messages = zoneFeedbackMessages[newZone.name];
@@ -447,6 +784,26 @@ const ExerciseCoach = () => {
       setReachedMilestones(prev => ({ ...prev, firstPeak: true }));
       setTimeout(() => speakFeedback(milestoneMessages.heartRate.firstPeak), 4000);
     }
+    
+    // Provide advanced feedback periodically
+    if (elapsedTime > 300 && elapsedTime % 300 === 0) { // Every 5 minutes after first 5 minutes
+      const trainingEffect = analyzeTrainingEffect();
+      if (trainingEffect) {
+        setTimeout(() => speakFeedback(trainingEffect), 6000);
+      }
+    }
+    
+    // Check recovery after intense effort
+    const recoveryData = analyzeHeartRateRecovery();
+    if (recoveryData && recoveryData.recovery > 15) {
+      setTimeout(() => speakFeedback(recoveryData.message), 8000);
+    }
+    
+    // Hydration reminders
+    const hydrationMsg = checkHydration();
+    if (hydrationMsg) {
+      setTimeout(() => speakFeedback(hydrationMsg), 10000);
+    }
   };
   
   // Check if we've hit any time-based milestones
@@ -460,43 +817,87 @@ const ExerciseCoach = () => {
       return;
     }
     
-    // Provide random motivational messages
-    if (seconds % 180 === 0 && Date.now() - lastMotivationTime > 120000) { // Every 3 minutes, but at least 2 min since last
+    // Provide random motivational messages - less frequently now
+    if (seconds % 420 === 0 && Date.now() - lastMotivationTime > 240000) { // Every 7 minutes, but at least 4 min since last
       const message = motivationalMessages[Math.floor(Math.random() * motivationalMessages.length)];
       setTimeout(() => speakFeedback(message), 1500);
       setLastMotivationTime(Date.now());
     }
+    
+    // Pace guidance based on target zone vs current zone
+    if (seconds % 240 === 0 && seconds > 120) { // Every 4 minutes after first 2 mins
+      const hrPercent = (heartRate / estimatedMaxHeartRate) * 100;
+      const targetZoneIndex = HR_ZONES.findIndex(zone => zone.min <= intensityTarget && zone.max > intensityTarget);
+      const currentZoneIndex = HR_ZONES.findIndex(zone => zone.min <= hrPercent && zone.max > hrPercent);
+      
+      if (targetZoneIndex > currentZoneIndex) {
+        speakFeedback("Try increasing your pace to reach your target intensity zone.");
+      } else if (targetZoneIndex < currentZoneIndex && currentZoneIndex >= 3) { // Only suggest slowing if in Peak/Extreme
+        speakFeedback("Consider slowing down slightly to maintain a more sustainable pace.");
+      } else if (targetZoneIndex === currentZoneIndex && seconds > 300) {
+        // If maintaining target zone for 5+ minutes, give positive feedback occasionally
+        if (seconds % 360 === 0) { // Every 6 minutes
+          speakFeedback("Excellent pacing! You're maintaining your target intensity zone perfectly.");
+        }
+      }
+    }
   };
   
-  // Text-to-speech function
+  // Feedback queue to prevent choppy audio
+  const speechQueue = useRef([]);
+  const isSpeaking = useRef(false);
+  
+  // Process the speech queue
+  const processSpeechQueue = () => {
+    if (speechQueue.current.length === 0 || isSpeaking.current || !speechSynthesis.current) {
+      return;
+    }
+    
+    // Get the next message in the queue
+    const nextMessage = speechQueue.current.shift();
+    isSpeaking.current = true;
+    
+    const utterance = new SpeechSynthesisUtterance(nextMessage);
+    utterance.volume = 1.0;
+    utterance.rate = 0.95; // Slightly slower for better clarity
+    utterance.pitch = 1.0;
+    utterance.lang = 'en-US'; // Ensure English language
+    
+    // Get available voices and set a good one if available
+    const voices = speechSynthesis.current.getVoices();
+    // Prioritize US English natural voices
+    const preferredVoice = voices.find(voice => 
+      (voice.name.includes('Google US English') || 
+       voice.name.includes('Samantha') ||
+       voice.name.includes('Natural') ||
+       (voice.name.includes('Female') && voice.lang.includes('en-US')))
+    );
+    
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+    
+    // When speech ends, process the next item in the queue
+    utterance.onend = () => {
+      isSpeaking.current = false;
+      setTimeout(() => {
+        processSpeechQueue();
+      }, 500); // Small pause between messages for natural speech rhythm
+    };
+    
+    speechSynthesis.current.speak(utterance);
+  };
+  
+  // Text-to-speech function - adds to queue
   const speakFeedback = (text) => {
     if (!voiceEnabled || !text) return;
     
-    if (speechSynthesis.current) {
-      // Cancel any ongoing speech
-      if (speechSynthesis.current.speaking) {
-        speechSynthesis.current.cancel();
-      }
-      
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.volume = 1.0;
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
-      
-      // Get available voices and set a good one if available
-      const voices = speechSynthesis.current.getVoices();
-      const preferredVoice = voices.find(voice => 
-        voice.name.includes('Google') || 
-        voice.name.includes('Natural') || 
-        voice.name.includes('Samantha') ||
-        voice.name.includes('Female')
-      );
-      
-      if (preferredVoice) {
-        utterance.voice = preferredVoice;
-      }
-      
-      speechSynthesis.current.speak(utterance);
+    // Add message to queue
+    speechQueue.current.push(text);
+    
+    // Start processing if not already speaking
+    if (!isSpeaking.current) {
+      processSpeechQueue();
     }
   };
   
@@ -752,6 +1153,64 @@ const ExerciseCoach = () => {
                 )}
               </Box>
               
+              {/* Interval workout timer - only show when in an active session */}
+              {isSessionActive && WORKOUT_TYPES[exerciseType]?.intervalStructure && (
+                <Box sx={{ mt: 2, mb: 3 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Workout Plan: {WORKOUT_TYPES[exerciseType].name}
+                  </Typography>
+                  
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                    {/* Workout phases visualization */}
+                    <Chip 
+                      label="Warm Up" 
+                      size="small"
+                      sx={{ 
+                        bgcolor: '#2196f340',
+                        fontWeight: workoutPhase === 'warmup' ? 'bold' : 'normal',
+                        border: workoutPhase === 'warmup' ? '2px solid #2196f3' : 'none'
+                      }}
+                    />
+                    <Chip 
+                      label="Main" 
+                      size="small"
+                      sx={{ 
+                        bgcolor: '#00968840',
+                        fontWeight: workoutPhase === 'main' ? 'bold' : 'normal',
+                        border: workoutPhase === 'main' ? '2px solid #009688' : 'none'
+                      }}
+                    />
+                    <Chip 
+                      label="Intervals" 
+                      size="small"
+                      sx={{ 
+                        bgcolor: '#ff980040',
+                        fontWeight: workoutPhase === 'interval' ? 'bold' : 'normal',
+                        border: workoutPhase === 'interval' ? '2px solid #ff9800' : 'none'
+                      }}
+                    />
+                    <Chip 
+                      label="Cool Down" 
+                      size="small"
+                      sx={{ 
+                        bgcolor: '#3f51b540',
+                        fontWeight: workoutPhase === 'cooldown' ? 'bold' : 'normal',
+                        border: workoutPhase === 'cooldown' ? '2px solid #3f51b5' : 'none'
+                      }}
+                    />
+                  </Box>
+                  
+                  {/* Coach advice based on workout type */}
+                  {WORKOUT_TYPES[exerciseType].tips && WORKOUT_TYPES[exerciseType].tips.length > 0 && (
+                    <Box sx={{ mb: 2, p: 1, bgcolor: 'rgba(0,0,0,0.02)', borderRadius: 1 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <InfoIcon fontSize="inherit" /> Coach Tip: {WORKOUT_TYPES[exerciseType].tips[Math.floor(Math.random() * WORKOUT_TYPES[exerciseType].tips.length)]}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              )}
+              
               <Divider sx={{ my: 2 }} />
               
               <Typography variant="subtitle1" gutterBottom>
@@ -791,15 +1250,28 @@ const ExerciseCoach = () => {
                   />
                 </Box>
                 
-                <FormControlLabel
-                  control={
-                    <Switch 
-                      checked={feedbackEnabled} 
-                      onChange={(e) => setFeedbackEnabled(e.target.checked)}
-                    />
-                  }
-                  label="Real-time Feedback"
-                />
+                <Box>
+                  <FormControlLabel
+                    control={
+                      <Switch 
+                        checked={feedbackEnabled} 
+                        onChange={(e) => setFeedbackEnabled(e.target.checked)}
+                      />
+                    }
+                    label="Real-time Feedback"
+                  />
+                  
+                  <FormControlLabel
+                    control={
+                      <Switch 
+                        checked={guidedWorkoutEnabled}
+                        onChange={(e) => setGuidedWorkoutEnabled(e.target.checked)}
+                        disabled={isSessionActive}
+                      />
+                    }
+                    label="Guided Workout"
+                  />
+                </Box>
               </Box>
             </Paper>
             

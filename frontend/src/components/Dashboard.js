@@ -284,11 +284,15 @@ const Dashboard = () => {
               textColor="primary"
               indicatorColor="primary"
               sx={{ 
-                px: { xs: 2, sm: 4 },
+                px: { xs: 1, sm: 2 },
                 pt: 2,
                 pb: 0,
                 '& .MuiTabs-flexContainer': {
-                  gap: { xs: 1, sm: 2 }
+                  gap: { xs: 0, sm: 0 } // Reduced gap between tabs
+                },
+                '& .MuiTab-root': {
+                  px: { xs: 1, sm: 1.5 }, // Reduce padding of individual tabs
+                  minWidth: { xs: 'auto', sm: 'auto' } // Allow tabs to be narrower
                 },
                 '& .MuiTabs-indicator': {
                   height: 3,
