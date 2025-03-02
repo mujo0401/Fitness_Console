@@ -530,8 +530,8 @@ const HealthAssistantTab = () => {
         p: { xs: 1, sm: 2 }, 
         maxWidth: 1000, 
         mx: 'auto',
-        overflow: 'visible',
-        height: 'auto' 
+        position: 'relative',
+        zIndex: 1
       }}
     >
       <motion.div
@@ -539,7 +539,6 @@ const HealthAssistantTab = () => {
         initial={{ opacity: 0, y: 0 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        style={{ overflow: 'visible' }}
       >
         <Paper
           elevation={0}
@@ -587,7 +586,6 @@ const HealthAssistantTab = () => {
           <Box sx={{ position: 'relative', p: { xs: 2, sm: 4 }, zIndex: 2 }}>
             <Box sx={{ 
               display: 'flex', 
-              alignItems: 'flex-start', 
               mb: 3, 
               flexDirection: { xs: 'column', sm: 'row' },
               alignItems: { xs: 'center', sm: 'flex-start' }
@@ -875,7 +873,7 @@ const HealthAssistantTab = () => {
             mb: 3, 
             p: { xs: 2, sm: 3 }, 
             borderRadius: 3,
-            height: { xs: 420, sm: 450 }, // Reduced height to prevent pushing header off screen
+            height: { xs: 420, sm: 450 }, 
             bgcolor: '#f8f9fa',
             backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'20\' height=\'20\' viewBox=\'0 0 20 20\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'%233f51b5\' fill-opacity=\'0.05\' fill-rule=\'evenodd\'%3E%3Ccircle cx=\'3\' cy=\'3\' r=\'1.5\'/%3E%3Ccircle cx=\'13\' cy=\'13\' r=\'1.5\'/%3E%3C/g%3E%3C/svg%3E")',
             backgroundSize: '20px 20px',
@@ -883,8 +881,7 @@ const HealthAssistantTab = () => {
             boxShadow: '0 12px 24px rgba(0,0,0,0.1), inset 0 2px 0 rgba(255,255,255,1), inset 0 -1px 0 rgba(0,0,0,0.05)',
             display: 'flex',
             flexDirection: 'column',
-            overflow: 'hidden', // Important for containing child scrollable elements
-            mt: 2, // Added margin at top to ensure it doesn't push content up
+            mt: 2
           }}
         >
           {/* Voice active overlay */}
@@ -928,17 +925,15 @@ const HealthAssistantTab = () => {
             </Backdrop>
           )}
           
-          {/* Message bubbles - using flex-grow to fill available space */}
+          {/* Message bubbles */}
           <Box sx={{ 
             display: 'flex', 
             flexDirection: 'column', 
             gap: 2, 
             overflowY: 'auto',
-            flexGrow: 1, // This makes the messages container fill the available space
-            height: 'calc(100% - 20px)', // Account for padding and prevent overflow issues
-            maxHeight: { xs: 380, sm: 420 }, // Limit height to prevent pushing header out of view
-            pb: 2, // Add padding at the bottom to ensure last message is fully visible
-            mt: 1 // Space at the top for readability
+            height: '100%',
+            pb: 2,
+            mt: 1
           }}>
             {chatHistory.map((msg) => (
               <Zoom 

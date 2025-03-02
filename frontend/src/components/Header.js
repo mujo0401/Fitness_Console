@@ -33,9 +33,11 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import SyncIcon from '@mui/icons-material/Sync';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const Header = () => {
   const theme = useTheme();
+  const navigate = useNavigate();
   const { isAuthenticated, user, login, logout, loginFitbit, loginAppleFitness, connectedServices } = useAuth();
   const [anchorEl, setAnchorEl] = useState(null);
   const [notificationEl, setNotificationEl] = useState(null);
@@ -105,12 +107,12 @@ const Header = () => {
   };
   
   const navigateToProfile = () => {
-    window.location.href = "/profile";
+    navigate('/profile');
     handleMenuClose();
   };
   
   const navigateToSettings = () => {
-    window.location.href = "/settings";
+    navigate('/settings');
     handleMenuClose();
   };
 
