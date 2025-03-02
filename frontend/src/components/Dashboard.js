@@ -29,6 +29,7 @@ import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import ChatIcon from '@mui/icons-material/Chat';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import HeadsetMicIcon from '@mui/icons-material/HeadsetMic';
 import { useAuth } from '../context/AuthContext';
 import ApiTester from './ApiTester'; 
 import HeartTab from '../pages/HeartTab'; 
@@ -39,6 +40,7 @@ import TrendsTab from '../pages/TrendsTab';
 import GroceryTab from '../pages/GroceryTab';
 import HealthAssistantTab from '../pages/HealthAssistantTab';
 import ABMTab from '../pages/ABMTab';
+import ExerciseCoach from './ExerciseCoach';
 
 import '../styles/Dashboard.css';
 
@@ -409,6 +411,25 @@ const Dashboard = () => {
                 }}
               />
               <Tab 
+                label="Exercise Coach" 
+                icon={<HeadsetMicIcon />} 
+                iconPosition="start" 
+                sx={{
+                  minHeight: 60,
+                  borderRadius: '10px 10px 0 0',
+                  fontWeight: 600,
+                  transition: 'all 0.2s ease',
+                  '&.Mui-selected': {
+                    color: '#2196f3',
+                    fontWeight: 700,
+                  },
+                  '&:hover': {
+                    bgcolor: 'rgba(33, 150, 243, 0.04)',
+                    color: '#2196f3'
+                  }
+                }}
+              />
+              <Tab 
                 label="Grocery Shop" 
                 icon={<ShoppingCartIcon />} 
                 iconPosition="start" 
@@ -516,14 +537,17 @@ const Dashboard = () => {
           {/* Fitness Plan tab - always accessible */}
           {currentTab === 4 && <FitnessTab />}
           
+          {/* Exercise Coach tab - always accessible but better with auth */}
+          {currentTab === 5 && <ExerciseCoach />}
+          
           {/* Grocery Shop tab - always accessible */}
-          {currentTab === 5 && <GroceryTab />}
+          {currentTab === 6 && <GroceryTab />}
           
           {/* Trends tab - always accessible */}
-          {currentTab === 6 && <TrendsTab />}
+          {currentTab === 7 && <TrendsTab />}
           
           {/* Assistant tab - always accessible */}
-          {currentTab === 7 && <HealthAssistantTab />}
+          {currentTab === 8 && <HealthAssistantTab />}
         </motion.div>
       </Box>
       
