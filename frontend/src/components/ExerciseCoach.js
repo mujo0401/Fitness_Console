@@ -19,7 +19,8 @@ import {
   Divider,
   Chip,
   useTheme,
-  alpha
+  alpha,
+  Snackbar
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -305,6 +306,7 @@ const ExerciseCoach = () => {
   const [maxHR, setMaxHR] = useState(0);
   const [caloriesBurned, setCaloriesBurned] = useState(0);
   const [showPlanSelection, setShowPlanSelection] = useState(false);
+  const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
   
   // Advanced workout features
   const [workoutPhase, setWorkoutPhase] = useState('warmup'); // warmup, main, interval, cooldown
@@ -1431,6 +1433,14 @@ const ExerciseCoach = () => {
                         // We need to get the function from context
                         if (typeof selectPredefinedPlan === 'function') {
                           selectPredefinedPlan(planKey);
+                          // Show notification
+                          setNotification({
+                            open: true,
+                            message: `${predefinedPlans[planKey].name} selected! Your workouts are now updated.`,
+                            severity: 'success'
+                          });
+                          // Hide the plan selection after choosing
+                          setTimeout(() => setShowPlanSelection(false), 1000);
                         }
                       }}
                     >
@@ -1488,6 +1498,23 @@ const ExerciseCoach = () => {
           </CardContent>
         </Card>
       </motion.div>
+      
+      {/* Notification */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={5000}
+        onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{ bottom: { xs: 90, sm: 30 } }} // Ensure it's visible above the footer
+      >
+        <Alert 
+          onClose={() => setNotification(prev => ({ ...prev, open: false }))} 
+          severity={notification.severity}
+          sx={{ width: '100%' }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

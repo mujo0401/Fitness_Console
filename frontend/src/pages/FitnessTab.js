@@ -1290,7 +1290,8 @@ const FitnessTab = () => {
         open={notification.open}
         autoHideDuration={6000}
         onClose={() => setNotification(prev => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{ bottom: { xs: 90, sm: 30 } }} // Ensure it's visible above the footer and other elements
       >
         <Alert 
           onClose={() => setNotification(prev => ({ ...prev, open: false }))} 
