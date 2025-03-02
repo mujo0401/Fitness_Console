@@ -116,7 +116,7 @@ def place_photo():
         response = requests.get(url, stream=True)
         
         # Check if request was successful
-        if response.status_code \!= 200:
+        if response.status_code != 200:
             return jsonify({
                 'error': f'Google Places API returned status code: {response.status_code}',
                 'message': response.text
