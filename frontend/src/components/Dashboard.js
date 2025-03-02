@@ -61,19 +61,36 @@ const Dashboard = () => {
   const [manualAuthCheck, setManualAuthCheck] = useState(false);
   
   // Define fixed tab component references to ensure they don't change between renders
-  const tabComponents = useRef({
-    '-1': InfoTab,           // Information
-    '0': HeartTab,           // Heart Rate
-    '1': ActivityTab,        // Activity
-    '2': SleepTab,           // Sleep
-    '3': ABMTab,             // ABM
-    '4': FitnessTab,         // Fitness Plan
-    '5': ExerciseCoach,      // Exercise Coach
-    '6': MusicTab,           // Music
-    '7': GroceryTab,         // Grocery Shop 
-    '8': TrendsTab,          // Trends
-    '9': HealthAssistantTab  // Assistant
-  });
+  // A fundamental problem: When adding the Information tab with index -1, the visual order and 
+  // numeric indices in the tab selection logic got misaligned.
+  // 
+  // Let's use explicit indices that match the physical order of tabs in the UI:
+  // Tab component order in JSX:
+  // 1. Information (index -1)
+  // 2. Heart Rate (index 0)
+  // 3. Activity (index 1)
+  // 4. Sleep (index 2)
+  // 5. ABM (index 3)
+  // 6. Fitness Plan (index 4)
+  // 7. Exercise Coach (index 5)
+  // 8. Music (index 6)
+  // 9. Grocery Shop (index 7)
+  // 10. Trends (index 8)
+  // 11. Assistant (index 9)
+  //
+  const tabComponentsMap = {
+    '-1': InfoTab,           // Information (tab index -1)
+    '0': HeartTab,           // Heart Rate (tab index 0)
+    '1': ActivityTab,        // Activity (tab index 1)
+    '2': SleepTab,           // Sleep (tab index 2)
+    '3': ABMTab,             // ABM (tab index 3)
+    '4': FitnessTab,         // Fitness Plan (tab index 4)
+    '5': ExerciseCoach,      // Exercise Coach (tab index 5)
+    '6': MusicTab,           // Music (tab index 6)
+    '7': GroceryTab,         // Grocery Shop (tab index 7)
+    '8': TrendsTab,          // Trends (tab index 8)
+    '9': HealthAssistantTab  // Assistant (tab index 9)
+  };
   
   // Auto-redirect to Fitness Plan tab if not authenticated and on a protected tab
   useEffect(() => {
@@ -189,15 +206,25 @@ const Dashboard = () => {
   };
 
   const handleTabChange = (event, newValue) => {
+    // Critical debugging - specifically to identify which of the visible tabs 
+    // corresponds to which numeric index
+    console.log(`----- TAB SELECTION -----`);
+    console.log(`Tab clicked: Index ${newValue}, visible position ${newValue + 1}`);
+    
+    // Get the component that should be rendered for this tab
+    const tabComponent = tabComponentsMap[newValue.toString()];
+    console.log(`Component for index ${newValue}: ${tabComponent?.name || tabComponent?.displayName || 'Unknown'}`);
+    
     // Only allow changing to protected tabs if authenticated
     if (!isAuthenticated && [0, 1, 2, 3, 8].includes(newValue)) {
       // If not authenticated and trying to access protected tab, redirect to Fitness Plan tab
-      console.log('Tab change: Protected tab requested, redirecting to Fitness Plan (4)');
+      console.log('Protected tab requested, redirecting to Fitness Plan (4)');
       setCurrentTab(4);
     } else {
-      console.log(`Tab change: Switching to tab index ${newValue}`);
+      console.log(`Setting current tab to index ${newValue}`);
       setCurrentTab(newValue);
     }
+    console.log(`-------------------------`);
   };
 
   // Show enhanced loading state with debug info
@@ -335,6 +362,8 @@ const Dashboard = () => {
               variant="fullWidth"
               scrollButtons={false}
               centered
+              allowScrollButtonsMobile={false}
+              visibleScrollbar={false}
               TabIndicatorProps={{
                 sx: { display: 'none' }
               }}
@@ -614,15 +643,22 @@ const Dashboard = () => {
               return <EmptyAccessDeniedComponent />;
             }
             
-            // Log what component we're rendering
-            console.log(`Tab index: ${currentTab}, rendering specific component`);
+            // Enhanced debugging for tab rendering
+            console.log(`Rendering tab with index: ${currentTab}`);
             
-            // Get the component from our fixed lookup table
-            const TabComponent = tabComponents.current[currentTab.toString()];
+            // Get the component from our fixed map with string key
+            const tabKey = currentTab.toString();
+            const TabComponent = tabComponentsMap[tabKey];
+            
+            // Debug which tab is being rendered
+            console.log(`Selected tab:
+            - Index: ${currentTab}
+            - Key: ${tabKey}
+            - Component: ${TabComponent?.name || TabComponent?.displayName || 'Unknown'}`);
             
             if (!TabComponent) {
-              console.error(`No component found for tab index ${currentTab}`);
-              return null;
+              console.error(`No component found for tab index ${currentTab} (key: ${tabKey})`);
+              return <Typography color="error">Tab content not found</Typography>;
             }
             
             // Render the component
