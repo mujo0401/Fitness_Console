@@ -36,6 +36,7 @@ import InfoIcon from '@mui/icons-material/Info';
 
 import { heartRateService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useWorkoutPlan } from '../context/WorkoutPlanContext';
 
 // Heart rate zones (same as in HeartTab.js)
 const HR_ZONES = [
@@ -279,6 +280,8 @@ const setupSpeech = () => {
 const ExerciseCoach = () => {
   const theme = useTheme();
   const { isAuthenticated } = useAuth();
+  const { todaysWorkout, predefinedPlans, selectedPlan, selectPredefinedPlan } = useWorkoutPlan();
+  
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [heartRate, setHeartRate] = useState(0);
@@ -300,6 +303,7 @@ const ExerciseCoach = () => {
   const [hrHistory, setHrHistory] = useState([]);
   const [maxHR, setMaxHR] = useState(0);
   const [caloriesBurned, setCaloriesBurned] = useState(0);
+  const [showPlanSelection, setShowPlanSelection] = useState(false);
   
   // Advanced workout features
   const [workoutPhase, setWorkoutPhase] = useState('warmup'); // warmup, main, interval, cooldown
@@ -451,8 +455,57 @@ const ExerciseCoach = () => {
     setWorkoutPhase('warmup');
     setCurrentIntervalNumber(0);
     
-    // Initialize guided workout if enabled
-    if (guidedWorkoutEnabled && WORKOUT_TYPES[exerciseType]) {
+    // Initialize workout - first check if today's workout is available
+    if (guidedWorkoutEnabled && todaysWorkout) {
+      // Use today's workout from the fitness plan
+      const workout = todaysWorkout;
+      
+      // Update exercise type to match workout type
+      setExerciseType(workout.type);
+      
+      // Set heart rate target based on workout
+      if (workout.heartRateTarget) {
+        setIntensityTarget(workout.heartRateTarget);
+      }
+      
+      // Announce the workout plan
+      if (feedbackEnabled) {
+        setTimeout(() => {
+          speakFeedback(`Starting today's ${workout.name} workout. Today is ${workout.day}.`);
+        }, 2000);
+        
+        // Announce workout structure
+        setTimeout(() => {
+          if (workout.structured?.warmup) {
+            speakFeedback(`We'll begin with a ${workout.structured.warmup.duration} minute warm up.`);
+          }
+        }, 5000);
+      }
+      
+      // If workout has intervals, announce them
+      if (workout.structured?.intervals) {
+        const { intervals } = workout.structured;
+        setTimeout(() => {
+          speakFeedback(`This workout includes ${intervals.sets} intervals, alternating between ${intervals.highDuration} minutes at ${intervals.high} intensity and ${intervals.lowDuration} minutes of ${intervals.low} intensity recovery.`);
+        }, 10000);
+      }
+      
+      // Announce first exercise
+      if (workout.exercises && workout.exercises.length > 0 && feedbackEnabled) {
+        setTimeout(() => {
+          const exercise = workout.exercises[0];
+          const description = exercise.sets && exercise.reps
+            ? `${exercise.sets} sets of ${exercise.reps} reps`
+            : exercise.duration
+              ? `for ${exercise.duration}`
+              : '';
+              
+          speakFeedback(`Your first exercise is ${exercise.name} ${description}`);
+        }, 15000);
+      }
+    }
+    // Fall back to default workout types
+    else if (guidedWorkoutEnabled && WORKOUT_TYPES[exerciseType]) {
       const workoutPlan = WORKOUT_TYPES[exerciseType];
       
       // Announce workout plan
@@ -547,13 +600,25 @@ const ExerciseCoach = () => {
   
   // Update workout phase based on elapsed time
   const updateWorkoutPhase = (elapsedSeconds) => {
-    if (!WORKOUT_TYPES[exerciseType]) return;
+    let plan, elapsedMinutes;
     
-    const plan = WORKOUT_TYPES[exerciseType].intervalStructure;
-    const elapsedMinutes = elapsedSeconds / 60;
+    // First check if we're using a workout from today's plan
+    if (todaysWorkout && todaysWorkout.structured) {
+      plan = todaysWorkout.structured;
+      elapsedMinutes = elapsedSeconds / 60;
+    }
+    // Fallback to the default workout types
+    else if (WORKOUT_TYPES[exerciseType]) {
+      plan = WORKOUT_TYPES[exerciseType].intervalStructure;
+      elapsedMinutes = elapsedSeconds / 60;
+    }
+    else {
+      // No valid plan found
+      return;
+    }
     
     // Calculate phase transition times
-    const warmupEnd = plan.warmup.duration;
+    const warmupEnd = plan.warmup ? plan.warmup.duration : 0;
     const mainEnd = plan.main ? warmupEnd + plan.main.duration : warmupEnd;
     const intervalEnd = plan.intervals ? mainEnd + (plan.intervals.sets * (plan.intervals.highDuration + plan.intervals.lowDuration)) : mainEnd;
     
@@ -616,7 +681,11 @@ const ExerciseCoach = () => {
             speakFeedback(`Beginning interval training. Get ready for your first high intensity interval!`);
             break;
           case 'cooldown':
-            speakFeedback(`Great work! Starting your ${plan.cooldown.duration} minute cooldown.`);
+            if (plan.cooldown && plan.cooldown.duration) {
+              speakFeedback(`Great work! Starting your ${plan.cooldown.duration} minute cooldown.`);
+            } else {
+              speakFeedback(`Great work! Starting your cooldown.`);
+            }
             break;
         }
       }
@@ -1275,8 +1344,117 @@ const ExerciseCoach = () => {
               </Box>
             </Paper>
             
+            {/* Today's Workout Plan Display */}
+            {!isSessionActive && todaysWorkout && (
+              <Paper elevation={3} sx={{ p: 3, mb: 3, borderRadius: 2, bgcolor: alpha(theme.palette.primary.light, 0.05) }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: theme.palette.primary.main }}>
+                    <DirectionsRunIcon /> Today's Workout: {todaysWorkout.name}
+                  </Typography>
+                  <Chip 
+                    label={todaysWorkout.day} 
+                    color="primary" 
+                    variant="outlined" 
+                    size="small"
+                  />
+                </Box>
+                
+                <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+                  Workout Type: <b>{todaysWorkout.type.charAt(0).toUpperCase() + todaysWorkout.type.slice(1)}</b> • 
+                  Target HR: <b>{todaysWorkout.heartRateTarget}% of max</b>
+                </Typography>
+                
+                <Divider sx={{ my: 2 }} />
+                
+                <Typography variant="subtitle2" gutterBottom>
+                  Exercises:
+                </Typography>
+                
+                <Box sx={{ maxHeight: '200px', overflowY: 'auto', pr: 1 }}>
+                  {todaysWorkout.exercises.map((exercise, index) => (
+                    <Paper key={index} elevation={1} sx={{ p: 1.5, mb: 1, borderRadius: 2, display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2">
+                        {exercise.name}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {exercise.sets && exercise.reps 
+                          ? `${exercise.sets} × ${exercise.reps}${exercise.perSide ? ' per side' : ''}` 
+                          : exercise.duration
+                            ? exercise.duration
+                            : exercise.description || ''}
+                      </Typography>
+                    </Paper>
+                  ))}
+                </Box>
+                
+                <Button 
+                  variant="contained" 
+                  color="primary" 
+                  fullWidth 
+                  sx={{ mt: 2 }}
+                  onClick={startSession}
+                  startIcon={<PlayArrowIcon />}
+                >
+                  Start Today's Workout
+                </Button>
+              </Paper>
+            )}
+            
+            {/* Workout Plan Selection */}
+            {!isSessionActive && !todaysWorkout && showPlanSelection && (
+              <Paper elevation={3} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  Select a Workout Plan
+                </Typography>
+                
+                <Typography variant="body2" paragraph color="text.secondary">
+                  No workout is scheduled for today in your fitness plan. Select a workout plan below:
+                </Typography>
+                
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+                  {Object.keys(predefinedPlans).map((planKey) => (
+                    <Paper
+                      key={planKey}
+                      elevation={1}
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        border: selectedPlan === planKey ? `2px solid ${theme.palette.primary.main}` : '1px solid rgba(0,0,0,0.1)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          bgcolor: alpha(theme.palette.primary.light, 0.1)
+                        }
+                      }}
+                      onClick={() => {
+                        // We need to get the function from context
+                        if (typeof selectPredefinedPlan === 'function') {
+                          selectPredefinedPlan(planKey);
+                        }
+                      }}
+                    >
+                      <Typography variant="subtitle1" fontWeight="bold">
+                        {predefinedPlans[planKey].name}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {predefinedPlans[planKey].description}
+                      </Typography>
+                    </Paper>
+                  ))}
+                </Box>
+                
+                <Button 
+                  variant="outlined" 
+                  sx={{ mt: 2 }}
+                  onClick={() => setShowPlanSelection(false)}
+                >
+                  Hide Plan Selection
+                </Button>
+              </Paper>
+            )}
+            
             {/* Instructions */}
-            {!isSessionActive && (
+            {!isSessionActive && !showPlanSelection && (
               <Paper sx={{ p: 2, bgcolor: '#f5f7fa', borderRadius: 2 }}>
                 <Typography variant="subtitle1" gutterBottom>
                   How to Use the Real-Time Exercise Coach:
@@ -1290,9 +1468,20 @@ const ExerciseCoach = () => {
                 <Typography variant="body2" paragraph>
                   3. Start your workout and receive real-time audio coaching through your Bluetooth headphones.
                 </Typography>
-                <Typography variant="body2">
+                <Typography variant="body2" paragraph>
                   4. The coach will help you maintain the right intensity, warn you if your heart rate gets too high, and provide motivational cues.
                 </Typography>
+                
+                {!todaysWorkout && (
+                  <Button 
+                    variant="contained" 
+                    color="primary" 
+                    sx={{ mt: 2 }}
+                    onClick={() => setShowPlanSelection(true)}
+                  >
+                    Choose a Workout Plan
+                  </Button>
+                )}
               </Paper>
             )}
           </CardContent>

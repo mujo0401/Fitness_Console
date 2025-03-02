@@ -26,6 +26,7 @@ import {
   alpha,
   Stack,
   Alert,
+  Snackbar
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
@@ -38,6 +39,7 @@ import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import NoteIcon from '@mui/icons-material/Note';
 import { useAuth } from '../context/AuthContext';
+import { useWorkoutPlan } from '../context/WorkoutPlanContext';
 import axios from 'axios';
 
 // Define the questionnaire steps
@@ -53,10 +55,12 @@ const steps = [
 const FitnessTab = () => {
   const theme = useTheme();
   const { isAuthenticated } = useAuth();
+  const { saveCustomPlan, selectPredefinedPlan, predefinedPlans } = useWorkoutPlan();
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [plan, setPlan] = useState(null);
   const [error, setError] = useState(null);
+  const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
 
   // Form state
   const [formData, setFormData] = useState({
@@ -914,14 +918,92 @@ const FitnessTab = () => {
                     <Typography variant="h5" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
                       Your Personalized Fitness & Nutrition Plan
                     </Typography>
-                    <Button 
-                      variant="outlined" 
-                      color="primary" 
-                      onClick={handleReset} 
-                      startIcon={<AssignmentIcon />}
-                    >
-                      Create New Plan
-                    </Button>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <Button 
+                        variant="contained" 
+                        color="success" 
+                        onClick={() => {
+                          // Convert the current plan to a format compatible with Exercise Coach
+                          const workouts = plan.workoutPlan.weekly.map(day => ({
+                            day: day.day,
+                            name: day.focus !== 'Rest Day' ? `${day.focus}` : 'Rest Day',
+                            type: day.focus.toLowerCase().includes('strength') ? 'strength' : 
+                                  day.focus.toLowerCase().includes('cardio') ? 'cardio' :
+                                  day.focus.toLowerCase().includes('hiit') ? 'hiit' :
+                                  day.focus.toLowerCase().includes('recovery') ? 'recovery' : 
+                                  'cardio',
+                            exercises: day.exercises.map(ex => {
+                              // Parse exercise strings into structured data
+                              const exercise = { name: ex };
+                              
+                              // Try to extract sets and reps with regex
+                              const setsRepsMatch = ex.match(/(\d+)\s*sets?\s*of\s*(\d+)(?:-(\d+))?\s*reps?/i);
+                              if (setsRepsMatch) {
+                                exercise.name = ex.split(':')[0].trim();
+                                exercise.sets = parseInt(setsRepsMatch[1]);
+                                exercise.reps = parseInt(setsRepsMatch[2]);
+                              }
+                              
+                              // Try to extract duration with regex
+                              const durationMatch = ex.match(/(\d+)(?:-(\d+))?\s*(?:min|minute|seconds|sec)/i);
+                              if (durationMatch && !setsRepsMatch) {
+                                exercise.name = ex.split(':')[0].trim();
+                                exercise.duration = durationMatch[0];
+                              }
+                              
+                              return exercise;
+                            }),
+                            heartRateTarget: day.focus.toLowerCase().includes('cardio') ? 75 :
+                                           day.focus.toLowerCase().includes('hiit') ? 85 :
+                                           day.focus.toLowerCase().includes('strength') ? 70 :
+                                           day.focus.toLowerCase().includes('recovery') ? 50 : 65,
+                            // Add structured format for workout phases
+                            structured: {
+                              warmup: { duration: 5, zone: 'Fat Burn' },
+                              main: { duration: day.duration === 'Rest day' ? 0 : 
+                                    day.duration.includes('30-45') ? 30 :
+                                    day.duration.includes('45-60') ? 45 : 30, 
+                                    zone: day.focus.toLowerCase().includes('cardio') ? 'Cardio' : 'Fat Burn' },
+                              cooldown: { duration: 5, zone: 'Fat Burn' }
+                            },
+                            tips: [
+                              "Maintain proper form throughout",
+                              "Stay hydrated during your workout",
+                              "Focus on controlled movements rather than speed",
+                              "Listen to your body and adjust intensity as needed"
+                            ]
+                          }));
+                          
+                          // Create the exercise plan
+                          const exercisePlan = {
+                            name: "Custom Fitness Plan",
+                            description: plan.fitnessProfile.summary,
+                            workouts: workouts
+                          };
+                          
+                          // Save to workout plan context
+                          saveCustomPlan(exercisePlan);
+                          
+                          // Show notification
+                          setNotification({
+                            open: true,
+                            message: "Plan saved to Exercise Coach! Visit the Exercise Coach tab to start your workout.",
+                            severity: "success"
+                          });
+                        }}
+                      >
+                        Save to Exercise Coach
+                      </Button>
+                      
+                      <Button 
+                        variant="outlined" 
+                        color="primary" 
+                        onClick={handleReset} 
+                        startIcon={<AssignmentIcon />}
+                      >
+                        Create New Plan
+                      </Button>
+                    </Box>
                   </Box>
                   
                   <Paper elevation={2} sx={{ p: 3, mb: 4, borderRadius: 2, background: alpha(theme.palette.primary.main, 0.05) }}>
@@ -1202,6 +1284,22 @@ const FitnessTab = () => {
           </CardContent>
         </Card>
       </motion.div>
+      
+      {/* Notification */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setNotification(prev => ({ ...prev, open: false }))} 
+          severity={notification.severity}
+          sx={{ width: '100%' }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
