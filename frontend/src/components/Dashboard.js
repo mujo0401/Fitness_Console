@@ -72,7 +72,19 @@ const Dashboard = () => {
   useEffect(() => {
     if (currentTab === -1) {
       // Default to Info tab as landing page
-      console.log('Setting default tab to Info tab');
+      console.log('Setting default tab to Info tab (index -1)');
+    }
+    
+    // Debug current tab display
+    console.log(`Current tab index: ${currentTab}`);
+    const tabNames = [
+      "Info (-1)", "Heart Rate (0)", "Activity (1)", "Sleep (2)", "ABM (3)",
+      "Fitness Plan (4)", "Exercise Coach (5)", "Music (6)", "Grocery (7)",
+      "Trends (8)", "Assistant (9)"
+    ];
+    const adjustedIndex = currentTab + 1; // Adjust for -1 index
+    if (adjustedIndex >= 0 && adjustedIndex < tabNames.length) {
+      console.log(`Displaying: ${tabNames[adjustedIndex]}`);
     }
   }, [currentTab]);
 
@@ -165,8 +177,10 @@ const Dashboard = () => {
     // Only allow changing to protected tabs if authenticated
     if (!isAuthenticated && [0, 1, 2, 3, 8].includes(newValue)) {
       // If not authenticated and trying to access protected tab, redirect to Fitness Plan tab
+      console.log('Tab change: Protected tab requested, redirecting to Fitness Plan (4)');
       setCurrentTab(4);
     } else {
+      console.log(`Tab change: Switching to tab index ${newValue}`);
       setCurrentTab(newValue);
     }
   };
@@ -581,102 +595,47 @@ const Dashboard = () => {
           transition={{ duration: 0.4 }}
           style={{ overflow: 'visible', paddingTop: '8px' }}
         >
-          {/* Information tab - always accessible, landing page */}
-          {currentTab === -1 && (
-            <Suspense fallback={<CircularProgress />}>
-              <InfoTab />
-            </Suspense>
-          )}
-          
-          {/* Heart rate tab content - needs auth */}
-          {currentTab === 0 && (
-            isAuthenticated ? (
+          {/* Define all tab components with their index and auth requirements in an array for more reliable rendering */}
+          {(() => {
+            // Define tab configuration with proper ordering
+            const tabConfig = [
+              { index: -1, component: InfoTab, requiresAuth: false, label: 'Information' },
+              { index: 0, component: HeartTab, requiresAuth: true, label: 'Heart Rate' },
+              { index: 1, component: ActivityTab, requiresAuth: true, label: 'Activity' },
+              { index: 2, component: SleepTab, requiresAuth: true, label: 'Sleep' },
+              { index: 3, component: ABMTab, requiresAuth: true, label: 'ABM' },
+              { index: 4, component: FitnessTab, requiresAuth: false, label: 'Fitness Plan' },
+              { index: 5, component: ExerciseCoach, requiresAuth: false, label: 'Exercise Coach' },
+              { index: 6, component: MusicTab, requiresAuth: false, label: 'Music' },
+              { index: 7, component: GroceryTab, requiresAuth: false, label: 'Grocery Shop' },
+              { index: 8, component: TrendsTab, requiresAuth: true, label: 'Trends' },
+              { index: 9, component: HealthAssistantTab, requiresAuth: false, label: 'Assistant' }
+            ];
+            
+            // Find the current tab configuration
+            const currentTabConfig = tabConfig.find(tab => tab.index === currentTab);
+            
+            // Log which tab is being rendered
+            if (currentTabConfig) {
+              console.log(`Rendering tab: ${currentTabConfig.label} (index: ${currentTabConfig.index})`);
+            } else {
+              console.log(`Tab index ${currentTab} not found in configuration`);
+              return null;
+            }
+            
+            // If tab requires auth and user is not authenticated, show empty component
+            if (currentTabConfig.requiresAuth && !isAuthenticated) {
+              return <EmptyAccessDeniedComponent />;
+            }
+            
+            // Otherwise render the tab component
+            const TabComponent = currentTabConfig.component;
+            return (
               <Suspense fallback={<CircularProgress />}>
-                <HeartTab />
+                <TabComponent />
               </Suspense>
-            ) : (
-              <EmptyAccessDeniedComponent />
-            )
-          )}
-          
-          {/* Activity tab content - needs auth */}
-          {currentTab === 1 && (
-            isAuthenticated ? (
-              <Suspense fallback={<CircularProgress />}>
-                <ActivityTab />
-              </Suspense>
-            ) : (
-              <EmptyAccessDeniedComponent />
-            )
-          )}
-          
-          {/* Sleep tab content - needs auth */}
-          {currentTab === 2 && (
-            isAuthenticated ? (
-              <Suspense fallback={<CircularProgress />}>
-                <SleepTab />
-              </Suspense>
-            ) : (
-              <EmptyAccessDeniedComponent />
-            )
-          )}
-          
-          {/* ABM tab content - needs auth */}
-          {currentTab === 3 && (
-            isAuthenticated ? (
-              <Suspense fallback={<CircularProgress />}>
-                <ABMTab />
-              </Suspense>
-            ) : (
-              <EmptyAccessDeniedComponent />
-            )
-          )}
-          
-          {/* Fitness Plan tab - always accessible */}
-          {currentTab === 4 && (
-            <Suspense fallback={<CircularProgress />}>
-              <FitnessTab />
-            </Suspense>
-          )}
-          
-          {/* Exercise Coach tab - always accessible but better with auth */}
-          {currentTab === 5 && (
-            <Suspense fallback={<CircularProgress />}>
-              <ExerciseCoach />
-            </Suspense>
-          )}
-          
-          {/* Music tab - always accessible */}
-          {currentTab === 6 && (
-            <Suspense fallback={<CircularProgress />}>
-              <MusicTab />
-            </Suspense>
-          )}
-          
-          {/* Grocery Shop tab - always accessible */}
-          {currentTab === 7 && (
-            <Suspense fallback={<CircularProgress />}>
-              <GroceryTab />
-            </Suspense>
-          )}
-          
-          {/* Trends tab - needs auth */}
-          {currentTab === 8 && (
-            isAuthenticated ? (
-              <Suspense fallback={<CircularProgress />}>
-                <TrendsTab />
-              </Suspense>
-            ) : (
-              <EmptyAccessDeniedComponent />
-            )
-          )}
-          
-          {/* Assistant tab - always accessible */}
-          {currentTab === 9 && (
-            <Suspense fallback={<CircularProgress />}>
-              <HealthAssistantTab />
-            </Suspense>
-          )}
+            );
+          })()}
         </motion.div>
       </Box>
       
