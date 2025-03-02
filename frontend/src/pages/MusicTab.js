@@ -62,7 +62,27 @@ import { useWorkoutPlan } from '../context/WorkoutPlanContext';
 // In a real app, you would use an actual YouTube Music API or a third-party API
 const mockGenres = [
   'Workout', 'Running', 'High Intensity', 'Cardio', 'Dance', 'Hip Hop', 
-  'Rock', 'Pop', 'Electronic', 'Motivation', 'Focus', 'Chill'
+  'Rock', 'Pop', 'Electronic', 'Motivation', 'Focus', 'Chill', 'Metal',
+  'R&B', 'Latin', 'Country', 'Jazz', 'Classical', 'Indie', 'Alternative'
+];
+
+// Mock artists data
+const mockArtists = [
+  { name: 'Metallica', genre: 'Metal' },
+  { name: 'Beyoncé', genre: 'Pop' },
+  { name: 'Eminem', genre: 'Hip Hop' },
+  { name: 'Dua Lipa', genre: 'Pop' },
+  { name: 'Ed Sheeran', genre: 'Pop' },
+  { name: 'Queen', genre: 'Rock' },
+  { name: 'Kendrick Lamar', genre: 'Hip Hop' },
+  { name: 'AC/DC', genre: 'Rock' },
+  { name: 'Taylor Swift', genre: 'Pop' },
+  { name: 'Drake', genre: 'Hip Hop' },
+  { name: 'The Weeknd', genre: 'R&B' },
+  { name: 'Ariana Grande', genre: 'Pop' },
+  { name: 'Bad Bunny', genre: 'Latin' },
+  { name: 'Daft Punk', genre: 'Electronic' },
+  { name: 'Coldplay', genre: 'Rock' }
 ];
 
 const mockPlaylists = [
@@ -224,6 +244,102 @@ const mockSongs = [
     bpm: 125,
     tags: ['Strength', 'Focus'],
     liked: true
+  },
+  {
+    id: 'song9',
+    title: 'Enter Sandman',
+    artist: 'Metallica',
+    album: 'Metallica',
+    thumbnail: 'https://i.ytimg.com/vi/CD-E-LDc384/mqdefault.jpg',
+    duration: 332,
+    videoId: 'CD-E-LDc384',
+    bpm: 123,
+    tags: ['Metal', 'Rock', 'Strength'],
+    liked: false
+  },
+  {
+    id: 'song10',
+    title: 'Formation',
+    artist: 'Beyoncé',
+    album: 'Lemonade',
+    thumbnail: 'https://i.ytimg.com/vi/WDZJPJV__bQ/mqdefault.jpg',
+    duration: 277,
+    videoId: 'WDZJPJV__bQ',
+    bpm: 123,
+    tags: ['Pop', 'R&B', 'Dance'],
+    liked: true
+  },
+  {
+    id: 'song11',
+    title: 'Lose Yourself',
+    artist: 'Eminem',
+    album: '8 Mile Soundtrack',
+    thumbnail: 'https://i.ytimg.com/vi/_Yhyp-_hX2s/mqdefault.jpg',
+    duration: 326,
+    videoId: '_Yhyp-_hX2s',
+    bpm: 171,
+    tags: ['Hip Hop', 'Motivation', 'Running'],
+    liked: true
+  },
+  {
+    id: 'song12',
+    title: 'Physical',
+    artist: 'Dua Lipa',
+    album: 'Future Nostalgia',
+    thumbnail: 'https://i.ytimg.com/vi/9HDEHj2yzew/mqdefault.jpg',
+    duration: 194,
+    videoId: '9HDEHj2yzew',
+    bpm: 124,
+    tags: ['Pop', 'Dance', 'Workout'],
+    liked: false
+  },
+  {
+    id: 'song13',
+    title: 'Shape of You',
+    artist: 'Ed Sheeran',
+    album: '÷',
+    thumbnail: 'https://i.ytimg.com/vi/JGwWNGJdvx8/mqdefault.jpg',
+    duration: 233,
+    videoId: 'JGwWNGJdvx8',
+    bpm: 96,
+    tags: ['Pop', 'Dance'],
+    liked: false
+  },
+  {
+    id: 'song14',
+    title: 'We Will Rock You',
+    artist: 'Queen',
+    album: 'News of the World',
+    thumbnail: 'https://i.ytimg.com/vi/-tJYN-eG1zk/mqdefault.jpg',
+    duration: 122,
+    videoId: '-tJYN-eG1zk',
+    bpm: 81,
+    tags: ['Rock', 'Motivation'],
+    liked: true
+  },
+  {
+    id: 'song15',
+    title: 'HUMBLE.',
+    artist: 'Kendrick Lamar',
+    album: 'DAMN.',
+    thumbnail: 'https://i.ytimg.com/vi/tvTRZJ-4EyI/mqdefault.jpg',
+    duration: 177,
+    videoId: 'tvTRZJ-4EyI',
+    bpm: 150,
+    tags: ['Hip Hop', 'High Intensity'],
+    liked: false
+  },
+  {
+    id: 'song16',
+    title: 'Thunderstruck',
+    artist: 'AC/DC',
+    album: 'The Razors Edge',
+    thumbnail: 'https://i.ytimg.com/vi/v2AC41dglnM/mqdefault.jpg',
+    duration: 292,
+    videoId: 'v2AC41dglnM',
+    bpm: 138,
+    tags: ['Rock', 'Motivation', 'Strength'],
+    liked: true
   }
 ];
 
@@ -335,11 +451,34 @@ const MusicTab = () => {
       setLoading(true);
       // Simulate API request delay
       setTimeout(() => {
-        const filtered = mockSongs.filter(song => 
-          song.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          song.artist.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          song.album.toLowerCase().includes(searchTerm.toLowerCase())
+        // First look for exact artist match in mock artists
+        const artistMatch = mockArtists.find(artist => 
+          artist.name.toLowerCase() === searchTerm.toLowerCase()
         );
+        
+        let filtered;
+        if (artistMatch) {
+          // If artist found, show all songs by that artist
+          filtered = mockSongs.filter(song => 
+            song.artist.toLowerCase() === artistMatch.name.toLowerCase()
+          );
+          
+          // If no songs found for exact artist, search by genre instead
+          if (filtered.length === 0) {
+            filtered = mockSongs.filter(song => 
+              song.tags.some(tag => tag.toLowerCase() === artistMatch.genre.toLowerCase())
+            );
+          }
+        } else {
+          // General search by title, artist, album, or genre
+          filtered = mockSongs.filter(song => 
+            song.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            song.artist.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            song.album.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            song.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+          );
+        }
+        
         setFilteredSongs(filtered);
         setLoading(false);
       }, 300);
