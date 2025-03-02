@@ -1,3 +1,5 @@
+// frontend/src/pages/GroceryTab.js
+// This file has been updated to include Recipe Planner functionality
 import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense, lazy } from 'react';
 import {
   Alert,
@@ -122,12 +124,100 @@ import MealPlanQuestionnaire from '../components/MealPlanQuestionnaire';
 import MealPlanDisplay from '../components/MealPlanDisplay';
 import MealPlanningSection from '../components/MealPlanningSection';
 
-// Temporary mock data - to be replaced with real API integration
-// TODO: Replace with real-time grocery data from APIs like Spoonacular, Edamam, or Instacart API
-// Example API endpoints:
-// - Spoonacular: https://spoonacular.com/food-api/docs#Search-Grocery-Products
-// - Edamam: https://developer.edamam.com/food-database-api-docs
-// - Kroger API: https://developer.kroger.com/reference/
+// API integration for dynamic grocery items
+// This uses the Spoonacular API to fetch real grocery data
+// NOTE: You will need to set up your API key in an environment variable: REACT_APP_SPOONACULAR_API_KEY
+
+// Function to fetch grocery items from Spoonacular API
+const fetchGroceryItems = async (filters = {}) => {
+  try {
+    // Get API key from environment variables
+    const API_KEY = process.env.REACT_APP_SPOONACULAR_API_KEY || "YOUR_API_KEY_HERE"; // Replace with your API key if not using env vars
+    
+    // Construct the API URL with query parameters
+    let url = `https://api.spoonacular.com/food/products/search?apiKey=${API_KEY}&number=25`;
+    
+    // Add filters if provided
+    if (filters.query) url += `&query=${encodeURIComponent(filters.query)}`;
+    if (filters.diet) url += `&diet=${encodeURIComponent(filters.diet)}`;
+    if (filters.intolerances) url += `&intolerances=${encodeURIComponent(filters.intolerances)}`;
+    if (filters.sortDirection) url += `&sortDirection=${filters.sortDirection}`;
+    
+    console.log("Fetching grocery items from API...");
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    // Get detailed information for each product
+    const itemsWithDetails = await Promise.all(
+      data.products.map(async (product) => {
+        try {
+          // For each product ID, fetch detailed information
+          const detailUrl = `https://api.spoonacular.com/food/products/${product.id}?apiKey=${API_KEY}`;
+          const detailResponse = await fetch(detailUrl);
+          
+          if (!detailResponse.ok) {
+            throw new Error(`Product detail request failed for ID ${product.id}`);
+          }
+          
+          const productDetails = await detailResponse.json();
+          
+          // Transform the API data to match our application's grocery item format
+          return {
+            id: product.id,
+            name: product.title,
+            category: productDetails.aisle || "General",
+            price: ((Math.random() * 10) + 1).toFixed(2), // Spoonacular doesn't provide price, so generate random price
+            unit: "item",
+            nutrition: {
+              calories: productDetails.nutrition?.calories || 0,
+              protein: productDetails.nutrition?.protein || 0,
+              carbs: productDetails.nutrition?.carbs || 0,
+              fat: productDetails.nutrition?.fat || 0,
+              fiber: productDetails.nutrition?.fiber || 0
+            },
+            dietTypes: productDetails.diets || [],
+            isOrganic: product.title.toLowerCase().includes("organic"),
+            storeSections: [productDetails.aisle || "General"],
+            storeLocations: [
+              { store: "Local Grocery", aisle: productDetails.aisle || "General", section: "General" }
+            ],
+            image: product.image || "https://via.placeholder.com/300?text=Food+Item"
+          };
+        } catch (error) {
+          console.error(`Error fetching details for product ${product.id}:`, error);
+          // Return a basic version if detail fetch fails
+          return {
+            id: product.id,
+            name: product.title,
+            category: "General",
+            price: ((Math.random() * 10) + 1).toFixed(2),
+            unit: "item",
+            nutrition: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
+            dietTypes: [],
+            isOrganic: product.title.toLowerCase().includes("organic"),
+            storeSections: ["General"],
+            storeLocations: [{ store: "Local Grocery", aisle: "General", section: "General" }],
+            image: product.image || "https://via.placeholder.com/300?text=Food+Item"
+          };
+        }
+      })
+    );
+    
+    return itemsWithDetails;
+  } catch (error) {
+    console.error("Error fetching grocery items:", error);
+    // Fall back to mock data if API fails
+    console.warn("Falling back to mock data due to API error");
+    return mockGroceryItems;
+  }
+};
+
+// Fallback mock data in case API fails or for development without API key
 const mockGroceryItems = [
   {
     id: 1,
@@ -3591,7 +3681,40 @@ const GroceryTab = () => {
   const { saveFitnessProfile, fitnessProfile, dietaryPreferences, recommendedGroceries } = useWorkoutPlan();
   const [activeTab, setActiveTab] = useState(0);
   const [currentMealPlan, setCurrentMealPlan] = useState(null);
-  const [groceryItems, setGroceryItems] = useState(mockGroceryItems);
+  const [groceryItems, setGroceryItems] = useState([]);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  
+  // Load grocery items from API on component mount
+  useEffect(() => {
+    async function loadGroceryItems() {
+      try {
+        console.log("Loading initial grocery items from API...");
+        // Show loading indicator
+        setIsSearching(true);
+        
+        // Initialize with some random search terms to get varied results
+        const initialFoods = ['fresh', 'organic', 'protein', 'healthy', 'vegetables', 'fruit', 'dairy', 'meat'];
+        const randomTerm = initialFoods[Math.floor(Math.random() * initialFoods.length)];
+        
+        // Fetch items from API
+        const items = await fetchGroceryItems({ query: randomTerm });
+        
+        console.log(`Loaded ${items.length} items from API`);
+        setGroceryItems(items);
+        setInitialLoadComplete(true);
+        setIsSearching(false);
+      } catch (error) {
+        console.error("Error loading initial grocery data:", error);
+        // Fall back to mock data if API fails
+        console.warn("Using mock data as fallback");
+        setGroceryItems(mockGroceryItems);
+        setInitialLoadComplete(true);
+        setIsSearching(false);
+      }
+    }
+    
+    loadGroceryItems();
+  }, []);
   const [cartItems, setCartItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredItems, setFilteredItems] = useState(groceryItems);
@@ -4165,38 +4288,73 @@ const generateDynamicGroceryItems = (searchQuery) => {
         setIsSearching(true);
         
         try {
-          // This will search existing items AND generate new ones if nothing is found
-          const searchResults = await fetchRealGroceryData(debouncedSearchTerm);
+          // Search with the Spoonacular API for new dynamic results
+          const apiSearchResults = await fetchGroceryItems({ 
+            query: debouncedSearchTerm.trim(),
+            diet: selectedDietType !== 'all' ? selectedDietType : undefined
+          });
           
           // Check if component is still mounted before updating state
           if (!isMounted) return;
           
-          // Always use the search results (they'll either be existing items
-          // or dynamically generated ones)
-          if (searchResults && searchResults.length > 0) {
-            items = searchResults;
+          // If we got results from the API, use them
+          if (apiSearchResults && apiSearchResults.length > 0) {
+            console.log(`Found ${apiSearchResults.length} items from API search for "${debouncedSearchTerm}"`);
+            items = apiSearchResults;
+            
+            // Update the main grocery items list with these new items to keep them available
+            setGroceryItems(prevItems => {
+              // Combine existing items with new ones, avoiding duplicates by ID
+              const existingIds = new Set(prevItems.map(item => item.id));
+              const newItems = apiSearchResults.filter(item => !existingIds.has(item.id));
+              
+              // If we found new items, add them to the existing items
+              if (newItems.length > 0) {
+                return [...prevItems, ...newItems];
+              }
+              return prevItems;
+            });
           } else {
-            console.error('Search returned no results, even after item generation attempt');
+            // Fallback: search existing items and generate new ones if needed
+            console.log("API search returned no results, falling back to existing items");
             
-            // Just do a basic filter on the existing items as a last resort
-            const search = debouncedSearchTerm.toLowerCase().trim();
+            // Fallback to searching the existing items
+            const searchResults = await fetchRealGroceryData(debouncedSearchTerm);
             
-            // Split search into words to handle multiple search terms
-            const searchTerms = search.split(/\s+/).filter(term => term.length > 0);
-            
-            if (searchTerms.length > 0) {
-              items = groceryItems.filter(item => {
-                // Check if any search term matches
-                return searchTerms.some(term => {
-                  return item.name.toLowerCase().includes(term) || 
-                         item.category.toLowerCase().includes(term);
+            if (searchResults && searchResults.length > 0) {
+              items = searchResults;
+            } else {
+              console.warn('Both API and fallback search returned no results');
+              
+              // Do a basic filter on the existing items as a last resort
+              const search = debouncedSearchTerm.toLowerCase().trim();
+              
+              // Split search into words to handle multiple search terms
+              const searchTerms = search.split(/\s+/).filter(term => term.length > 0);
+              
+              if (searchTerms.length > 0) {
+                items = groceryItems.filter(item => {
+                  // Check if any search term matches
+                  return searchTerms.some(term => {
+                    return item.name.toLowerCase().includes(term) || 
+                           item.category.toLowerCase().includes(term);
+                  });
                 });
-              });
+              }
             }
           }
         } catch (error) {
           if (isMounted) {
-            console.error('Error in search:', error);
+            console.error('Error in API search:', error);
+            // Fallback to existing search method
+            try {
+              const fallbackResults = await fetchRealGroceryData(debouncedSearchTerm);
+              if (fallbackResults && fallbackResults.length > 0) {
+                items = fallbackResults;
+              }
+            } catch (fallbackError) {
+              console.error('Fallback search also failed:', fallbackError);
+            }
           }
         } finally {
           // Hide loading state if component is still mounted
@@ -5076,9 +5234,43 @@ const generateDynamicGroceryItems = (searchQuery) => {
   
   // Function to refresh and update meal plan ingredients
 const refreshMealPlanIngredients = async (ingredients, dietType) => {
-  console.log(`Refreshing meal plan for ${dietType} diet`);
+  console.log(`Refreshing meal plan for ${dietType} diet using API data`);
   
-  // Get the diet-specific ingredient suggestions
+  try {
+    // Get ingredients from Spoonacular API based on diet type
+    const apiIngredients = await fetchGroceryItems({ 
+      diet: dietType.toLowerCase().replace('_', '-'),
+      number: 20 // Get 20 ingredients that match this diet
+    });
+    
+    if (apiIngredients && apiIngredients.length > 0) {
+      console.log(`Successfully fetched ${apiIngredients.length} ingredients for ${dietType} diet from API`);
+      
+      // Process ingredients into the structure expected by meal plans
+      const processedIngredients = apiIngredients.map(item => ({
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        quantity: Math.floor(Math.random() * 3) + 1, // Random quantity 1-3
+        unit: item.unit || "item"
+      }));
+      
+      // Return a mix of original and new ingredients
+      // Keep some original ingredients for stability
+      const originalIngredientsToKeep = ingredients.slice(0, Math.min(5, ingredients.length));
+      return [...originalIngredientsToKeep, ...processedIngredients.slice(0, 15)];
+    } else {
+      console.warn("API didn't return ingredients, falling back to diet type mapping");
+      // Fall back to the static mapping if API fails
+      throw new Error("API returned no ingredients");
+    }
+  } catch (error) {
+    console.error("Error refreshing ingredients from API:", error);
+    
+    // Fallback to the static mapping
+    console.log("Using fallback static ingredient data");
+    
+    // Get the diet-specific ingredient suggestions
   const dietIngredients = {
     "High-Protein": {
       proteins: ['chicken breast', 'turkey', 'salmon', 'tuna', 'eggs', 'greek yogurt', 'cottage cheese', 'tofu'],

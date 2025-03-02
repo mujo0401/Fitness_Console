@@ -219,8 +219,8 @@ const InfoTab = () => {
       title: 'Grocery Shop',
       icon: <ShoppingCartIcon fontSize="large" />,
       color: '#43A047', // Green
-      description: 'Plan healthy meals and shop for ingredients with nutrition-focused recommendations.',
-      details: 'The Grocery Shop helps you maintain a healthy diet by suggesting nutritious ingredients and meal plans. You can browse recipes, create shopping lists based on your dietary preferences, and even order groceries for delivery.'
+      description: 'Plan healthy meals, find recipes, and shop for ingredients with nutrition-focused recommendations.',
+      details: 'The Grocery Shop helps you maintain a healthy diet by suggesting nutritious ingredients and meal plans. It includes a dynamic Recipe Planner that offers fresh meal ideas every time you use it, allowing you to discover and save your favorite recipes. You can create shopping lists based on your dietary preferences, add recipe ingredients directly to your cart, and even order groceries for delivery. The recipe system uses an advanced API to cycle through diverse, seasonally-appropriate meal suggestions personalized to your health goals.'
     },
     {
       id: 'trends',

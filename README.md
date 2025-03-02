@@ -28,41 +28,55 @@ To set up your Google API key:
 ### Open Food Facts API
 The Open Food Facts API is used for searching food ingredients and doesn't require an API key.
 
-### Instacart Integration
+### DoorDash Integration
 
-The application now includes integration with Instacart for grocery delivery services. This allows users to:
-- Find nearby stores available through Instacart
-- Add grocery items to cart
-- Submit orders for delivery through Instacart
+The application now includes integration with DoorDash for food delivery services. This allows users to:
+- Find nearby restaurants and grocery stores available through DoorDash
+- Add food items to cart
+- Submit orders for delivery through DoorDash
 
 #### Configuration
 
-To use the Instacart integration:
+To use the DoorDash integration:
 
 1. **For development/testing:** 
-   - The application includes a mock Instacart API that simulates interactions with the real API
-   - This is enabled by default with `INSTACART_MOCK_API_ENABLED=True`
+   - The application includes a mock DoorDash API that simulates interactions with the real API
+   - This is enabled by default with `DOORDASH_MOCK_API_ENABLED=True`
 
-2. **For production use with real Instacart API:**
-   - Obtain an API key from Instacart's Partner API program
+2. **For production use with real DoorDash API:**
+   - Obtain API credentials from DoorDash's Developer portal: https://developer.doordash.com/
    - Add these settings to your `.env` file:
      ```
-     INSTACART_API_KEY=your_instacart_api_key
-     INSTACART_API_BASE_URL=https://api.instacart.com
-     INSTACART_MOCK_API_ENABLED=False
+     DOORDASH_API_KEY=your_doordash_api_key
+     DOORDASH_CLIENT_ID=your_doordash_client_id
+     DOORDASH_CLIENT_SECRET=your_doordash_client_secret
+     DOORDASH_API_BASE_URL=https://api.doordash.com
+     DOORDASH_MOCK_API_ENABLED=False
      ```
 
 #### Features
 
-- **Store Locator:** Finds nearby grocery stores that work with Instacart
-- **Product Search:** Allows users to search for groceries available at selected stores  
+- **Store & Restaurant Locator:** Finds nearby food establishments that work with DoorDash
+- **Menu Search:** Search for ready-to-eat meals and groceries available at selected locations
 - **Cart Management:** Add items to cart with quantities and view nutritional information
-- **Checkout Process:** Place orders through Instacart's delivery network with real-time delivery estimates
+- **Checkout Process:** Place orders through DoorDash's delivery network with real-time delivery estimates
 
 #### Performance Optimizations
 
-The grocery browsing feature has been optimized for performance:
-- Virtualized lists for efficient rendering of large product catalogs
+The food browsing feature has been optimized for performance:
+- Virtualized lists for efficient rendering of large menus and product catalogs
 - Lazy loading of images (only loads when visible)
 - Debounced search to reduce API calls
 - Memoized components to prevent unnecessary re-renders
+
+### Spoonacular API Integration
+
+The application uses the Spoonacular API for recipe and ingredient data:
+
+1. Sign up for a free API key at: https://spoonacular.com/food-api/console#Dashboard
+2. Add the API key to your backend/.env file:
+   ```
+   SPOONACULAR_API_KEY=your_spoonacular_api_key
+   SPOONACULAR_CACHE_ENABLED=True
+   SPOONACULAR_CACHE_TIMEOUT=3600
+   ```

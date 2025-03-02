@@ -58,7 +58,15 @@ class Config:
     ]    # Google API configuration
     GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY', '')
     
-    # Instacart API configuration
-    INSTACART_API_KEY = os.environ.get('INSTACART_API_KEY', '')
-    INSTACART_API_BASE_URL = os.environ.get('INSTACART_API_BASE_URL', 'https://api.instacart.com')
-    INSTACART_MOCK_API_ENABLED = os.environ.get('INSTACART_MOCK_API_ENABLED', 'True') == 'True'
+    # DoorDash API configuration
+    DOORDASH_API_KEY = os.environ.get('DOORDASH_API_KEY', '')
+    DOORDASH_API_BASE_URL = os.environ.get('DOORDASH_API_BASE_URL', 'https://api.doordash.com')
+    DOORDASH_CLIENT_ID = os.environ.get('DOORDASH_CLIENT_ID', '')
+    DOORDASH_CLIENT_SECRET = os.environ.get('DOORDASH_CLIENT_SECRET', '')
+    DOORDASH_MOCK_API_ENABLED = os.environ.get('DOORDASH_MOCK_API_ENABLED', 'True') == 'True'
+    
+    # Spoonacular API configuration
+    SPOONACULAR_API_KEY = os.environ.get("SPOONACULAR_API_KEY", "")
+    SPOONACULAR_API_BASE_URL = "https://api.spoonacular.com"
+    SPOONACULAR_CACHE_ENABLED = os.environ.get("SPOONACULAR_CACHE_ENABLED", "True") == "True"
+    SPOONACULAR_CACHE_TIMEOUT = int(os.environ.get("SPOONACULAR_CACHE_TIMEOUT", "3600"))  # Default 1 hour cache
