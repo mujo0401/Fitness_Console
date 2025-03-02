@@ -456,6 +456,7 @@ const Dashboard = () => {
                 label="Trends" 
                 icon={<AutoGraphIcon />} 
                 iconPosition="start" 
+                disabled={!isAuthenticated}
                 sx={{
                   minHeight: 60,
                   borderRadius: '10px 10px 0 0',
@@ -468,6 +469,9 @@ const Dashboard = () => {
                   '&:hover': {
                     bgcolor: 'rgba(255, 152, 0, 0.04)',
                     color: '#ff9800'
+                  },
+                  '&.Mui-disabled': {
+                    opacity: 0.6,
                   }
                 }}
               />
