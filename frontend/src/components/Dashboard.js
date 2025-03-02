@@ -57,6 +57,7 @@ const Dashboard = () => {
   const [showDebugTools, setShowDebugTools] = useState(true); // Set to false in production
   const [currentTab, setCurrentTab] = useState(0); // Add state for tracking current tab
   const [manualAuthCheck, setManualAuthCheck] = useState(false);
+  const [musicContext, setMusicContext] = useState(null); // Music player state tracking
   
   // Auto-redirect to Fitness Plan tab if not authenticated and on a protected tab
   useEffect(() => {
@@ -65,6 +66,17 @@ const Dashboard = () => {
       setCurrentTab(4);
     }
   }, [isAuthenticated, currentTab]);
+
+  // Keep track of the music tab to maintain player state
+  useEffect(() => {
+    if (currentTab === 6) {
+      // When music tab is active, we can get its context
+      const musicTabContext = document.getElementById('musicTabContext');
+      if (musicTabContext) {
+        setMusicContext(musicTabContext);
+      }
+    }
+  }, [currentTab]);
 
   useEffect(() => {
     // Check authentication status when component mounts
@@ -201,20 +213,6 @@ const Dashboard = () => {
       <Box sx={{ height: 0, overflow: 'hidden' }} />
     );
   };
-
-  // Access the music player context if music tab is or was active
-  const [musicContext, setMusicContext] = useState(null);
-  
-  // Keep track of the music tab to maintain player state
-  useEffect(() => {
-    if (currentTab === 6) {
-      // When music tab is active, we can get its context
-      const musicTabContext = document.getElementById('musicTabContext');
-      if (musicTabContext) {
-        setMusicContext(musicTabContext);
-      }
-    }
-  }, [currentTab]);
 
   return (
     <Container maxWidth="lg" sx={{ pt: 4, pb: 4 }}>
