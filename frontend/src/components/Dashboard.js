@@ -1,6 +1,6 @@
 // frontend/src/components/Dashboard.js
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { 
   Box, 
   Container, 
@@ -582,12 +582,18 @@ const Dashboard = () => {
           style={{ overflow: 'visible', paddingTop: '8px' }}
         >
           {/* Information tab - always accessible, landing page */}
-          {currentTab === -1 && <InfoTab />}
+          {currentTab === -1 && (
+            <Suspense fallback={<CircularProgress />}>
+              <InfoTab />
+            </Suspense>
+          )}
           
           {/* Heart rate tab content - needs auth */}
           {currentTab === 0 && (
             isAuthenticated ? (
-              <HeartTab />
+              <Suspense fallback={<CircularProgress />}>
+                <HeartTab />
+              </Suspense>
             ) : (
               <EmptyAccessDeniedComponent />
             )
@@ -596,7 +602,9 @@ const Dashboard = () => {
           {/* Activity tab content - needs auth */}
           {currentTab === 1 && (
             isAuthenticated ? (
-              <ActivityTab />
+              <Suspense fallback={<CircularProgress />}>
+                <ActivityTab />
+              </Suspense>
             ) : (
               <EmptyAccessDeniedComponent />
             )
@@ -605,7 +613,9 @@ const Dashboard = () => {
           {/* Sleep tab content - needs auth */}
           {currentTab === 2 && (
             isAuthenticated ? (
-              <SleepTab />
+              <Suspense fallback={<CircularProgress />}>
+                <SleepTab />
+              </Suspense>
             ) : (
               <EmptyAccessDeniedComponent />
             )
@@ -614,35 +624,59 @@ const Dashboard = () => {
           {/* ABM tab content - needs auth */}
           {currentTab === 3 && (
             isAuthenticated ? (
-              <ABMTab />
+              <Suspense fallback={<CircularProgress />}>
+                <ABMTab />
+              </Suspense>
             ) : (
               <EmptyAccessDeniedComponent />
             )
           )}
           
           {/* Fitness Plan tab - always accessible */}
-          {currentTab === 4 && <FitnessTab />}
+          {currentTab === 4 && (
+            <Suspense fallback={<CircularProgress />}>
+              <FitnessTab />
+            </Suspense>
+          )}
           
           {/* Exercise Coach tab - always accessible but better with auth */}
-          {currentTab === 5 && <ExerciseCoach />}
+          {currentTab === 5 && (
+            <Suspense fallback={<CircularProgress />}>
+              <ExerciseCoach />
+            </Suspense>
+          )}
           
           {/* Music tab - always accessible */}
-          {currentTab === 6 && <MusicTab />}
+          {currentTab === 6 && (
+            <Suspense fallback={<CircularProgress />}>
+              <MusicTab />
+            </Suspense>
+          )}
           
           {/* Grocery Shop tab - always accessible */}
-          {currentTab === 7 && <GroceryTab />}
+          {currentTab === 7 && (
+            <Suspense fallback={<CircularProgress />}>
+              <GroceryTab />
+            </Suspense>
+          )}
           
           {/* Trends tab - needs auth */}
           {currentTab === 8 && (
             isAuthenticated ? (
-              <TrendsTab />
+              <Suspense fallback={<CircularProgress />}>
+                <TrendsTab />
+              </Suspense>
             ) : (
               <EmptyAccessDeniedComponent />
             )
           )}
           
           {/* Assistant tab - always accessible */}
-          {currentTab === 9 && <HealthAssistantTab />}
+          {currentTab === 9 && (
+            <Suspense fallback={<CircularProgress />}>
+              <HealthAssistantTab />
+            </Suspense>
+          )}
         </motion.div>
       </Box>
       
