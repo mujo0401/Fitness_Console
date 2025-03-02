@@ -202,6 +202,20 @@ const Dashboard = () => {
     );
   };
 
+  // Access the music player context if music tab is or was active
+  const [musicContext, setMusicContext] = useState(null);
+  
+  // Keep track of the music tab to maintain player state
+  useEffect(() => {
+    if (currentTab === 6) {
+      // When music tab is active, we can get its context
+      const musicTabContext = document.getElementById('musicTabContext');
+      if (musicTabContext) {
+        setMusicContext(musicTabContext);
+      }
+    }
+  }, [currentTab]);
+
   return (
     <Container maxWidth="lg" sx={{ pt: 4, pb: 4 }}>
       <motion.div
@@ -254,11 +268,12 @@ const Dashboard = () => {
             sx={{ 
               borderRadius: '20px', 
               mb: 4, 
-              background: 'linear-gradient(135deg, #1a237e, #3f51b5, #2196f3)',
+              background: 'linear-gradient(135deg, rgba(26, 35, 126, 0.95), rgba(63, 81, 181, 0.95), rgba(33, 150, 243, 0.95))',
               overflow: 'visible',
               boxShadow: '0 10px 30px rgba(33, 150, 243, 0.4), 0 -5px 30px rgba(63, 81, 181, 0.2)',
               border: '1px solid rgba(255,255,255,0.2)',
               position: 'relative',
+              backdropFilter: 'blur(10px)',
               '&::before': {
                 content: '""',
                 position: 'absolute',
@@ -315,6 +330,7 @@ const Dashboard = () => {
                   minWidth: { xs: 'auto', sm: 'auto' }, 
                   maxWidth: 180,
                   minHeight: 48,
+                  width: { xs: 'auto', sm: 120 }, // Consistent width for all tabs
                   margin: '0 4px',
                   borderRadius: '12px',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -322,11 +338,11 @@ const Dashboard = () => {
                   fontSize: '0.9rem',
                   fontWeight: 500,
                   border: '1px solid rgba(255,255,255,0.1)',
-                  backgroundColor: 'rgba(255,255,255,0.1)',
+                  backgroundColor: 'rgba(255,255,255,0.05)',
                   backdropFilter: 'blur(10px)',
                   '&:hover': {
                     transform: 'translateY(-4px) scale(1.05)',
-                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    backgroundColor: 'rgba(255,255,255,0.15)',
                     boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
                   }
                 },
@@ -583,7 +599,11 @@ const Dashboard = () => {
           {currentTab === 5 && <ExerciseCoach />}
           
           {/* Music tab - always accessible */}
-          {currentTab === 6 && <MusicTab />}
+          {currentTab === 6 && (
+            <div id="musicTabContext">
+              <MusicTab />
+            </div>
+          )}
           
           {/* Grocery Shop tab - always accessible */}
           {currentTab === 7 && <GroceryTab />}

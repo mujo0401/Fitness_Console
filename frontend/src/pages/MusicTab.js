@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
 import { 
   Box, 
   Typography, 
@@ -37,9 +37,12 @@ import {
   MenuItem,
   Badge,
   Snackbar,
-  Alert
+  Alert,
+  Zoom,
+  Fab,
+  Drawer
 } from '@mui/material';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
@@ -64,7 +67,16 @@ import HistoryIcon from '@mui/icons-material/History';
 import TuneIcon from '@mui/icons-material/Tune';
 import SportsIcon from '@mui/icons-material/Sports';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
+import CloseIcon from '@mui/icons-material/Close';
+import OpenInFullIcon from '@mui/icons-material/OpenInFull';
+import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import { useWorkoutPlan } from '../context/WorkoutPlanContext';
+
+// Create a context for the music player state
+export const MusicPlayerContext = createContext();
+
+// Custom hook to use the music player context
+export const useMusicPlayer = () => useContext(MusicPlayerContext);
 
 // Mock data for YouTube Music API integration
 // In a real app, you would use an actual YouTube Music API or a third-party API
@@ -90,7 +102,17 @@ const mockArtists = [
   { name: 'Ariana Grande', genre: 'Pop' },
   { name: 'Bad Bunny', genre: 'Latin' },
   { name: 'Daft Punk', genre: 'Electronic' },
-  { name: 'Coldplay', genre: 'Rock' }
+  { name: 'Coldplay', genre: 'Rock' },
+  { name: 'Breaking Benjamin', genre: 'Metal' },
+  { name: 'Linkin Park', genre: 'Rock' },
+  { name: 'Imagine Dragons', genre: 'Rock' },
+  { name: 'Twenty One Pilots', genre: 'Alternative' },
+  { name: 'Post Malone', genre: 'Hip Hop' },
+  { name: 'Rihanna', genre: 'Pop' },
+  { name: 'Bruno Mars', genre: 'Pop' },
+  { name: 'Billie Eilish', genre: 'Pop' },
+  { name: 'Adele', genre: 'Pop' },
+  { name: 'Justin Bieber', genre: 'Pop' }
 ];
 
 const mockPlaylists = [
@@ -418,6 +440,8 @@ const MusicTab = () => {
   const [currentWorkoutType, setCurrentWorkoutType] = useState('');
   const [enableBpmSync, setEnableBpmSync] = useState(false);
   const [targetBpm, setTargetBpm] = useState(140);
+  const [showMiniPlayer, setShowMiniPlayer] = useState(false);
+  const [miniPlayerExpanded, setMiniPlayerExpanded] = useState(false);
   
   const audioRef = useRef(null);
   const progressInterval = useRef(null);
@@ -890,14 +914,220 @@ const MusicTab = () => {
     }
   };
   
+  // Update context for global access to player
+  useEffect(() => {
+    // Show mini player when navigating away but only if a song is playing
+    if (currentSong) {
+      setShowMiniPlayer(true);
+    }
+  }, [currentSong]);
+
+  // Mini player component
+  const MiniPlayer = () => {
+    return (
+      <Zoom in={showMiniPlayer && currentSong}>
+        <Box
+          sx={{
+            position: 'fixed',
+            bottom: 20,
+            right: 20,
+            zIndex: 1000,
+          }}
+        >
+          {miniPlayerExpanded ? (
+            // Expanded mini player
+            <Card
+              sx={{
+                width: 300,
+                borderRadius: 3,
+                background: 'linear-gradient(145deg, #5C1B9D, #2341DD)',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                overflow: 'hidden',
+              }}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 0.5 }}>
+                <IconButton
+                  size="small"
+                  onClick={() => setMiniPlayerExpanded(false)}
+                  sx={{ color: 'white' }}
+                >
+                  <CloseFullscreenIcon fontSize="small" />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  onClick={() => setShowMiniPlayer(false)}
+                  sx={{ color: 'white' }}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </Box>
+              <Box sx={{ display: 'flex', p: 1 }}>
+                <Avatar
+                  src={currentSong?.thumbnail}
+                  variant="rounded"
+                  sx={{ width: 60, height: 60, mr: 1 }}
+                />
+                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <Typography variant="subtitle2" noWrap sx={{ color: 'white', fontWeight: 'bold' }}>
+                    {currentSong?.title}
+                  </Typography>
+                  <Typography variant="caption" noWrap sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                    {currentSong?.artist}
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', minWidth: 28 }}>
+                      {formatTime(Math.floor(currentTime))}
+                    </Typography>
+                    <Slider
+                      size="small"
+                      value={currentTime}
+                      min={0}
+                      max={currentSong?.duration || 0}
+                      onChange={handleSeek}
+                      sx={{
+                        mx: 1,
+                        color: 'white',
+                        '& .MuiSlider-thumb': {
+                          width: 8,
+                          height: 8,
+                        }
+                      }}
+                    />
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', minWidth: 28 }}>
+                      {formatTime(currentSong?.duration || 0)}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'center', pb: 1 }}>
+                <IconButton onClick={playPreviousSong} size="small" sx={{ color: 'white' }}>
+                  <SkipPreviousIcon />
+                </IconButton>
+                <IconButton onClick={togglePlay} sx={{ color: 'white', mx: 1 }}>
+                  {isPlaying ? <PauseIcon /> : <PlayArrowIcon />}
+                </IconButton>
+                <IconButton onClick={playNextSong} size="small" sx={{ color: 'white' }}>
+                  <SkipNextIcon />
+                </IconButton>
+                <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', ml: 1 }}>
+                  <IconButton
+                    size="small"
+                    onClick={toggleMute}
+                    onMouseEnter={() => setShowVolumeSlider(true)}
+                    sx={{ color: 'white' }}
+                  >
+                    {muted ? <VolumeOffIcon fontSize="small" /> : <VolumeUpIcon fontSize="small" />}
+                  </IconButton>
+                  {showVolumeSlider && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        bottom: '100%',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        bgcolor: 'rgba(0,0,0,0.7)',
+                        p: 1,
+                        borderRadius: 1,
+                        width: 24,
+                        height: 100,
+                      }}
+                      onMouseLeave={() => setShowVolumeSlider(false)}
+                    >
+                      <Slider
+                        orientation="vertical"
+                        value={muted ? 0 : volume}
+                        onChange={handleVolumeChange}
+                        min={0}
+                        max={100}
+                        sx={{ height: '100%', color: 'white' }}
+                        size="small"
+                      />
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            </Card>
+          ) : (
+            // Collapsed mini player
+            <Fab
+              color="primary"
+              sx={{
+                background: 'linear-gradient(145deg, #5C1B9D, #2341DD)',
+                width: 60,
+                height: 60,
+                position: 'relative',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+              }}
+            >
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+                onClick={() => setMiniPlayerExpanded(true)}
+              >
+                <Avatar
+                  src={currentSong?.thumbnail}
+                  sx={{
+                    width: '100%',
+                    height: '100%',
+                    opacity: 0.7,
+                  }}
+                />
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    backgroundColor: 'rgba(0,0,0,0.3)',
+                  }}
+                >
+                  <IconButton
+                    sx={{ color: 'white', p: 0 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      togglePlay();
+                    }}
+                  >
+                    {isPlaying ? <PauseIcon /> : <PlayArrowIcon />}
+                  </IconButton>
+                </Box>
+              </Box>
+            </Fab>
+          )}
+        </Box>
+      </Zoom>
+    );
+  };
+
   return (
-    <Box sx={{ p: 2 }}>
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        {/* Main content */}
+    <MusicPlayerContext.Provider value={{ 
+      currentSong, setCurrentSong, 
+      isPlaying, setIsPlaying, 
+      currentTime, setCurrentTime,
+      volume, setVolume,
+      muted, setMuted,
+      queue, setQueue,
+      togglePlay, playNextSong, playPreviousSong
+    }}>
+      <Box sx={{ p: 2 }}>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          {/* Main content */}
         <Grid container spacing={3}>
           {/* Player and controls column */}
           <Grid item xs={12} md={5} lg={4}>
@@ -1872,7 +2102,11 @@ const MusicTab = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      
+      {/* Render the mini player */}
+      <MiniPlayer />
     </Box>
+    </MusicPlayerContext.Provider>
   );
 };
 
