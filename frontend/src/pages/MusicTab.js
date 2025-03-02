@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Box, 
   Typography, 
@@ -70,13 +70,9 @@ import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import CloseIcon from '@mui/icons-material/Close';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
+import AlbumIcon from '@mui/icons-material/Album';
 import { useWorkoutPlan } from '../context/WorkoutPlanContext';
-
-// Create a context for the music player state
-export const MusicPlayerContext = createContext();
-
-// Custom hook to use the music player context
-export const useMusicPlayer = () => useContext(MusicPlayerContext);
+import { useMusicPlayer, MusicPlayerContext } from '../context/MusicPlayerContext';
 
 // YouTube Data API Integration
 // This file uses the real YouTube Data API for music searches
@@ -420,17 +416,26 @@ const MusicTab = () => {
   const theme = useTheme();
   const { todaysWorkout } = useWorkoutPlan();
   
-  // State variables
+  // Use global music player context
+  const { 
+    currentSong, setCurrentSong,
+    isPlaying, setIsPlaying,
+    currentTime, setCurrentTime,
+    volume, setVolume,
+    muted, setMuted,
+    queue, setQueue,
+    showMiniPlayer, setShowMiniPlayer,
+    repeatMode, setRepeatMode,
+    shuffleEnabled, setShuffleEnabled,
+    rockCatalog,
+    playSong, togglePlay, handleSeek, handleVolumeChange, toggleMute,
+    playNextSong, playPreviousSong, toggleShuffle, toggleRepeat,
+    addToQueue, removeFromQueue, clearQueue, findSongById, playAlbum
+  } = useMusicPlayer();
+  
+  // Local state variables
   const [selectedTab, setSelectedTab] = useState(0);
-  const [currentSong, setCurrentSong] = useState(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [volume, setVolume] = useState(80);
-  const [muted, setMuted] = useState(false);
-  const [queue, setQueue] = useState([]);
   const [playlistView, setPlaylistView] = useState('grid'); // 'grid' or 'list'
-  const [repeatMode, setRepeatMode] = useState('none'); // 'none', 'all', 'one'
-  const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredSongs, setFilteredSongs] = useState(mockSongs);
   const [loading, setLoading] = useState(false);
@@ -444,45 +449,11 @@ const MusicTab = () => {
   const [currentWorkoutType, setCurrentWorkoutType] = useState('');
   const [enableBpmSync, setEnableBpmSync] = useState(false);
   const [targetBpm, setTargetBpm] = useState(140);
-  const [showMiniPlayer, setShowMiniPlayer] = useState(false);
   const [miniPlayerExpanded, setMiniPlayerExpanded] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertSeverity, setAlertSeverity] = useState('info');
-  
-  const audioRef = useRef(null);
-  const progressInterval = useRef(null);
-  const playerRef = useRef(null);
-  
-  // Initialize YouTube iframe API
-  useEffect(() => {
-    // Define YT globally if it doesn't exist yet
-    if (!window.YT) {
-      window.YT = {
-        PlayerState: {
-          ENDED: 0,
-          PLAYING: 1,
-          PAUSED: 2,
-          BUFFERING: 3
-        }
-      };
-    }
-    
-    // Load YouTube iframe API
-    const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    const firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-    
-    window.onYouTubeIframeAPIReady = initializeYouTubePlayer;
-    
-    return () => {
-      // Clean up timer when component unmounts
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current);
-      }
-    };
-  }, []);
+  const [showRockBands, setShowRockBands] = useState(false);
   
   // Function to search YouTube using the Data API
   const searchYouTube = async (query) => {
@@ -513,6 +484,10 @@ const MusicTab = () => {
       }));
     } catch (error) {
       console.error('Error searching YouTube:', error);
+      // Show error alert to user
+      setAlertMessage('Failed to search YouTube: ' + error.message);
+      setAlertSeverity('error');
+      setAlertOpen(true);
       return [];
     }
   };
@@ -549,15 +524,93 @@ const MusicTab = () => {
     }
   };
 
-  // Update filtered songs when search term changes - Using real YouTube API
+  // Update filtered songs when search term changes - Using a hybrid approach with API and mock data
   useEffect(() => {
-    // Use a cached set of results for empty search to avoid API calls
     if (!searchTerm) {
-      setFilteredSongs(mockSongs);
+      // Default view without search - show rock bands catalog if enabled
+      if (showRockBands) {
+        // Flatten the rock catalog to display all songs
+        const allRockSongs = [];
+        for (const artist in rockCatalog) {
+          rockCatalog[artist].forEach(album => {
+            album.tracks.forEach(track => {
+              allRockSongs.push({
+                ...track,
+                artist: album.artist,
+                album: album.title,
+                thumbnail: album.coverArt
+              });
+            });
+          });
+        }
+        setFilteredSongs(allRockSongs.slice(0, 20)); // Limit to 20 songs
+      } else {
+        setFilteredSongs(mockSongs);
+      }
       return;
     }
     
-    // Fetch from YouTube
+    // Check if the search matches any of our rock bands first
+    const rockBandSearchRegex = /breaking\s*benjamin|twenty\s*one\s*pilots|linkin\s*park|of\s*monsters\s*and\s*men/i;
+    if (rockBandSearchRegex.test(searchTerm)) {
+      setShowRockBands(true);
+      
+      // Find matching songs from rock catalog
+      const matchingSongs = [];
+      for (const artist in rockCatalog) {
+        if (artist.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            searchTerm.toLowerCase().includes(artist.toLowerCase())) {
+          // Add all tracks from this artist
+          rockCatalog[artist].forEach(album => {
+            album.tracks.forEach(track => {
+              matchingSongs.push({
+                ...track,
+                artist: album.artist,
+                album: album.title,
+                thumbnail: album.coverArt
+              });
+            });
+          });
+          continue;
+        }
+        
+        // Check individual albums and tracks
+        rockCatalog[artist].forEach(album => {
+          if (album.title.toLowerCase().includes(searchTerm.toLowerCase())) {
+            // Add all tracks from this album
+            album.tracks.forEach(track => {
+              matchingSongs.push({
+                ...track,
+                artist: album.artist,
+                album: album.title,
+                thumbnail: album.coverArt
+              });
+            });
+            return;
+          }
+          
+          // Check individual tracks
+          album.tracks.forEach(track => {
+            if (track.title.toLowerCase().includes(searchTerm.toLowerCase())) {
+              matchingSongs.push({
+                ...track,
+                artist: album.artist,
+                album: album.title,
+                thumbnail: album.coverArt
+              });
+            }
+          });
+        });
+      }
+      
+      if (matchingSongs.length > 0) {
+        setFilteredSongs(matchingSongs);
+        setLoading(false);
+        return;
+      }
+    }
+    
+    // If no rock band matches or it's a different search, use YouTube API
     const fetchData = async () => {
       setLoading(true);
       try {
@@ -597,7 +650,7 @@ const MusicTab = () => {
     }, 500); // Debounce search
     
     return () => clearTimeout(timer);
-  }, [searchTerm]);
+  }, [searchTerm, showRockBands, rockCatalog]);
   
   // Effect to sync with workout if enabled
   useEffect(() => {
@@ -624,267 +677,13 @@ const MusicTab = () => {
           
           // Start playing the first song if none is playing
           if (!currentSong) {
-            setCurrentSong(suggestedSongs[0]);
+            playSong(suggestedSongs[0]);
           }
         }
       }
     }
-  }, [syncWithWorkout, todaysWorkout, queue.length, currentSong]);
-  
-  // Initialize YouTube player with improved error handling
-  const initializeYouTubePlayer = () => {
-    if (typeof window.YT === 'undefined' || !window.YT.Player) {
-      // If YT is not yet loaded, try again in 100ms
-      console.log('YouTube API not ready yet, retrying in 100ms');
-      setTimeout(initializeYouTubePlayer, 100);
-      return;
-    }
-    
-    console.log('Initializing YouTube player');
-    
-    try {
-      // Check if element exists
-      const playerElement = document.getElementById('youtube-player');
-      if (!playerElement) {
-        console.error('YouTube player element not found');
-        return;
-      }
-      
-      playerRef.current = new window.YT.Player('youtube-player', {
-        height: '0',
-        width: '0',
-        playerVars: {
-          'playsinline': 1,
-          'controls': 0,
-          'disablekb': 1,
-          'enablejsapi': 1,
-          'modestbranding': 1,
-          'rel': 0,
-          'origin': window.location.origin
-        },
-        events: {
-          'onReady': onPlayerReady,
-          'onStateChange': onPlayerStateChange,
-          'onError': (event) => {
-            console.error('YouTube player error:', event.data);
-            // Handle player errors - could offer to try again
-            setAlertMessage(`YouTube player error: ${event.data}. Try another song.`);
-          }
-        }
-      });
-      
-      // If we have a stored song from previous session, load it
-      if (window.musicPlayerState && window.musicPlayerState.currentSong) {
-        console.log('Restoring previous song in player', window.musicPlayerState.currentSong.videoId);
-      }
-    } catch (error) {
-      console.error('Error initializing YouTube player:', error);
-    }
-  };
-  
-  const onPlayerReady = (event) => {
-    // Player is ready
-    console.log("YouTube player ready");
-    // Set initial volume
-    event.target.setVolume(volume);
-    
-    // If we have a stored song from previous session, load it
-    if (window.musicPlayerState && window.musicPlayerState.currentSong) {
-      console.log('Loading previously playing song', window.musicPlayerState.currentSong.videoId);
-      
-      // We need to actually load the video and potentially play it
-      if (playerRef.current && window.musicPlayerState.videoId) {
-        try {
-          // Restore the video
-          playerRef.current.loadVideoById(window.musicPlayerState.videoId);
-          
-          // Seek to the stored position if available
-          if (window.musicPlayerState.currentTime) {
-            playerRef.current.seekTo(window.musicPlayerState.currentTime);
-          }
-          
-          // Resume playback if it was playing
-          if (window.musicPlayerState.isPlaying) {
-            // Small delay to ensure video is loaded
-            setTimeout(() => {
-              playerRef.current.playVideo();
-              setIsPlaying(true);
-            }, 300);
-          }
-        } catch (error) {
-          console.error('Error restoring player state:', error);
-        }
-      }
-    }
-  };
-  
-  const onPlayerStateChange = (event) => {
-    // 0 = ended, 1 = playing, 2 = paused, 3 = buffering
-    if (event.data === window.YT.PlayerState.ENDED) {
-      handleSongEnd();
-    } else if (event.data === window.YT.PlayerState.PLAYING) {
-      setIsPlaying(true);
-      
-      // Start tracking progress
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current);
-      }
-      
-      progressInterval.current = setInterval(() => {
-        if (playerRef.current) {
-          const currentTime = playerRef.current.getCurrentTime();
-          setCurrentTime(currentTime);
-        }
-      }, 1000);
-    } else if (event.data === window.YT.PlayerState.PAUSED) {
-      setIsPlaying(false);
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current);
-      }
-    }
-  };
-  
-  // Handle song selection
-  const playSong = (song) => {
-    if (!song) return;
-    
-    setCurrentSong(song);
-    
-    // Add to user history
-    setUserHistory(prev => {
-      // Remove duplicates
-      const history = prev.filter(item => item.id !== song.id);
-      // Add to beginning
-      return [song, ...history].slice(0, 20);
-    });
-    
-    // If player is initialized, load and play the video
-    if (playerRef.current) {
-      playerRef.current.loadVideoById(song.videoId);
-      playerRef.current.setVolume(muted ? 0 : volume);
-      setIsPlaying(true);
-    }
-  };
-  
-  // Handle play/pause
-  const togglePlay = () => {
-    if (!currentSong) {
-      // If no song is selected, play the first song in the filtered list
-      if (filteredSongs.length > 0) {
-        playSong(filteredSongs[0]);
-      }
-      return;
-    }
-    
-    if (playerRef.current) {
-      if (isPlaying) {
-        playerRef.current.pauseVideo();
-      } else {
-        playerRef.current.playVideo();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-  
-  // Handle seeking in the song
-  const handleSeek = (e, newValue) => {
-    if (playerRef.current && currentSong) {
-      playerRef.current.seekTo(newValue);
-      setCurrentTime(newValue);
-    }
-  };
-  
-  // Handle volume change
-  const handleVolumeChange = (e, newValue) => {
-    setVolume(newValue);
-    if (playerRef.current) {
-      playerRef.current.setVolume(newValue);
-      if (newValue === 0) {
-        setMuted(true);
-      } else if (muted) {
-        setMuted(false);
-      }
-    }
-  };
-  
-  // Toggle mute
-  const toggleMute = () => {
-    if (playerRef.current) {
-      if (muted) {
-        playerRef.current.setVolume(volume);
-      } else {
-        playerRef.current.setVolume(0);
-      }
-      setMuted(!muted);
-    }
-  };
-  
-  // Handle song ending
-  const handleSongEnd = () => {
-    if (repeatMode === 'one') {
-      // Replay the current song
-      if (playerRef.current) {
-        playerRef.current.seekTo(0);
-        playerRef.current.playVideo();
-      }
-    } else {
-      playNextSong();
-    }
-  };
-  
-  // Play next song
-  const playNextSong = () => {
-    if (!currentSong || queue.length === 0) return;
-    
-    const currentIndex = queue.findIndex(song => song.id === currentSong.id);
-    if (currentIndex === -1) {
-      // Current song not in queue, play first in queue
-      playSong(queue[0]);
-    } else {
-      const nextIndex = (currentIndex + 1) % queue.length;
-      playSong(queue[nextIndex]);
-    }
-  };
-  
-  // Play previous song
-  const playPreviousSong = () => {
-    if (!currentSong || queue.length === 0) return;
-    
-    const currentIndex = queue.findIndex(song => song.id === currentSong.id);
-    if (currentIndex === -1) {
-      // Current song not in queue, play last in queue
-      playSong(queue[queue.length - 1]);
-    } else {
-      const prevIndex = (currentIndex - 1 + queue.length) % queue.length;
-      playSong(queue[prevIndex]);
-    }
-  };
-  
-  // Toggle shuffle mode
-  const toggleShuffle = () => {
-    setShuffleEnabled(!shuffleEnabled);
-    if (!shuffleEnabled && queue.length > 0) {
-      // Shuffle the queue
-      const shuffled = [...queue];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
-      setQueue(shuffled);
-    }
-  };
-  
-  // Toggle repeat mode
-  const toggleRepeat = () => {
-    if (repeatMode === 'none') {
-      setRepeatMode('all');
-    } else if (repeatMode === 'all') {
-      setRepeatMode('one');
-    } else {
-      setRepeatMode('none');
-    }
-  };
-  
+  }, [syncWithWorkout, todaysWorkout, queue, currentSong, playSong]);
+
   // Toggle like status of a song
   const toggleLike = (songId) => {
     const updatedSongs = filteredSongs.map(song => {
@@ -902,16 +701,6 @@ const MusicTab = () => {
     
     // Update liked songs list
     setLikedSongs(updatedSongs.filter(song => song.liked));
-  };
-  
-  // Add song to queue
-  const addToQueue = (song) => {
-    setQueue(prev => [...prev, song]);
-  };
-  
-  // Remove song from queue
-  const removeFromQueue = (songId) => {
-    setQueue(prev => prev.filter(song => song.id !== songId));
   };
   
   // Create a playlist from current queue
@@ -932,19 +721,17 @@ const MusicTab = () => {
   // Filter songs by selected genres
   useEffect(() => {
     if (selectedGenres.length === 0) {
-      setFilteredSongs(mockSongs);
+      if (!searchTerm) {
+        setFilteredSongs(mockSongs);
+      }
+      // If there's a search term, don't override the search results
     } else {
       const filtered = mockSongs.filter(song => 
         song.tags.some(tag => selectedGenres.includes(tag))
       );
       setFilteredSongs(filtered);
     }
-  }, [selectedGenres]);
-  
-  // Clear queue
-  const clearQueue = () => {
-    setQueue([]);
-  };
+  }, [selectedGenres, searchTerm]);
   
   // Handle BPM sync toggle
   const handleBpmSyncToggle = (event) => {
@@ -971,6 +758,8 @@ const MusicTab = () => {
         case 'recovery':
           recommendedBpm = 85;
           break;
+        default:
+          recommendedBpm = 140;
       }
       
       setTargetBpm(recommendedBpm);
@@ -1021,55 +810,58 @@ const MusicTab = () => {
     }
   };
   
-  // Fix player persistence across tabs and ensure continuous playback
-  useEffect(() => {
-    // Create global reference to maintain player state across tab changes
-    if (!window.musicPlayerState) {
-      window.musicPlayerState = {
-        currentSong: null,
-        isPlaying: false,
-        currentTime: 0,
-        videoId: null,
-        queue: []
-      };
+  // Toggle rock bands catalog view
+  const toggleRockBandsView = () => {
+    setShowRockBands(!showRockBands);
+    
+    if (!showRockBands) {
+      // Flatten the rock catalog to display all songs
+      const allRockSongs = [];
+      for (const artist in rockCatalog) {
+        rockCatalog[artist].forEach(album => {
+          album.tracks.forEach(track => {
+            allRockSongs.push({
+              ...track,
+              artist: album.artist,
+              album: album.title,
+              thumbnail: album.coverArt
+            });
+          });
+        });
+      }
+      setFilteredSongs(allRockSongs.slice(0, 20)); // Limit to 20 songs
+    } else {
+      // Revert to mock songs
+      setFilteredSongs(mockSongs);
     }
-    
-    // This runs when the component mounts
-    const initializePlayer = () => {
-      // If we have stored state and no current song, restore from the stored state
-      if (window.musicPlayerState.currentSong && !currentSong) {
-        console.log('Restoring music player state from cache');
-        setCurrentSong(window.musicPlayerState.currentSong);
+  };
+  
+  // Play an album directly
+  const handlePlayAlbum = (albumId) => {
+    playAlbum(albumId);
+  };
+  
+  // Add an entire album to the queue
+  const addAlbumToQueue = (albumId) => {
+    for (const artist in rockCatalog) {
+      const album = rockCatalog[artist].find(a => a.id === albumId);
+      if (album) {
+        const albumTracks = album.tracks.map(track => ({
+          ...track,
+          artist: album.artist,
+          album: album.title,
+          thumbnail: album.coverArt
+        }));
         
-        // We don't immediately set isPlaying to true as we need to ensure player is ready
-        if (window.musicPlayerState.queue.length > 0) {
-          setQueue(window.musicPlayerState.queue);
-        }
+        setQueue(prev => [...prev, ...albumTracks]);
         
-        // Set mini player state
-        setShowMiniPlayer(true);
+        setAlertMessage(`Added ${album.title} to queue`);
+        setAlertSeverity('success');
+        setAlertOpen(true);
+        return;
       }
-    };
-    
-    initializePlayer();
-    
-    // When component unmounts, save state globally
-    return () => {
-      if (currentSong) {
-        console.log('Saving music player state before unmount');
-        window.musicPlayerState = {
-          currentSong,
-          isPlaying, 
-          currentTime,
-          videoId: currentSong.videoId,
-          queue
-        };
-        
-        // Always show mini player when navigating away
-        setShowMiniPlayer(true);
-      }
-    };
-  }, []);
+    }
+  };
 
   // Mini player component
   const MiniPlayer = () => {
@@ -1261,38 +1053,152 @@ const MusicTab = () => {
   };
 
   return (
-    <MusicPlayerContext.Provider value={{ 
-      currentSong, setCurrentSong, 
-      isPlaying, setIsPlaying, 
-      currentTime, setCurrentTime,
-      volume, setVolume,
-      muted, setMuted,
-      queue, setQueue,
-      togglePlay, playNextSong, playPreviousSong
-    }}>
-      <Box sx={{ p: 2 }}>
-        {/* Alert for errors and notifications */}
-        <Snackbar
-          open={alertOpen}
-          autoHideDuration={6000}
-          onClose={() => setAlertOpen(false)}
-          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+    <Box sx={{ p: 2 }}>
+      {/* Alert for errors and notifications */}
+      <Snackbar
+        open={alertOpen}
+        autoHideDuration={6000}
+        onClose={() => setAlertOpen(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setAlertOpen(false)} 
+          severity={alertSeverity}
+          sx={{ width: '100%' }}
         >
-          <Alert 
-            onClose={() => setAlertOpen(false)} 
-            severity={alertSeverity}
-            sx={{ width: '100%' }}
+          {alertMessage}
+        </Alert>
+      </Snackbar>
+      
+      {/* Rock Albums Showcase */}
+      {showRockBands && (
+        <Paper 
+          elevation={3}
+          sx={{
+            p: 2,
+            mb: 3,
+            background: 'linear-gradient(145deg, #1a2035, #121212)',
+            color: 'white',
+            borderRadius: 2
+          }}
+        >
+          <Typography variant="h5" sx={{ mb: 2, fontWeight: 'bold' }}>Rock Band Albums</Typography>
+          
+          <Grid container spacing={2}>
+            {Object.keys(rockCatalog).map(artist => (
+              <React.Fragment key={artist}>
+                <Grid item xs={12}>
+                  <Typography variant="h6" sx={{ mt: 1, mb: 1, color: '#90caf9' }}>
+                    {artist.split(/(?=[A-Z])/).join(' ')}
+                  </Typography>
+                </Grid>
+                
+                {rockCatalog[artist].map(album => (
+                  <Grid item xs={12} sm={6} md={4} lg={3} key={album.id}>
+                    <Card 
+                      sx={{ 
+                        bgcolor: 'rgba(0,0,0,0.7)',
+                        color: 'white',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        transition: 'all 0.3s',
+                        '&:hover': {
+                          transform: 'translateY(-5px)',
+                          boxShadow: '0 5px 15px rgba(0,0,0,0.3)'
+                        }
+                      }}
+                    >
+                      <Box sx={{ position: 'relative' }}>
+                        <Box
+                          component="img"
+                          src={album.coverArt}
+                          alt={album.title}
+                          sx={{ 
+                            width: '100%',
+                            aspectRatio: '1',
+                            objectFit: 'cover' 
+                          }}
+                        />
+                        <Box 
+                          sx={{ 
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: 'rgba(0,0,0,0.5)',
+                            opacity: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'opacity 0.3s',
+                            '&:hover': {
+                              opacity: 1
+                            }
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <IconButton
+                              onClick={() => handlePlayAlbum(album.id)}
+                              sx={{ 
+                                color: 'white',
+                                bgcolor: 'rgba(255,255,255,0.1)',
+                                '&:hover': {
+                                  bgcolor: theme.palette.primary.main
+                                }
+                              }}
+                            >
+                              <PlayArrowIcon />
+                            </IconButton>
+                            <IconButton
+                              onClick={() => addAlbumToQueue(album.id)}
+                              sx={{ 
+                                color: 'white',
+                                bgcolor: 'rgba(255,255,255,0.1)',
+                                '&:hover': {
+                                  bgcolor: theme.palette.secondary.main
+                                }
+                              }}
+                            >
+                              <QueueMusicIcon />
+                            </IconButton>
+                          </Box>
+                        </Box>
+                      </Box>
+                      <CardContent sx={{ flexGrow: 1 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                          {album.title}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                          {album.year} • {album.tracks.length} tracks
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </React.Fragment>
+            ))}
+          </Grid>
+          
+          <Button 
+            variant="outlined"
+            color="primary"
+            onClick={toggleRockBandsView}
+            startIcon={<MusicNoteIcon />}
+            sx={{ mt: 2 }}
           >
-            {alertMessage}
-          </Alert>
-        </Snackbar>
-        
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          {/* Main content */}
+            Return to All Music
+          </Button>
+        </Paper>
+      )}
+      
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        {/* Main content */}
         <Grid container spacing={3}>
           {/* Player and controls column */}
           <Grid item xs={12} md={5} lg={4}>
@@ -1806,6 +1712,22 @@ const MusicTab = () => {
             
             {/* Genre filters */}
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+              {/* Rock bands toggle */}
+              <Chip
+                icon={<AlbumIcon />}
+                label="Rock Bands"
+                onClick={toggleRockBandsView}
+                color={showRockBands ? "secondary" : "default"}
+                variant={showRockBands ? "filled" : "outlined"}
+                sx={{ 
+                  fontWeight: 'bold',
+                  '&:hover': {
+                    bgcolor: showRockBands ? '' : alpha(theme.palette.secondary.main, 0.1)
+                  }
+                }}
+              />
+              
+              {/* Genre filters */}
               {musicGenres.map(genre => (
                 <Chip
                   key={genre}
@@ -2271,7 +2193,6 @@ const MusicTab = () => {
       {/* Render the mini player */}
       <MiniPlayer />
     </Box>
-    </MusicPlayerContext.Provider>
   );
 };
 

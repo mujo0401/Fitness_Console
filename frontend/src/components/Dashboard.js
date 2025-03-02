@@ -215,7 +215,7 @@ const Dashboard = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ pt: 4, pb: 4 }}>
+    <Container maxWidth="lg" sx={{ pt: 4, pb: 4, position: 'relative' }}>
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -270,7 +270,9 @@ const Dashboard = () => {
               overflow: 'visible',
               boxShadow: '0 10px 30px rgba(33, 150, 243, 0.2), 0 -5px 15px rgba(63, 81, 181, 0.1)',
               border: '1px solid rgba(255,255,255,0.8)',
-              position: 'relative',
+              position: 'sticky',
+              top: 16,
+              zIndex: 1100,
               backdropFilter: 'blur(10px)',
               '&::before': {
                 content: '""',
@@ -548,7 +550,7 @@ const Dashboard = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          style={{ overflow: 'visible' }}
+          style={{ overflow: 'visible', paddingTop: '8px' }}
         >
           {/* Heart rate tab content - needs auth */}
           {currentTab === 0 && (
@@ -593,11 +595,7 @@ const Dashboard = () => {
           {currentTab === 5 && <ExerciseCoach />}
           
           {/* Music tab - always accessible */}
-          {currentTab === 6 && (
-            <div id="musicTabContext">
-              <MusicTab />
-            </div>
-          )}
+          {currentTab === 6 && <MusicTab />}
           
           {/* Grocery Shop tab - always accessible */}
           {currentTab === 7 && <GroceryTab />}
