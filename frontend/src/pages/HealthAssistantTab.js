@@ -157,10 +157,21 @@ const HealthAssistantTab = () => {
     }
   };
   
-  // Scroll to the bottom of the chat when new messages are added
+  // Only scroll to the bottom of the chat when sending/receiving new messages, not on initial load
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(false);
+  
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatHistory]);
+    // Only scroll if it's not the initial mount and we have new messages
+    if (shouldAutoScroll && chatHistory.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [chatHistory, shouldAutoScroll]);
+  
+  // Set auto-scroll when sending/receiving messages
+  useEffect(() => {
+    // Initialize with auto-scroll disabled
+    setShouldAutoScroll(false);
+  }, []);
   
   // Function to get response from "AI"
   const getAIResponse = async (userMessage) => {
@@ -261,6 +272,9 @@ const HealthAssistantTab = () => {
   const handleSendMessage = async (inputMessage = null) => {
     const messageToSend = inputMessage || message;
     if (!messageToSend.trim()) return;
+    
+    // Enable auto-scrolling when sending a message
+    setShouldAutoScroll(true);
     
     // Add user message to chat
     const userMessage = {
@@ -377,6 +391,9 @@ const HealthAssistantTab = () => {
 
   const handleInsightClick = (insight) => {
     setActiveInsight(insight);
+    
+    // Enable auto-scrolling when sending an insight
+    setShouldAutoScroll(true);
     
     // Add a message from the assistant about this insight
     const insightMessage = {
@@ -776,7 +793,9 @@ const HealthAssistantTab = () => {
             backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'20\' height=\'20\' viewBox=\'0 0 20 20\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'%233f51b5\' fill-opacity=\'0.05\' fill-rule=\'evenodd\'%3E%3Ccircle cx=\'3\' cy=\'3\' r=\'1.5\'/%3E%3Ccircle cx=\'13\' cy=\'13\' r=\'1.5\'/%3E%3C/g%3E%3C/svg%3E")',
             backgroundSize: '20px 20px',
             position: 'relative',
-            boxShadow: '0 12px 24px rgba(0,0,0,0.1), inset 0 2px 0 rgba(255,255,255,1), inset 0 -1px 0 rgba(0,0,0,0.05)'
+            boxShadow: '0 12px 24px rgba(0,0,0,0.1), inset 0 2px 0 rgba(255,255,255,1), inset 0 -1px 0 rgba(0,0,0,0.05)',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
           {/* Voice active overlay */}
@@ -820,8 +839,16 @@ const HealthAssistantTab = () => {
             </Backdrop>
           )}
           
-          {/* Message bubbles */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {/* Message bubbles - using flex-grow to fill available space */}
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: 2, 
+            overflowY: 'auto',
+            flexGrow: 1, // This makes the messages container fill the available space
+            height: '100%',
+            pb: 2 // Add padding at the bottom to ensure last message is fully visible
+          }}>
             {chatHistory.map((msg) => (
               <Zoom 
                 key={msg.id} 
@@ -1044,7 +1071,8 @@ const HealthAssistantTab = () => {
                 </Box>
               </Box>
             )}
-            <div ref={messagesEndRef} />
+            {/* This ref is used for scrolling to bottom */}
+            <Box ref={messagesEndRef} sx={{ height: 1 }} />
           </Box>
         </Paper>
         
