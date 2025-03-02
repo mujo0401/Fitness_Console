@@ -31,6 +31,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import HeadsetMicIcon from '@mui/icons-material/HeadsetMic';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
+import InfoIcon from '@mui/icons-material/Info';
 import { useAuth } from '../context/AuthContext';
 import ApiTester from './ApiTester'; 
 import HeartTab from '../pages/HeartTab'; 
@@ -43,6 +44,7 @@ import HealthAssistantTab from '../pages/HealthAssistantTab';
 import ABMTab from '../pages/ABMTab';
 import ExerciseCoach from './ExerciseCoach';
 import MusicTab from '../pages/MusicTab';
+import InfoTab from '../pages/InfoTab';
 
 import '../styles/Dashboard.css';
 
@@ -55,9 +57,8 @@ const Dashboard = () => {
   const [alertMessage, setAlertMessage] = useState('');
   const [alertSeverity, setAlertSeverity] = useState('info');
   const [showDebugTools, setShowDebugTools] = useState(true); // Set to false in production
-  const [currentTab, setCurrentTab] = useState(0); // Add state for tracking current tab
+  const [currentTab, setCurrentTab] = useState(-1); // Use -1 for Info tab, which should be the landing page
   const [manualAuthCheck, setManualAuthCheck] = useState(false);
-  const [musicContext, setMusicContext] = useState(null); // Music player state tracking
   
   // Auto-redirect to Fitness Plan tab if not authenticated and on a protected tab
   useEffect(() => {
@@ -67,14 +68,11 @@ const Dashboard = () => {
     }
   }, [isAuthenticated, currentTab]);
 
-  // Keep track of the music tab to maintain player state
+  // Set default tab to Info when app loads
   useEffect(() => {
-    if (currentTab === 6) {
-      // When music tab is active, we can get its context
-      const musicTabContext = document.getElementById('musicTabContext');
-      if (musicTabContext) {
-        setMusicContext(musicTabContext);
-      }
+    if (currentTab === -1) {
+      // Default to Info tab as landing page
+      console.log('Setting default tab to Info tab');
     }
   }, [currentTab]);
 
@@ -290,8 +288,8 @@ const Dashboard = () => {
               value={currentTab} 
               onChange={handleTabChange} 
               aria-label="dashboard tabs"
-              variant="fullWidth"
-              centered
+              variant="scrollable"
+              scrollButtons="auto"
               TabIndicatorProps={{
                 sx: { display: 'none' }
               }}
@@ -346,6 +344,22 @@ const Dashboard = () => {
                 }
               }}
             >
+              {/* Information tab - landing page */}
+              <Tab 
+                icon={<InfoIcon />}
+                label="Information"
+                sx={{
+                  fontWeight: 600,
+                  '&.Mui-selected': {
+                    color: 'white',
+                    fontWeight: 700,
+                    background: 'linear-gradient(135deg, #607D8B, #90A4AE)',
+                    border: '1px solid rgba(96, 125, 139, 0.8)',
+                    boxShadow: '0 4px 12px rgba(96, 125, 139, 0.4), inset 0 0 6px rgba(255, 255, 255, 0.3)'
+                  }
+                }}
+              />
+            
               {/* Health data tabs - disabled when not authenticated */}
               <Tab 
                 icon={<FavoriteIcon />}
@@ -552,6 +566,9 @@ const Dashboard = () => {
           transition={{ duration: 0.4 }}
           style={{ overflow: 'visible', paddingTop: '8px' }}
         >
+          {/* Information tab - always accessible, landing page */}
+          {currentTab === -1 && <InfoTab />}
+          
           {/* Heart rate tab content - needs auth */}
           {currentTab === 0 && (
             isAuthenticated ? (
