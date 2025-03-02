@@ -42,6 +42,20 @@ import {
   Fade,
   Zoom,
   Skeleton,
+  Stepper,
+  Step,
+  StepLabel,
+  StepContent,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormLabel,
+  FormGroup,
+  Checkbox,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Container,
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import { FixedSizeGrid } from 'react-window';
@@ -59,6 +73,7 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import SearchIcon from '@mui/icons-material/Search';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CheckIcon from '@mui/icons-material/Check';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -74,11 +89,38 @@ import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import NightsStayIcon from '@mui/icons-material/NightsStay';
 import LocalDiningIcon from '@mui/icons-material/LocalDining';
+import DinnerDiningIcon from '@mui/icons-material/DinnerDining';
+import FreeBreakfastIcon from '@mui/icons-material/FreeBreakfast';
+import IcecreamIcon from '@mui/icons-material/Icecream';
+import BoltIcon from '@mui/icons-material/Bolt';
+import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
+import ShieldIcon from '@mui/icons-material/Shield';
+import SpaIcon from '@mui/icons-material/Spa';
+import YardIcon from '@mui/icons-material/Yard';
+import GrassIcon from '@mui/icons-material/Grass';
+import NoMealsIcon from '@mui/icons-material/NoMeals';
+import NoFoodIcon from '@mui/icons-material/NoFood';
+import RamenDiningIcon from '@mui/icons-material/RamenDining';
+import EggAltIcon from '@mui/icons-material/EggAlt';
+import MonitorHeightIcon from '@mui/icons-material/Height';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
+import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
+import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import RiceBowlIcon from '@mui/icons-material/RiceBowl';
+import FastfoodIcon from '@mui/icons-material/Fastfood';
+import OutdoorGrillIcon from '@mui/icons-material/OutdoorGrill';
 import Rating from '@mui/material/Rating';
 import { useAuth } from '../context/AuthContext';
+import { useWorkoutPlan } from '../context/WorkoutPlanContext';
+
+// Import our custom meal planning components
+import MealPlanQuestionnaire from '../components/MealPlanQuestionnaire';
+import MealPlanDisplay from '../components/MealPlanDisplay';
+import MealPlanningSection from '../components/MealPlanningSection';
 
 // Temporary mock data - to be replaced with real API integration
 // TODO: Replace with real-time grocery data from APIs like Spoonacular, Edamam, or Instacart API
@@ -1048,6 +1090,590 @@ const GroceryItemCard = React.memo(({ item, onAdd, isAdded, cartQuantity = 0 }) 
     </Card>
   );
 });
+
+// Meal Planning Questionnaire component
+const MealPlanQuestionnaire = ({ onComplete }) => {
+  const theme = useTheme();
+  const [activeStep, setActiveStep] = useState(0);
+  const [formData, setFormData] = useState({
+    goals: [],
+    dietaryRestrictions: [],
+    allergies: [],
+    mealPreferences: {
+      breakfast: true,
+      lunch: true,
+      dinner: true,
+      snacks: true
+    },
+    calorieGoal: 2000,
+    numMealsPerDay: 3,
+    cookingTime: 'moderate',
+    flavorPreferences: [],
+    foodGroups: {
+      protein: 5,
+      vegetables: 5,
+      fruits: 5,
+      grains: 5,
+      dairy: 5
+    }
+  });
+
+  const handleNext = () => {
+    setActiveStep((prevStep) => prevStep + 1);
+  };
+
+  const handleBack = () => {
+    setActiveStep((prevStep) => prevStep - 1);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+  };
+
+  const handleCheckboxChange = (category, item) => {
+    setFormData(prev => {
+      const currentItems = [...prev[category]];
+      const itemIndex = currentItems.indexOf(item);
+      
+      if (itemIndex === -1) {
+        // Add item
+        return {
+          ...prev,
+          [category]: [...currentItems, item]
+        };
+      } else {
+        // Remove item
+        currentItems.splice(itemIndex, 1);
+        return {
+          ...prev,
+          [category]: currentItems
+        };
+      }
+    });
+  };
+
+  const handleSliderChange = (category, value) => {
+    setFormData(prev => ({
+      ...prev,
+      foodGroups: {
+        ...prev.foodGroups,
+        [category]: value
+      }
+    }));
+  };
+
+  const handleComplete = () => {
+    onComplete(formData);
+  };
+
+  // Step content based on current step
+  const getStepContent = () => {
+    switch (activeStep) {
+      case 0: // Health goals
+        return (
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              What are your main health and nutrition goals?
+            </Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Select all that apply to customize your meal recommendations.
+            </Typography>
+            
+            <Grid container spacing={2}>
+              {[
+                { value: 'weight_loss', label: 'Weight Loss', icon: <MonitorHeightIcon /> },
+                { value: 'muscle_gain', label: 'Muscle Gain', icon: <FitnessCenterIcon /> },
+                { value: 'energy_boost', label: 'Energy Boost', icon: <BoltIcon /> },
+                { value: 'heart_health', label: 'Heart Health', icon: <FavoriteIcon /> },
+                { value: 'better_sleep', label: 'Better Sleep', icon: <NightsStayIcon /> },
+                { value: 'digestion', label: 'Digestive Health', icon: <HealthAndSafetyIcon /> },
+                { value: 'immune_support', label: 'Immune Support', icon: <ShieldIcon /> },
+                { value: 'general_health', label: 'General Wellness', icon: <SpaIcon /> }
+              ].map((goal) => {
+                const isSelected = formData.goals.includes(goal.value);
+                return (
+                  <Grid item xs={6} sm={4} md={3} key={goal.value}>
+                    <Paper
+                      elevation={isSelected ? 3 : 1}
+                      onClick={() => handleCheckboxChange('goals', goal.value)}
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        cursor: 'pointer',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center',
+                        bgcolor: isSelected ? alpha(theme.palette.primary.main, 0.1) : 'white',
+                        border: isSelected ? `2px solid ${theme.palette.primary.main}` : '1px solid #e0e0e0',
+                        transition: 'all 0.2s ease-in-out',
+                        '&:hover': {
+                          transform: 'translateY(-3px)',
+                          boxShadow: 2
+                        }
+                      }}
+                    >
+                      <Box sx={{
+                        p: 1,
+                        borderRadius: '50%',
+                        bgcolor: isSelected ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.1),
+                        color: isSelected ? 'white' : theme.palette.primary.main,
+                        mb: 1
+                      }}>
+                        {goal.icon}
+                      </Box>
+                      <Typography variant="body2" sx={{ fontWeight: isSelected ? 'bold' : 'normal' }}>
+                        {goal.label}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          </Box>
+        );
+        
+      case 1: // Dietary restrictions
+        return (
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Do you have any dietary restrictions?
+            </Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Select all that apply to ensure your meal plan is compatible with your diet.
+            </Typography>
+            
+            <Grid container spacing={2}>
+              {[
+                { value: 'vegetarian', label: 'Vegetarian', icon: <YardIcon /> },
+                { value: 'vegan', label: 'Vegan', icon: <GrassIcon /> },
+                { value: 'gluten_free', label: 'Gluten-Free', icon: <NoMealsIcon /> },
+                { value: 'dairy_free', label: 'Dairy-Free', icon: <NoMealsIcon /> },
+                { value: 'keto', label: 'Keto', icon: <RamenDiningIcon /> },
+                { value: 'paleo', label: 'Paleo', icon: <EggAltIcon /> },
+                { value: 'low_carb', label: 'Low-Carb', icon: <NoFoodIcon /> },
+                { value: 'low_sodium', label: 'Low-Sodium', icon: <NoFoodIcon /> },
+                { value: 'low_fat', label: 'Low-Fat', icon: <NoFoodIcon /> },
+                { value: 'mediterranean', label: 'Mediterranean', icon: <DinnerDiningIcon /> },
+                { value: 'none', label: 'No Restrictions', icon: <RestaurantIcon /> }
+              ].map((restriction) => {
+                const isSelected = formData.dietaryRestrictions.includes(restriction.value);
+                return (
+                  <Grid item xs={6} sm={4} md={3} key={restriction.value}>
+                    <Paper
+                      elevation={isSelected ? 3 : 1}
+                      onClick={() => {
+                        // If "none" is selected, clear all others
+                        if (restriction.value === 'none') {
+                          setFormData({
+                            ...formData,
+                            dietaryRestrictions: isSelected ? [] : ['none']
+                          });
+                        } else {
+                          // If selecting a specific restriction, remove "none" if present
+                          let newRestrictions = [...formData.dietaryRestrictions];
+                          const noneIndex = newRestrictions.indexOf('none');
+                          if (noneIndex !== -1) {
+                            newRestrictions.splice(noneIndex, 1);
+                          }
+                          
+                          // Toggle the selected restriction
+                          const restrictionIndex = newRestrictions.indexOf(restriction.value);
+                          if (restrictionIndex === -1) {
+                            newRestrictions.push(restriction.value);
+                          } else {
+                            newRestrictions.splice(restrictionIndex, 1);
+                          }
+                          
+                          setFormData({
+                            ...formData,
+                            dietaryRestrictions: newRestrictions
+                          });
+                        }
+                      }}
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        cursor: 'pointer',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center',
+                        bgcolor: isSelected ? alpha(theme.palette.primary.main, 0.1) : 'white',
+                        border: isSelected ? `2px solid ${theme.palette.primary.main}` : '1px solid #e0e0e0',
+                        transition: 'all 0.2s ease-in-out',
+                        '&:hover': {
+                          transform: 'translateY(-3px)',
+                          boxShadow: 2
+                        }
+                      }}
+                    >
+                      <Box sx={{
+                        p: 1,
+                        borderRadius: '50%',
+                        bgcolor: isSelected ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.1),
+                        color: isSelected ? 'white' : theme.palette.primary.main,
+                        mb: 1
+                      }}>
+                        {restriction.icon}
+                      </Box>
+                      <Typography variant="body2" sx={{ fontWeight: isSelected ? 'bold' : 'normal' }}>
+                        {restriction.label}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          </Box>
+        );
+
+      case 2: // Food preferences
+        return (
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Food Group Preferences
+            </Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Rate how much you enjoy each food group to help us customize your meal recommendations.
+            </Typography>
+            
+            <Box sx={{ py: 2 }}>
+              {[
+                { name: 'protein', label: 'Protein (Meat, Fish, Beans, etc.)', icon: '🥩' },
+                { name: 'vegetables', label: 'Vegetables', icon: '🥦' },
+                { name: 'fruits', label: 'Fruits', icon: '🍎' },
+                { name: 'grains', label: 'Grains (Bread, Rice, Pasta, etc.)', icon: '🌾' },
+                { name: 'dairy', label: 'Dairy', icon: '🧀' }
+              ].map((food) => (
+                <Box key={food.name} sx={{ mb: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Typography sx={{ mr: 1 }}>{food.icon}</Typography>
+                    <Typography variant="subtitle2">{food.label}</Typography>
+                  </Box>
+                  <Box sx={{ px: 1, display: 'flex', alignItems: 'center' }}>
+                    <Typography variant="caption" sx={{ mr: 1, minWidth: '45px' }}>
+                      Dislike
+                    </Typography>
+                    <Slider
+                      value={formData.foodGroups[food.name]}
+                      onChange={(e, newValue) => handleSliderChange(food.name, newValue)}
+                      step={1}
+                      marks
+                      min={1}
+                      max={10}
+                      sx={{ 
+                        mx: 1,
+                        color: formData.foodGroups[food.name] < 4 ? '#f44336' : 
+                              formData.foodGroups[food.name] > 7 ? '#4caf50' : '#ff9800'
+                      }}
+                    />
+                    <Typography variant="caption" sx={{ ml: 1, minWidth: '45px' }}>
+                      Love it
+                    </Typography>
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+            
+            <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+              Flavor Preferences
+            </Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Select the flavor profiles you enjoy most.
+            </Typography>
+            
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+              {[
+                'Spicy', 'Sweet', 'Savory', 'Tangy', 'Salty', 'Bitter', 'Umami', 'Herbal',
+                'Smoky', 'Citrusy', 'Garlic', 'Minty', 'Nutty'
+              ].map((flavor) => {
+                const isSelected = formData.flavorPreferences.includes(flavor);
+                return (
+                  <Chip
+                    key={flavor}
+                    label={flavor}
+                    onClick={() => handleCheckboxChange('flavorPreferences', flavor)}
+                    color={isSelected ? "primary" : "default"}
+                    variant={isSelected ? "filled" : "outlined"}
+                    sx={{ 
+                      m: 0.5,
+                      '&:hover': {
+                        bgcolor: isSelected ? '' : alpha(theme.palette.primary.main, 0.1)
+                      }
+                    }}
+                  />
+                );
+              })}
+            </Box>
+          </Box>
+        );
+
+      case 3: // Meal structure
+        return (
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Meal Planning Details
+            </Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Help us understand your meal structure preferences.
+            </Typography>
+            
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6}>
+                <Typography gutterBottom>How many meals do you prefer per day?</Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
+                  {[2, 3, 4, 5, 6].map((number) => (
+                    <Button
+                      key={number}
+                      variant={formData.numMealsPerDay === number ? "contained" : "outlined"}
+                      color="primary"
+                      onClick={() => setFormData({...formData, numMealsPerDay: number})}
+                      sx={{ minWidth: '60px' }}
+                    >
+                      {number}
+                    </Button>
+                  ))}
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <Typography gutterBottom>Preferred cooking time:</Typography>
+                <RadioGroup
+                  row
+                  name="cookingTime"
+                  value={formData.cookingTime}
+                  onChange={handleInputChange}
+                >
+                  <FormControlLabel value="quick" control={<Radio />} label="Quick (< 30 min)" />
+                  <FormControlLabel value="moderate" control={<Radio />} label="Moderate (30-60 min)" />
+                  <FormControlLabel value="elaborate" control={<Radio />} label="Elaborate (60+ min)" />
+                </RadioGroup>
+              </Grid>
+              
+              <Grid item xs={12}>
+                <Typography gutterBottom>Which meals would you like to plan?</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                  {[
+                    { key: 'breakfast', label: 'Breakfast', icon: <FreeBreakfastIcon /> },
+                    { key: 'lunch', label: 'Lunch', icon: <RestaurantIcon /> },
+                    { key: 'dinner', label: 'Dinner', icon: <DinnerDiningIcon /> },
+                    { key: 'snacks', label: 'Snacks', icon: <IcecreamIcon /> },
+                  ].map((meal) => {
+                    const isSelected = formData.mealPreferences[meal.key];
+                    return (
+                      <Paper
+                        key={meal.key}
+                        elevation={isSelected ? 3 : 1}
+                        onClick={() => setFormData({
+                          ...formData,
+                          mealPreferences: {
+                            ...formData.mealPreferences,
+                            [meal.key]: !isSelected
+                          }
+                        })}
+                        sx={{
+                          p: 2,
+                          borderRadius: 2,
+                          cursor: 'pointer',
+                          width: '120px',
+                          height: '100px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          textAlign: 'center',
+                          bgcolor: isSelected ? alpha(theme.palette.primary.main, 0.1) : 'white',
+                          border: isSelected ? `2px solid ${theme.palette.primary.main}` : '1px solid #e0e0e0',
+                          transition: 'all 0.2s ease-in-out',
+                          '&:hover': {
+                            transform: 'translateY(-3px)',
+                            boxShadow: 2
+                          }
+                        }}
+                      >
+                        <Box sx={{
+                          p: 1,
+                          borderRadius: '50%',
+                          bgcolor: isSelected ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.1),
+                          color: isSelected ? 'white' : theme.palette.primary.main,
+                          mb: 1
+                        }}>
+                          {meal.icon}
+                        </Box>
+                        <Typography variant="body2" sx={{ fontWeight: isSelected ? 'bold' : 'normal' }}>
+                          {meal.label}
+                        </Typography>
+                      </Paper>
+                    );
+                  })}
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12}>
+                <Typography gutterBottom>Daily calorie target (approximate):</Typography>
+                <Slider
+                  value={formData.calorieGoal}
+                  onChange={(e, newValue) => setFormData({...formData, calorieGoal: newValue})}
+                  step={100}
+                  marks={[
+                    { value: 1200, label: '1200' },
+                    { value: 1500, label: '1500' },
+                    { value: 2000, label: '2000' },
+                    { value: 2500, label: '2500' },
+                    { value: 3000, label: '3000' }
+                  ]}
+                  min={1000}
+                  max={3500}
+                  valueLabelDisplay="on"
+                  sx={{ color: theme.palette.primary.main }}
+                />
+              </Grid>
+            </Grid>
+          </Box>
+        );
+        
+      case 4: // Food allergies
+        return (
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Do you have any food allergies?
+            </Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Select all allergies that apply to ensure your meal plan is safe.
+            </Typography>
+            
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+              {[
+                'None', 'Peanuts', 'Tree Nuts', 'Dairy', 'Eggs', 'Fish', 'Shellfish', 
+                'Soy', 'Wheat', 'Gluten', 'Sesame', 'Corn', 'Berries'
+              ].map((allergy) => {
+                const isSelected = formData.allergies.includes(allergy);
+                return (
+                  <Chip
+                    key={allergy}
+                    label={allergy}
+                    onClick={() => {
+                      // Handle 'None' special case
+                      if (allergy === 'None') {
+                        setFormData({
+                          ...formData,
+                          allergies: isSelected ? [] : ['None']
+                        });
+                      } else {
+                        let newAllergies = [...formData.allergies];
+                        // Remove 'None' if it exists
+                        const noneIndex = newAllergies.indexOf('None');
+                        if (noneIndex !== -1) {
+                          newAllergies.splice(noneIndex, 1);
+                        }
+                        
+                        // Toggle the selected allergy
+                        const allergyIndex = newAllergies.indexOf(allergy);
+                        if (allergyIndex === -1) {
+                          newAllergies.push(allergy);
+                        } else {
+                          newAllergies.splice(allergyIndex, 1);
+                        }
+                        
+                        setFormData({
+                          ...formData,
+                          allergies: newAllergies
+                        });
+                      }
+                    }}
+                    color={isSelected ? "error" : "default"}
+                    variant={isSelected ? "filled" : "outlined"}
+                    sx={{ 
+                      m: 0.5,
+                      '&:hover': {
+                        bgcolor: isSelected ? '' : alpha(theme.palette.error.main, 0.1)
+                      }
+                    }}
+                  />
+                );
+              })}
+            </Box>
+            
+            <Alert severity="info" sx={{ mt: 2 }}>
+              Your meal plan will exclude these allergens. If you have severe allergies, please consult with a healthcare professional before following any meal plan.
+            </Alert>
+          </Box>
+        );
+        
+      default:
+        return 'Unknown step';
+    }
+  };
+
+  // Steps array
+  const steps = [
+    'Health Goals',
+    'Dietary Restrictions',
+    'Food Preferences',
+    'Meal Structure',
+    'Allergies'
+  ];
+
+  return (
+    <Box>
+      <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
+        <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
+          Personalized Meal Planning
+        </Typography>
+        
+        <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4, pt: 2 }}>
+          {steps.map((label, index) => (
+            <Step key={label} completed={activeStep > index}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+        
+        <Box sx={{ mt: 2, minHeight: '300px' }}>
+          {getStepContent()}
+        </Box>
+        
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
+          <Button
+            disabled={activeStep === 0}
+            onClick={handleBack}
+            variant="outlined"
+          >
+            Back
+          </Button>
+          
+          {activeStep === steps.length - 1 ? (
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleComplete}
+              startIcon={<CheckIcon />}
+            >
+              Generate Meal Plan
+            </Button>
+          ) : (
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleNext}
+            >
+              Continue
+            </Button>
+          )}
+        </Box>
+      </Paper>
+    </Box>
+  );
+};
 
 // Helper component for the shopping cart item
 const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
@@ -2962,6 +3588,7 @@ const RecipeSuggestions = ({ cartItems, recipes }) => {
 const GroceryTab = () => {
   const theme = useTheme();
   const { isAuthenticated } = useAuth();
+  const { saveFitnessProfile, fitnessProfile, dietaryPreferences, recommendedGroceries } = useWorkoutPlan();
   const [activeTab, setActiveTab] = useState(0);
   const [currentMealPlan, setCurrentMealPlan] = useState(null);
   const [groceryItems, setGroceryItems] = useState(mockGroceryItems);
@@ -2981,6 +3608,13 @@ const GroceryTab = () => {
   const [locationLoading, setLocationLoading] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
   const [locationError, setLocationError] = useState(null);
+  
+  // Meal planning questionnaire state
+  const [showMealPlanningQuestionnaire, setShowMealPlanningQuestionnaire] = useState(false);
+  const [mealPlanningResults, setMealPlanningResults] = useState(null);
+  const [dietFilters, setDietFilters] = useState([]);
+  const [foodGroupFilters, setFoodGroupFilters] = useState({});
+  const [generatedMealPlan, setGeneratedMealPlan] = useState(null);
   
   // Calculate cart total
   const cartTotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
@@ -3502,6 +4136,7 @@ const generateDynamicGroceryItems = (searchQuery) => {
   // State for search loading indicators
   const [isSearching, setIsSearching] = useState(false);
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+  const [enableDietFiltering, setEnableDietFiltering] = useState(false);
   
   // Add debounce to search term to avoid unnecessary API calls
   useEffect(() => {
@@ -3576,6 +4211,57 @@ const generateDynamicGroceryItems = (searchQuery) => {
         items = items.filter(item => item.category === selectedCategory);
       }
       
+      // Filter by diet types based on user's preferences from WorkoutPlanContext
+      if (isMounted && dietaryPreferences && enableDietFiltering) {
+        // Map from our diet types to the dietTypes in grocery items
+        const dietTypeMap = {
+          'vegan': 'Vegan',
+          'vegetarian': 'Vegetarian',
+          'keto': 'Keto',
+          'paleo': 'Paleo',
+          'gluten_free': 'Gluten-Free',
+          'high-protein': 'High-Protein',
+          'balanced': 'Mediterranean',
+          'athletic': 'Performance',
+          'muscle_gain': 'High-Protein',
+          'weight_loss': 'Low-Fat'
+        };
+        
+        // Get the appropriate diet type to filter by
+        const dietToFilterBy = dietTypeMap[dietaryPreferences.primaryDiet] || null;
+        
+        // If we have a valid diet filter
+        if (dietToFilterBy) {
+          console.log(`Filtering items by diet type: ${dietToFilterBy}`);
+          items = items.filter(item => 
+            // Check if item's dietTypes includes the user's preferred diet
+            item.dietTypes && item.dietTypes.some(diet => diet === dietToFilterBy)
+          );
+        }
+        
+        // Check for restrictions and filter those out
+        if (dietaryPreferences.restrictions && dietaryPreferences.restrictions.length > 0) {
+          // Items to exclude based on restrictions
+          const excludeTerms = [];
+          
+          if (dietaryPreferences.restrictions.includes('dairy_free')) {
+            excludeTerms.push('milk', 'cheese', 'yogurt', 'cream');
+          }
+          
+          if (dietaryPreferences.restrictions.includes('gluten_free')) {
+            excludeTerms.push('wheat', 'gluten', 'bread', 'pasta');
+          }
+          
+          // Filter out items containing excluded terms
+          if (excludeTerms.length > 0) {
+            items = items.filter(item => {
+              const itemName = item.name.toLowerCase();
+              return !excludeTerms.some(term => itemName.includes(term));
+            });
+          }
+        }
+      }
+      
       // Update filtered items if component is still mounted
       if (isMounted) {
         setFilteredItems(items);
@@ -3589,12 +4275,685 @@ const generateDynamicGroceryItems = (searchQuery) => {
     return () => {
       isMounted = false;
     };
-  }, [debouncedSearchTerm, selectedCategory, groceryItems]);
+  }, [debouncedSearchTerm, selectedCategory, groceryItems, dietaryPreferences, enableDietFiltering]);
   
   // Memorize filtered items to prevent unnecessary re-renders
   const memoizedFilteredItems = useMemo(() => filteredItems, [filteredItems]);
   
   // Load meal plan ingredients if a meal plan is selected
+  // Handle meal plan questionnaire results
+  const handleMealPlanningComplete = (formData) => {
+    setMealPlanningResults(formData);
+    setShowMealPlanningQuestionnaire(false);
+    
+    // Generate meal plan based on questionnaire responses
+    const mealPlan = generateMealPlan(formData);
+    setGeneratedMealPlan(mealPlan);
+    
+    // Set dietary filters based on responses for grocery filtering
+    if (formData.dietaryRestrictions && formData.dietaryRestrictions.length > 0) {
+      // Map from our dietary restriction values to dietTypes used in grocery items
+      const dietFilterMap = {
+        'vegetarian': 'Vegetarian',
+        'vegan': 'Vegan',
+        'gluten_free': 'Gluten-Free',
+        'dairy_free': 'Dairy-Free',
+        'keto': 'Keto',
+        'paleo': 'Paleo',
+        'low_carb': 'Low-Carb',
+        'mediterranean': 'Mediterranean'
+      };
+      
+      // Set diet filters based on restrictions
+      const newDietFilters = formData.dietaryRestrictions
+        .filter(r => dietFilterMap[r]) // Filter out restrictions without mappings
+        .map(r => dietFilterMap[r]);   // Map to grocery diet type format
+      
+      setDietFilters(newDietFilters);
+    }
+    
+    // Set food group filters based on preferences
+    setFoodGroupFilters(formData.foodGroups);
+    
+    // Save to fitness profile in context for future use
+    saveFitnessProfile({
+      preferredDiet: formData.dietaryRestrictions[0] || 'balanced',
+      dietaryRestrictions: formData.dietaryRestrictions.join(','),
+      mealsPerDay: formData.numMealsPerDay,
+      primaryGoal: formData.goals[0] || 'general_health',
+      currentDiet: formData.dietaryRestrictions[0] || ''
+    });
+    
+    // Switch to browse tab to show filtered results
+    setActiveTab(0);
+  };
+  
+  // Generate a personalized meal plan based on the questionnaire responses
+  const generateMealPlan = (formData) => {
+    // Use goals, restrictions, and preferences to create a meal plan
+    const caloricGoal = formData.calorieGoal;
+    const dietType = formData.dietaryRestrictions[0] || 'balanced';
+    const numMeals = formData.numMealsPerDay;
+    const preferredFoodGroups = Object.entries(formData.foodGroups)
+      .filter(([_, value]) => value >= 7)
+      .map(([key, _]) => key);
+    
+    // Generate a basic structure for the meal plan
+    const mealPlan = {
+      title: `Custom ${dietType.charAt(0).toUpperCase() + dietType.slice(1)} Meal Plan`,
+      description: `A personalized meal plan based on your preferences and goals${formData.goals.length > 0 ? ` focused on ${formData.goals.join(', ')}` : ''}.`,
+      dailyCalories: caloricGoal,
+      mealsPerDay: numMeals,
+      restrictions: formData.dietaryRestrictions,
+      allergies: formData.allergies,
+      days: []
+    };
+    
+    // Generate meal plan for 7 days
+    for (let i = 0; i < 7; i++) {
+      const day = {
+        day: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][i],
+        meals: []
+      };
+      
+      // Add meals based on preferences
+      if (formData.mealPreferences.breakfast) {
+        day.meals.push({
+          type: 'Breakfast',
+          calories: Math.floor(caloricGoal * 0.25),
+          options: generateMealOptions('Breakfast', dietType, preferredFoodGroups)
+        });
+      }
+      
+      if (formData.mealPreferences.lunch) {
+        day.meals.push({
+          type: 'Lunch',
+          calories: Math.floor(caloricGoal * 0.3),
+          options: generateMealOptions('Lunch', dietType, preferredFoodGroups)
+        });
+      }
+      
+      if (formData.mealPreferences.dinner) {
+        day.meals.push({
+          type: 'Dinner',
+          calories: Math.floor(caloricGoal * 0.35),
+          options: generateMealOptions('Dinner', dietType, preferredFoodGroups)
+        });
+      }
+      
+      if (formData.mealPreferences.snacks) {
+        day.meals.push({
+          type: 'Snack',
+          calories: Math.floor(caloricGoal * 0.1),
+          options: generateMealOptions('Snack', dietType, preferredFoodGroups)
+        });
+      }
+      
+      mealPlan.days.push(day);
+    }
+    
+    // Generate shopping list based on the meal plan
+    mealPlan.shoppingList = generateShoppingList(mealPlan, formData);
+    
+    return mealPlan;
+  };
+  
+  // Helper to generate meal options for a specific meal type
+  const generateMealOptions = (mealType, dietType, preferredFoodGroups) => {
+    // Define meal templates based on diet type
+    const mealTemplates = {
+      'Breakfast': {
+        'vegetarian': [
+          'Greek Yogurt with Berries and Granola',
+          'Avocado Toast with Poached Eggs',
+          'Overnight Oats with Almond Milk and Fruits',
+          'Spinach and Mushroom Omelette',
+          'Whole Grain Pancakes with Fruit Compote'
+        ],
+        'vegan': [
+          'Tofu Scramble with Vegetables',
+          'Overnight Oats with Almond Milk and Fruits',
+          'Smoothie Bowl with Chia Seeds and Berries',
+          'Avocado Toast with Nutritional Yeast',
+          'Vegan Breakfast Burrito with Beans and Salsa'
+        ],
+        'gluten_free': [
+          'Gluten-Free Oatmeal with Berries',
+          'Egg Muffins with Spinach and Feta',
+          'Greek Yogurt Parfait with Gluten-Free Granola',
+          'Sweet Potato Breakfast Hash',
+          'Smoothie Bowl with Chia Seeds and Nuts'
+        ],
+        'keto': [
+          'Bacon and Avocado Breakfast Bowl',
+          'Keto Eggs Benedict without English Muffin',
+          'Cream Cheese Pancakes',
+          'Sausage and Spinach Frittata',
+          'Keto Breakfast Casserole'
+        ],
+        'balanced': [
+          'Greek Yogurt with Honey and Granola',
+          'Whole Grain Toast with Avocado and Egg',
+          'Oatmeal with Fresh Berries and Almonds',
+          'Vegetable Omelette with Toast',
+          'Protein Smoothie with Banana and Peanut Butter'
+        ],
+        'low_carb': [
+          'Egg Muffins with Vegetables',
+          'Greek Yogurt with Berries and Nuts',
+          'Avocado and Egg Breakfast Bowl',
+          'Turkey Breakfast Sausage with Vegetables',
+          'Cottage Cheese with Sliced Almonds and Berries'
+        ]
+      },
+      'Lunch': {
+        'vegetarian': [
+          'Quinoa Salad with Roasted Vegetables',
+          'Lentil Soup with Whole Grain Bread',
+          'Greek Salad with Feta Cheese',
+          'Vegetable Wrap with Hummus',
+          'Caprese Sandwich on Whole Grain Bread'
+        ],
+        'vegan': [
+          'Buddha Bowl with Tofu and Tahini Dressing',
+          'Lentil and Vegetable Soup',
+          'Chickpea Salad Sandwich',
+          'Quinoa Bowl with Roasted Vegetables',
+          'Vegan Burrito with Black Beans and Guacamole'
+        ],
+        'gluten_free': [
+          'Chicken and Rice Bowl with Vegetables',
+          'Gluten-Free Wrap with Turkey and Avocado',
+          'Quinoa Salad with Grilled Chicken',
+          'Stuffed Sweet Potato with Black Beans',
+          'Shrimp and Vegetable Stir-Fry over Rice'
+        ],
+        'keto': [
+          'Chicken Caesar Salad without Croutons',
+          'Tuna Salad Lettuce Wraps',
+          'Zucchini Noodles with Alfredo Sauce and Chicken',
+          'Bacon Avocado Burger without Bun',
+          'Egg Salad on Cloud Bread'
+        ],
+        'balanced': [
+          'Turkey and Avocado Wrap',
+          'Greek Salad with Grilled Chicken',
+          'Quinoa Bowl with Roasted Vegetables and Tofu',
+          'Mediterranean Tuna Salad',
+          'Black Bean and Sweet Potato Burrito'
+        ],
+        'low_carb': [
+          'Grilled Chicken Salad with Olive Oil Dressing',
+          'Lettuce-Wrapped Turkey Burger',
+          'Cauliflower Rice Bowl with Grilled Shrimp',
+          'Tuna Salad Stuffed Avocados',
+          'Zucchini Noodles with Pesto and Chicken'
+        ]
+      },
+      'Dinner': {
+        'vegetarian': [
+          'Eggplant Parmesan with Side Salad',
+          'Vegetable Stir-Fry with Tofu',
+          'Black Bean and Sweet Potato Enchiladas',
+          'Mushroom Risotto with Grilled Asparagus',
+          'Spinach and Ricotta Stuffed Shells'
+        ],
+        'vegan': [
+          'Lentil and Vegetable Curry with Rice',
+          'Tempeh Stir-Fry with Broccoli and Carrots',
+          'Sweet Potato and Black Bean Chili',
+          'Vegan Buddha Bowl with Tahini Dressing',
+          'Chickpea and Vegetable Tagine'
+        ],
+        'gluten_free': [
+          'Baked Salmon with Roasted Vegetables',
+          'Gluten-Free Pasta with Turkey Meatballs',
+          'Stuffed Bell Peppers with Ground Turkey',
+          'Garlic Shrimp with Zucchini Noodles',
+          'Herb-Roasted Chicken with Quinoa and Vegetables'
+        ],
+        'keto': [
+          'Baked Salmon with Asparagus',
+          'Steak with Butter-Fried Vegetables',
+          'Chicken Thighs with Creamed Spinach',
+          'Bacon-Wrapped Pork Tenderloin with Brussels Sprouts',
+          'Shrimp and Cauliflower Fried "Rice"'
+        ],
+        'balanced': [
+          'Grilled Chicken with Roasted Vegetables',
+          'Baked Salmon with Quinoa and Broccoli',
+          'Turkey Chili with Mixed Green Salad',
+          'Stir-Fry with Lean Beef and Brown Rice',
+          'Shrimp and Vegetable Pasta Primavera'
+        ],
+        'low_carb': [
+          'Baked Cod with Roasted Vegetables',
+          'Grilled Chicken with Cauliflower Mash',
+          'Pork Tenderloin with Sautéed Greens',
+          'Turkey Stuffed Bell Peppers',
+          'Beef and Broccoli Stir-Fry without Rice'
+        ]
+      },
+      'Snack': {
+        'vegetarian': [
+          'Greek Yogurt with Honey',
+          'Apple Slices with Almond Butter',
+          'Hummus with Carrot Sticks',
+          'String Cheese with Fruit',
+          'Trail Mix with Nuts and Dried Fruit'
+        ],
+        'vegan': [
+          'Hummus with Vegetable Sticks',
+          'Apple Slices with Almond Butter',
+          'Trail Mix with Nuts and Seeds',
+          'Roasted Chickpeas',
+          'Sliced Fruit with Coconut Yogurt'
+        ],
+        'gluten_free': [
+          'Rice Cakes with Almond Butter',
+          'Greek Yogurt with Berries',
+          'Hard-Boiled Eggs',
+          'Gluten-Free Pretzels with Hummus',
+          'Fruit and Nut Mix'
+        ],
+        'keto': [
+          'Cheese Cubes and Olives',
+          'Avocado with Salt and Pepper',
+          'Hard-Boiled Eggs',
+          'Cucumber Slices with Cream Cheese',
+          'Bacon-Wrapped Asparagus'
+        ],
+        'balanced': [
+          'Apple Slices with Peanut Butter',
+          'Greek Yogurt with Berries',
+          'Hummus with Vegetable Sticks',
+          'Trail Mix with Nuts and Dried Fruit',
+          'Whole Grain Crackers with Cheese'
+        ],
+        'low_carb': [
+          'Celery Sticks with Almond Butter',
+          'Hard-Boiled Eggs',
+          'String Cheese',
+          'Turkey Roll-Ups with Avocado',
+          'Cucumber Slices with Tuna Salad'
+        ]
+      }
+    };
+    
+    // Use the right diet type or fallback to balanced
+    const dietKey = dietType in mealTemplates[mealType] ? dietType : 'balanced';
+    const options = mealTemplates[mealType][dietKey];
+    
+    // Select 2-3 options randomly, favoring meals with preferred food groups if possible
+    const shuffledOptions = [...options].sort(() => 0.5 - Math.random());
+    return shuffledOptions.slice(0, 3);
+  };
+  
+  // Generate a shopping list based on the meal plan
+  const generateShoppingList = (mealPlan, formData) => {
+    const shoppingItems = {};
+    
+    // Map common meal components to grocery categories
+    const ingredientCategories = {
+      'chicken': 'Protein',
+      'beef': 'Protein',
+      'turkey': 'Protein',
+      'pork': 'Protein',
+      'lamb': 'Protein',
+      'fish': 'Protein',
+      'salmon': 'Protein',
+      'tuna': 'Protein',
+      'shrimp': 'Protein',
+      'tofu': 'Protein',
+      'tempeh': 'Protein',
+      'eggs': 'Protein',
+      'yogurt': 'Dairy',
+      'cheese': 'Dairy',
+      'milk': 'Dairy',
+      'cream': 'Dairy',
+      'butter': 'Dairy',
+      'rice': 'Grains',
+      'quinoa': 'Grains',
+      'pasta': 'Grains',
+      'bread': 'Grains',
+      'oats': 'Grains',
+      'granola': 'Grains',
+      'broccoli': 'Produce',
+      'spinach': 'Produce',
+      'kale': 'Produce',
+      'lettuce': 'Produce',
+      'carrot': 'Produce',
+      'tomato': 'Produce',
+      'potato': 'Produce',
+      'sweet potato': 'Produce',
+      'zucchini': 'Produce',
+      'bell pepper': 'Produce',
+      'onion': 'Produce',
+      'garlic': 'Produce',
+      'avocado': 'Produce',
+      'apple': 'Produce',
+      'banana': 'Produce',
+      'berries': 'Produce',
+      'almond': 'Nuts & Seeds',
+      'walnut': 'Nuts & Seeds',
+      'cashew': 'Nuts & Seeds',
+      'peanut': 'Nuts & Seeds',
+      'chia': 'Nuts & Seeds',
+      'flax': 'Nuts & Seeds',
+      'olive oil': 'Oils & Vinegars',
+      'coconut oil': 'Oils & Vinegars',
+      'beans': 'Canned Goods',
+      'lentils': 'Canned Goods',
+      'chickpeas': 'Canned Goods',
+      'hummus': 'Refrigerated'
+    };
+    
+    // Extract ingredients from meal options
+    const mealMentions = new Set();
+    mealPlan.days.forEach(day => {
+      day.meals.forEach(meal => {
+        meal.options.forEach(option => {
+          // Split meal options into words to match ingredients
+          const words = option.toLowerCase().split(/\s+/);
+          for (const word of words) {
+            // Check if this word is a known ingredient
+            for (const [ingredient, category] of Object.entries(ingredientCategories)) {
+              if (option.toLowerCase().includes(ingredient.toLowerCase())) {
+                if (!shoppingItems[category]) {
+                  shoppingItems[category] = [];
+                }
+                if (!shoppingItems[category].includes(ingredient)) {
+                  shoppingItems[category].push(ingredient);
+                }
+                mealMentions.add(ingredient);
+              }
+            }
+          }
+        });
+      });
+    });
+    
+    // Generate the shopping list with structured categories
+    const shoppingList = [];
+    
+    for (const [category, items] of Object.entries(shoppingItems)) {
+      shoppingList.push({
+        category: category,
+        items: items.map(item => ({
+          name: item.charAt(0).toUpperCase() + item.slice(1),
+          quantity: 1,
+          unit: getDefaultUnit(item),
+          checked: false
+        }))
+      });
+    }
+    
+    return shoppingList;
+  };
+  
+  // Helper to determine default unit for shopping list items
+  const getDefaultUnit = (item) => {
+    const unitMap = {
+      'chicken': 'lb',
+      'beef': 'lb',
+      'turkey': 'lb',
+      'pork': 'lb',
+      'lamb': 'lb',
+      'fish': 'lb',
+      'salmon': 'lb',
+      'tuna': 'can',
+      'shrimp': 'lb',
+      'tofu': 'package',
+      'tempeh': 'package',
+      'eggs': 'dozen',
+      'yogurt': 'container',
+      'cheese': 'oz',
+      'milk': 'gallon',
+      'cream': 'pint',
+      'butter': 'stick',
+      'rice': 'lb',
+      'quinoa': 'cup',
+      'pasta': 'box',
+      'bread': 'loaf',
+      'oats': 'cup',
+      'granola': 'cup',
+      'broccoli': 'head',
+      'spinach': 'bag',
+      'kale': 'bunch',
+      'lettuce': 'head',
+      'carrot': 'lb',
+      'tomato': 'lb',
+      'potato': 'lb',
+      'sweet potato': 'lb',
+      'zucchini': 'each',
+      'bell pepper': 'each',
+      'onion': 'each',
+      'garlic': 'head',
+      'avocado': 'each',
+      'apple': 'each',
+      'banana': 'bunch',
+      'berries': 'container',
+      'almond': 'oz',
+      'walnut': 'oz',
+      'cashew': 'oz',
+      'peanut': 'jar',
+      'chia': 'tbsp',
+      'flax': 'tbsp',
+      'olive oil': 'bottle',
+      'coconut oil': 'jar',
+      'beans': 'can',
+      'lentils': 'cup',
+      'chickpeas': 'can',
+      'hummus': 'container'
+    };
+    
+    return unitMap[item] || 'each';
+  };
+  
+  // Component to display the generated meal plan
+  const MealPlanResults = ({ mealPlan }) => {
+    const [selectedDay, setSelectedDay] = useState(0);
+    
+    const addToCart = (item) => {
+      // Find or create grocery items for each shopping list item
+      const groceryItem = groceryItems.find(g => 
+        g.name.toLowerCase().includes(item.name.toLowerCase()) || 
+        item.name.toLowerCase().includes(g.name.toLowerCase())
+      );
+      
+      if (groceryItem) {
+        handleAddToCart(groceryItem, item.quantity || 1);
+      } else {
+        // Create a new grocery item if none found
+        const newItem = {
+          id: nextId++,
+          name: item.name,
+          category: item.category || 'Other',
+          price: (Math.random() * 5 + 1.99).toFixed(2),
+          unit: item.unit || 'each',
+          nutrition: {
+            calories: Math.floor(Math.random() * 200) + 50,
+            protein: Math.floor(Math.random() * 10) + 1,
+            carbs: Math.floor(Math.random() * 20) + 5,
+            fat: Math.floor(Math.random() * 10) + 1,
+            fiber: Math.floor(Math.random() * 5)
+          },
+          dietTypes: [...(dietFilters.length > 0 ? dietFilters : ['Vegetarian'])],
+          isOrganic: Math.random() > 0.5,
+          storeSections: [item.category || 'Other'],
+          storeLocations: [
+            { store: "Whole Foods", aisle: "1", section: item.category || 'Other' },
+            { store: "Trader Joe's", aisle: "2", section: item.category || 'Other' }
+          ],
+          image: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80"
+        };
+        
+        setGroceryItems(prev => [...prev, newItem]);
+        handleAddToCart(newItem, item.quantity || 1);
+      }
+    };
+    
+    const addAllToCart = () => {
+      // Flatten all shopping list items and add to cart
+      const allItems = [];
+      mealPlan.shoppingList.forEach(category => {
+        category.items.forEach(item => {
+          allItems.push({
+            ...item,
+            category: category.category
+          });
+        });
+      });
+      
+      // Add each item to cart
+      allItems.forEach(item => addToCart(item));
+    };
+    
+    return (
+      <Box>
+        <Paper elevation={2} sx={{ p: 3, borderRadius: 2, mb: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+            <Box>
+              <Typography variant="h5" fontWeight="bold" gutterBottom sx={{ color: theme.palette.primary.main }}>
+                {mealPlan.title}
+              </Typography>
+              <Typography variant="body1" color="text.secondary" paragraph>
+                {mealPlan.description}
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+                <Chip 
+                  icon={<LocalDiningIcon />} 
+                  label={`${mealPlan.dailyCalories} calories/day`} 
+                  color="primary" 
+                  variant="outlined" 
+                />
+                <Chip 
+                  icon={<RestaurantMenuIcon />} 
+                  label={`${mealPlan.mealsPerDay} meals/day`} 
+                  color="primary" 
+                  variant="outlined" 
+                />
+                {mealPlan.restrictions.filter(r => r !== 'none').map((restriction, index) => (
+                  <Chip 
+                    key={index}
+                    label={restriction.replace('_', ' ')} 
+                    color="secondary" 
+                    variant="outlined" 
+                  />
+                ))}
+              </Box>
+            </Box>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={addAllToCart}
+              startIcon={<ShoppingCartIcon />}
+            >
+              Add All Items to Cart
+            </Button>
+          </Box>
+          
+          <Divider sx={{ mb: 3 }} />
+          
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              7-Day Meal Plan
+            </Typography>
+            
+            <Box sx={{ display: 'flex', overflow: 'auto', gap: 1, mb: 2, pb: 1 }}>
+              {mealPlan.days.map((day, index) => (
+                <Button
+                  key={index}
+                  variant={selectedDay === index ? "contained" : "outlined"}
+                  color="primary"
+                  onClick={() => setSelectedDay(index)}
+                  sx={{ minWidth: '100px' }}
+                >
+                  {day.day}
+                </Button>
+              ))}
+            </Box>
+            
+            <Box>
+              {mealPlan.days[selectedDay].meals.map((meal, mealIndex) => (
+                <Paper 
+                  key={mealIndex} 
+                  elevation={1} 
+                  sx={{ 
+                    p: 2, 
+                    mb: 2, 
+                    borderRadius: 2,
+                    borderLeft: `4px solid ${
+                      meal.type === 'Breakfast' ? '#8bc34a' : 
+                      meal.type === 'Lunch' ? '#2196f3' : 
+                      meal.type === 'Dinner' ? '#ff9800' : 
+                      '#9e9e9e'
+                    }`
+                  }}
+                >
+                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                    {meal.type} ({meal.calories} calories)
+                  </Typography>
+                  
+                  <List sx={{ pt: 0 }}>
+                    {meal.options.map((option, optionIndex) => (
+                      <ListItem key={optionIndex} sx={{ px: 1 }}>
+                        <ListItemText primary={option} />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Paper>
+              ))}
+            </Box>
+          </Box>
+          
+          <Divider sx={{ mb: 3 }} />
+          
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Shopping List
+            </Typography>
+            
+            <Grid container spacing={2}>
+              {mealPlan.shoppingList.map((category, categoryIndex) => (
+                <Grid item xs={12} sm={6} md={4} key={categoryIndex}>
+                  <Paper elevation={1} sx={{ p: 2, borderRadius: 2, height: '100%' }}>
+                    <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                      {category.category}
+                    </Typography>
+                    
+                    <List dense>
+                      {category.items.map((item, itemIndex) => (
+                        <ListItem
+                          key={itemIndex}
+                          secondaryAction={
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={() => addToCart({...item, category: category.category})}
+                              sx={{ minWidth: 0, p: '4px 8px' }}
+                            >
+                              <AddCircleOutlineIcon fontSize="small" />
+                            </Button>
+                          }
+                        >
+                          <ListItemText 
+                            primary={item.name} 
+                            secondary={`${item.quantity} ${item.unit}`} 
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Paper>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+        </Paper>
+      </Box>
+    );
+  };
+
   useEffect(() => {
     if (currentMealPlan) {
       const ingredientItems = currentMealPlan.ingredients.map(ingredient => {
@@ -4381,6 +5740,11 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
                 icon={<CalculateIcon />} 
                 iconPosition="start"
               />
+              <Tab 
+                label="Meal Planner" 
+                icon={<QuestionAnswerIcon />} 
+                iconPosition="start"
+              />
             </Tabs>
           </Box>
           
@@ -4442,6 +5806,30 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
                       ))}
                     </Select>
                   </FormControl>
+                  
+                  {/* Diet Filter Toggle */}
+                  {dietaryPreferences && (
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={enableDietFiltering}
+                          onChange={(e) => setEnableDietFiltering(e.target.checked)}
+                          color="primary"
+                        />
+                      }
+                      label={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <RestaurantMenuIcon fontSize="small" color="primary" />
+                          <Typography variant="body2">
+                            Filter by diet ({dietaryPreferences.primaryDiet 
+                              ? dietaryPreferences.primaryDiet.replace('_', ' ') 
+                              : 'none'})
+                          </Typography>
+                        </Box>
+                      }
+                      sx={{ ml: 2 }}
+                    />
+                  )}
                 </Box>
                 
                 {filteredItems.length === 0 ? (
@@ -5144,6 +6532,49 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
             {/* Nutrition Calculator Tab */}
             {activeTab === 3 && (
               <NutritionCalculator cartItems={cartItems} groceryItems={groceryItems} />
+            )}
+            
+            {/* Meal Planner Tab */}
+            {activeTab === 4 && (
+              <MealPlanningSection 
+                onAddToCart={(items) => {
+                  // Convert meal plan ingredients format to cart items format
+                  const cartItems = items.map(item => {
+                    // Find the grocery item that matches this ingredient
+                    const groceryItem = groceryItems.find(g => 
+                      g.name.toLowerCase().includes(item.name.toLowerCase()) ||
+                      item.name.toLowerCase().includes(g.name.toLowerCase())
+                    );
+                    
+                    // If we found a matching grocery item, use it with the meal plan quantity
+                    if (groceryItem) {
+                      return {
+                        ...groceryItem,
+                        quantity: item.quantity || 1
+                      };
+                    }
+                    
+                    // Otherwise, create a placeholder item
+                    return {
+                      id: `meal-${item.itemId || Date.now()}`,
+                      name: item.name,
+                      category: item.category || 'Other',
+                      price: 0,
+                      unit: item.unit || 'each',
+                      nutrition: { calories: 0, protein: 0, carbs: 0, fat: 0 },
+                      dietTypes: [],
+                      quantity: item.quantity || 1
+                    };
+                  });
+                  
+                  // Add all items to cart
+                  addToCart(cartItems);
+                  
+                  // Optionally switch to the cart tab
+                  setActiveTab(1);
+                }}
+                mockMealPlans={mockMealPlans}
+              />
             )}
             
           </CardContent>

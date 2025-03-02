@@ -5,6 +5,9 @@ export const WORKOUT_PLANS = {
   beginner: {
     name: "Beginner's Fitness Program",
     description: "A gentle introduction to fitness for those new to regular exercise.",
+    dietType: "Balanced",
+    recommendedFoods: ["Lean Proteins", "Whole Grains", "Fresh Fruits", "Vegetables"],
+    avoidFoods: ["Processed Foods", "Sugary Drinks", "Excessive Alcohol", "High-Fat Foods"],
     workouts: [
       {
         day: "Monday",
@@ -167,6 +170,9 @@ export const WORKOUT_PLANS = {
   intermediate: {
     name: "Intermediate Fitness Program",
     description: "For those with some exercise experience looking to progress.",
+    dietType: "High-Protein",
+    recommendedFoods: ["Lean Proteins", "Complex Carbohydrates", "Healthy Fats", "Fruits and Vegetables"],
+    avoidFoods: ["Highly Processed Foods", "Added Sugars", "Refined Carbohydrates", "Excessive Alcohol"],
     workouts: [
       {
         day: "Monday",
@@ -342,6 +348,9 @@ export const WORKOUT_PLANS = {
   advanced: {
     name: "Advanced Fitness Program",
     description: "For experienced fitness enthusiasts looking for a challenge.",
+    dietType: "Athletic Performance",
+    recommendedFoods: ["High-Quality Proteins", "Complex Carbohydrates", "Healthy Fats", "Nutrient-Dense Produce"],
+    avoidFoods: ["Processed Foods", "Refined Sugars", "Fried Foods", "Empty Calories"],
     workouts: [
       {
         day: "Monday",
@@ -537,6 +546,129 @@ export const WORKOUT_PLANS = {
   }
 };
 
+// Diet recommendations based on goals and preferences
+export const DIET_TYPES = {
+  weight_loss: {
+    name: "Weight Loss Diet",
+    type: "Caloric Deficit",
+    description: "Focuses on nutrient-dense, low-calorie foods to create a moderate caloric deficit.",
+    macros: { protein: "30-35%", carbs: "40-45%", fat: "20-25%" },
+    recommended: ["Lean proteins", "Fibrous vegetables", "Complex carbohydrates", "Low-fat dairy", "Berries", "Leafy greens"],
+    avoid: ["Refined sugars", "Processed foods", "High-calorie beverages", "Fried foods", "Excessive alcohol"]
+  },
+  muscle_gain: {
+    name: "Muscle Building Diet",
+    type: "High-Protein",
+    description: "Higher protein and moderate carbohydrate intake to support muscle recovery and growth.",
+    macros: { protein: "25-35%", carbs: "40-50%", fat: "20-30%" },
+    recommended: ["Lean proteins", "Eggs", "Greek yogurt", "Quinoa", "Sweet potatoes", "Nuts and seeds", "Avocados"],
+    avoid: ["Low quality processed foods", "Excessive alcohol", "High-sugar foods", "Trans fats"]
+  },
+  endurance: {
+    name: "Endurance Training Diet",
+    type: "Carb-Focused",
+    description: "Higher carbohydrate intake to fuel longer training sessions with adequate protein for recovery.",
+    macros: { protein: "15-20%", carbs: "55-65%", fat: "20-30%" },
+    recommended: ["Complex carbohydrates", "Oats", "Brown rice", "Fruit", "Lean proteins", "Hydrating foods"],
+    avoid: ["High-fat meals before workouts", "Simple sugars", "Heavy meals", "Fried foods"]
+  },
+  vegan: {
+    name: "Plant-Based Diet",
+    type: "Vegan",
+    description: "Focuses on high-quality plant proteins and varied nutrients from plant sources.",
+    macros: { protein: "15-20%", carbs: "50-60%", fat: "25-30%" },
+    recommended: ["Legumes", "Tofu", "Tempeh", "Nuts and seeds", "Whole grains", "Plant-based proteins"],
+    avoid: ["All animal products", "Processed vegan foods", "High-sugar items", "Refined grains"]
+  },
+  balanced: {
+    name: "Balanced Nutrition Plan",
+    type: "Balanced",
+    description: "Evenly distributed macronutrients with focus on whole foods and variety.",
+    macros: { protein: "20-25%", carbs: "45-55%", fat: "25-35%" },
+    recommended: ["Lean proteins", "Whole grains", "Fruits", "Vegetables", "Healthy fats", "Legumes"],
+    avoid: ["Processed foods", "Excessive sugar", "Artificial ingredients", "Trans fats"]
+  },
+  keto: {
+    name: "Ketogenic Diet",
+    type: "Keto",
+    description: "Very low carbohydrate, high fat diet that shifts the body's metabolism to fat-burning.",
+    macros: { protein: "20-25%", carbs: "5-10%", fat: "70-75%" },
+    recommended: ["Healthy fats", "Avocados", "Nuts", "Low-carb vegetables", "Eggs", "Fatty fish"],
+    avoid: ["Sugars", "Grains", "Starchy vegetables", "Most fruits", "High-carb foods"]
+  },
+  paleo: {
+    name: "Paleo Diet",
+    type: "Paleo",
+    description: "Based on foods presumed to have been available to ancestral humans, avoiding processed foods.",
+    macros: { protein: "25-35%", carbs: "30-40%", fat: "30-40%" },
+    recommended: ["Lean meats", "Fish", "Fruits", "Vegetables", "Nuts and seeds", "Eggs"],
+    avoid: ["Grains", "Dairy", "Legumes", "Processed foods", "Refined sugar", "Vegetable oils"]
+  },
+  mediterranean: {
+    name: "Mediterranean Diet",
+    type: "Mediterranean",
+    description: "Rich in plant foods, healthy fats, and lean proteins, modeled after Mediterranean eating patterns.",
+    macros: { protein: "15-20%", carbs: "40-50%", fat: "30-40%" },
+    recommended: ["Olive oil", "Fish", "Whole grains", "Vegetables", "Fruits", "Legumes", "Nuts"],
+    avoid: ["Red meat", "Processed foods", "Added sugars", "Refined grains"]
+  },
+  athletic: {
+    name: "Athletic Performance Diet",
+    type: "Performance",
+    description: "Optimized for athletic performance with timed nutrient intake and balanced macros.",
+    macros: { protein: "20-30%", carbs: "45-55%", fat: "20-30%" },
+    recommended: ["Lean proteins", "Complex carbs", "Whole grains", "Fruits", "Vegetables", "Pre/post workout nutrition"],
+    avoid: ["Processed foods", "Alcohol", "Excessive sugar", "Dehydration"]
+  }
+};
+
+// Food category mapping to grocery items
+export const FOOD_CATEGORIES = {
+  "Lean Proteins": [
+    { name: "Chicken Breast", category: "Protein" },
+    { name: "Turkey", category: "Protein" },
+    { name: "Lean Beef", category: "Protein" },
+    { name: "Fish (Salmon, Tuna)", category: "Protein" },
+    { name: "Greek Yogurt", category: "Dairy" },
+    { name: "Tofu", category: "Protein" },
+    { name: "Eggs", category: "Protein" }
+  ],
+  "Whole Grains": [
+    { name: "Brown Rice", category: "Grains" },
+    { name: "Quinoa", category: "Grains" },
+    { name: "Oats", category: "Grains" },
+    { name: "Whole Grain Bread", category: "Grains" },
+    { name: "Barley", category: "Grains" }
+  ],
+  "Vegetables": [
+    { name: "Spinach", category: "Produce" },
+    { name: "Broccoli", category: "Produce" },
+    { name: "Kale", category: "Produce" },
+    { name: "Bell Peppers", category: "Produce" },
+    { name: "Carrots", category: "Produce" },
+    { name: "Cauliflower", category: "Produce" }
+  ],
+  "Fruits": [
+    { name: "Apples", category: "Produce" },
+    { name: "Bananas", category: "Produce" },
+    { name: "Berries", category: "Produce" },
+    { name: "Oranges", category: "Produce" },
+    { name: "Avocados", category: "Produce" }
+  ],
+  "Healthy Fats": [
+    { name: "Olive Oil", category: "Oils" },
+    { name: "Avocados", category: "Produce" },
+    { name: "Nuts (Almonds, Walnuts)", category: "Nuts & Seeds" },
+    { name: "Seeds (Chia, Flax)", category: "Nuts & Seeds" }
+  ],
+  "Dairy and Alternatives": [
+    { name: "Greek Yogurt", category: "Dairy" },
+    { name: "Cottage Cheese", category: "Dairy" },
+    { name: "Almond Milk", category: "Dairy Alternative" },
+    { name: "Oat Milk", category: "Dairy Alternative" }
+  ]
+};
+
 // Create the context
 const WorkoutPlanContext = createContext();
 
@@ -545,6 +677,9 @@ export const WorkoutPlanProvider = ({ children }) => {
   const [customWorkoutPlan, setCustomWorkoutPlan] = useState(null);
   const [selectedPlan, setSelectedPlan] = useState('beginner');
   const [todaysWorkout, setTodaysWorkout] = useState(null);
+  const [fitnessProfile, setFitnessProfile] = useState(null);
+  const [dietaryPreferences, setDietaryPreferences] = useState(null);
+  const [recommendedGroceries, setRecommendedGroceries] = useState([]);
   
   // Get today's workout based on the day of the week
   useEffect(() => {
@@ -574,13 +709,207 @@ export const WorkoutPlanProvider = ({ children }) => {
   // Save a custom workout plan from the Fitness Planner
   const saveCustomPlan = (plan) => {
     setCustomWorkoutPlan(plan);
+    return true;
   };
   
   // Select a predefined workout plan
   const selectPredefinedPlan = (planKey) => {
     if (WORKOUT_PLANS[planKey]) {
       setSelectedPlan(planKey);
+      return true;
     }
+    return false;
+  };
+  
+  // Save fitness profile from questionnaire
+  const saveFitnessProfile = (profile) => {
+    setFitnessProfile(profile);
+    
+    // Extract dietary preferences
+    const dietPrefs = {
+      primaryDiet: profile.preferredDiet || 'balanced',
+      restrictions: profile.dietaryRestrictions ? profile.dietaryRestrictions.split(',') : [],
+      mealsPerDay: profile.mealsPerDay || 3,
+      currentDiet: profile.currentDiet || '',
+      primaryGoal: profile.primaryGoal || 'weight_loss'
+    };
+    
+    setDietaryPreferences(dietPrefs);
+    
+    // Generate recommended groceries based on profile
+    const groceryList = generateGroceryList(profile);
+    setRecommendedGroceries(groceryList);
+    
+    return true;
+  };
+  
+  // Get diet recommendations based on fitness profile
+  const getDietRecommendations = () => {
+    if (!fitnessProfile) return null;
+    
+    // Determine the recommended diet type based on primary goal
+    const goalType = fitnessProfile.primaryGoal;
+    let recommendedDiet = DIET_TYPES.balanced;
+    
+    if (DIET_TYPES[goalType]) {
+      recommendedDiet = DIET_TYPES[goalType];
+    } else if (fitnessProfile.preferredDiet && DIET_TYPES[fitnessProfile.preferredDiet]) {
+      recommendedDiet = DIET_TYPES[fitnessProfile.preferredDiet];
+    }
+    
+    // Factor in dietary restrictions
+    let restrictions = [];
+    if (fitnessProfile.dietaryRestrictions) {
+      restrictions = fitnessProfile.dietaryRestrictions.split(',');
+    }
+    
+    // Create customized diet recommendations
+    const customizedDiet = {...recommendedDiet};
+    
+    // Adjust recommendations based on dietary restrictions
+    if (restrictions.includes('vegetarian')) {
+      customizedDiet.recommended = customizedDiet.recommended.filter(item => 
+        !['meat', 'poultry', 'fish', 'seafood'].some(meat => item.toLowerCase().includes(meat)));
+      customizedDiet.avoid = [...customizedDiet.avoid, 'Meat', 'Poultry', 'Fish', 'Seafood'];
+    }
+    
+    if (restrictions.includes('vegan')) {
+      customizedDiet.recommended = customizedDiet.recommended.filter(item => 
+        !['meat', 'poultry', 'fish', 'seafood', 'dairy', 'egg'].some(animal => item.toLowerCase().includes(animal)));
+      customizedDiet.avoid = [...customizedDiet.avoid, 'All animal products'];
+    }
+    
+    if (restrictions.includes('gluten_free')) {
+      customizedDiet.recommended = customizedDiet.recommended.filter(item => 
+        !['wheat', 'gluten'].some(gluten => item.toLowerCase().includes(gluten)));
+      customizedDiet.avoid = [...customizedDiet.avoid, 'Gluten-containing foods', 'Wheat', 'Barley', 'Rye'];
+    }
+    
+    return customizedDiet;
+  };
+  
+  // Generate grocery list based on fitness profile and diet recommendations
+  const generateGroceryList = (profile) => {
+    // If no profile, use current fitness profile
+    if (!profile) {
+      if (!fitnessProfile) return [];
+      profile = fitnessProfile;
+    }
+    
+    // Determine which diet type to use based on goals and preferences
+    let dietType = 'balanced';
+    if (profile.primaryGoal) {
+      if (profile.primaryGoal === 'weight_loss') dietType = 'weight_loss';
+      else if (profile.primaryGoal === 'muscle_gain') dietType = 'muscle_gain';
+      else if (profile.primaryGoal === 'endurance') dietType = 'endurance';
+    }
+    
+    // Override with preferred diet if specified
+    if (profile.preferredDiet) {
+      dietType = profile.preferredDiet;
+    }
+    
+    // Get diet recommendations
+    const dietRecs = DIET_TYPES[dietType] || DIET_TYPES.balanced;
+    
+    // Container for grocery items
+    let groceryList = [];
+    
+    // Add recommended foods to grocery list
+    if (dietRecs.recommended && dietRecs.recommended.length > 0) {
+      dietRecs.recommended.forEach(food => {
+        // Map food categories to specific grocery items
+        const mappedItems = mapFoodToGroceryItems(food);
+        if (mappedItems.length > 0) {
+          groceryList = [...groceryList, ...mappedItems];
+        }
+      });
+    }
+    
+    // If vegetarian, remove meat products
+    if (profile.dietaryRestrictions && profile.dietaryRestrictions.includes('vegetarian')) {
+      groceryList = groceryList.filter(item => 
+        !['chicken', 'beef', 'pork', 'turkey', 'fish', 'salmon', 'tuna'].some(
+          meat => item.name.toLowerCase().includes(meat)
+        )
+      );
+    }
+    
+    // If vegan, remove all animal products
+    if (profile.dietaryRestrictions && profile.dietaryRestrictions.includes('vegan')) {
+      groceryList = groceryList.filter(item => 
+        !['chicken', 'beef', 'pork', 'turkey', 'fish', 'salmon', 'tuna', 'egg', 'yogurt', 'milk', 'cheese'].some(
+          animal => item.name.toLowerCase().includes(animal)
+        )
+      );
+      
+      // Add vegan alternatives
+      groceryList.push(
+        { name: "Tofu", category: "Protein" },
+        { name: "Tempeh", category: "Protein" },
+        { name: "Plant-based Protein", category: "Protein" },
+        { name: "Almond Milk", category: "Dairy Alternative" }
+      );
+    }
+    
+    // If gluten-free, remove gluten-containing foods
+    if (profile.dietaryRestrictions && profile.dietaryRestrictions.includes('gluten_free')) {
+      groceryList = groceryList.filter(item => 
+        !['wheat', 'bread', 'pasta', 'barley', 'rye'].some(
+          gluten => item.name.toLowerCase().includes(gluten)
+        )
+      );
+      
+      // Add gluten-free alternatives
+      groceryList.push(
+        { name: "Gluten-free Bread", category: "Grains" },
+        { name: "Rice Noodles", category: "Grains" },
+        { name: "Quinoa", category: "Grains" }
+      );
+    }
+    
+    // Remove duplicates
+    const uniqueList = [];
+    const seen = new Set();
+    groceryList.forEach(item => {
+      if (!seen.has(item.name)) {
+        seen.add(item.name);
+        uniqueList.push(item);
+      }
+    });
+    
+    return uniqueList;
+  };
+  
+  // Helper to map food items to specific grocery items
+  const mapFoodToGroceryItems = (food) => {
+    // Look for exact match in food categories
+    for (const [category, items] of Object.entries(FOOD_CATEGORIES)) {
+      if (food.toLowerCase().includes(category.toLowerCase())) {
+        return items;
+      }
+    }
+    
+    // Look for specific food mentions
+    const specificFoods = {
+      'lean protein': FOOD_CATEGORIES['Lean Proteins'],
+      'protein': FOOD_CATEGORIES['Lean Proteins'],
+      'whole grain': FOOD_CATEGORIES['Whole Grains'],
+      'grain': FOOD_CATEGORIES['Whole Grains'],
+      'vegetable': FOOD_CATEGORIES['Vegetables'],
+      'fruit': FOOD_CATEGORIES['Fruits'],
+      'healthy fat': FOOD_CATEGORIES['Healthy Fats'],
+      'dairy': FOOD_CATEGORIES['Dairy and Alternatives']
+    };
+    
+    for (const [term, items] of Object.entries(specificFoods)) {
+      if (food.toLowerCase().includes(term)) {
+        return items;
+      }
+    }
+    
+    // If no match found, return empty array
+    return [];
   };
   
   return (
@@ -591,7 +920,14 @@ export const WorkoutPlanProvider = ({ children }) => {
         todaysWorkout,
         saveCustomPlan,
         selectPredefinedPlan,
-        predefinedPlans: WORKOUT_PLANS
+        predefinedPlans: WORKOUT_PLANS,
+        fitnessProfile,
+        saveFitnessProfile,
+        dietaryPreferences,
+        dietTypes: DIET_TYPES,
+        getDietRecommendations,
+        recommendedGroceries,
+        generateGroceryList
       }}
     >
       {children}
