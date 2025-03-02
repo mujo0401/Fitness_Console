@@ -30,7 +30,8 @@ import {
   Select,
   Chip,
   useTheme,
-  alpha
+  alpha,
+  Avatar
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import NotificationsIcon from '@mui/icons-material/Notifications';
