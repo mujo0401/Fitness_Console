@@ -359,10 +359,10 @@ const Dashboard = () => {
               value={currentTab} 
               onChange={handleTabChange} 
               aria-label="dashboard tabs"
-              variant="fullWidth"
-              scrollButtons={false}
-              centered
-              allowScrollButtonsMobile={false}
+              variant={{ xs: 'scrollable', md: 'fullWidth' }}
+              scrollButtons={{ xs: 'auto', md: false }}
+              centered={false}
+              allowScrollButtonsMobile={true}
               visibleScrollbar={false}
               TabIndicatorProps={{
                 sx: { display: 'none' }
@@ -375,24 +375,43 @@ const Dashboard = () => {
                 maxWidth: '100%',
                 position: 'relative',
                 '& .MuiTabs-flexContainer': {
-                  gap: { xs: 0.25, sm: 0.3, md: 0.4 }, // Reduced even more
-                  justifyContent: 'space-between',
+                  gap: { xs: 0.5, sm: 0.6, md: 0.8 },
+                  // Only justify space-between on larger screens
+                  justifyContent: { xs: 'flex-start', md: 'space-between' },
+                },
+                // Style for scroll buttons on mobile
+                '& .MuiTabs-scrollButtons': {
+                  opacity: 1,
+                  color: '#5C6BC0',
+                  width: { xs: 24, sm: 28 },
+                  height: { xs: 24, sm: 28 },
+                  backgroundColor: 'rgba(255,255,255,0.8)',
+                  borderRadius: '50%',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  '&.Mui-disabled': {
+                    opacity: 0.2,
+                  },
+                  '&:hover': {
+                    backgroundColor: 'rgba(255,255,255,0.95)',
+                  }
                 },
                 '& .MuiTab-root': {
                   color: '#5C6BC0', // Indigo color for tabs
-                  px: { xs: 0.3, sm: 0.5, md: 0.7 }, 
-                  py: { xs: 0.6, sm: 0.8, md: 1 },
-                  minWidth: { xs: 'auto', sm: 'auto', md: 'auto' }, 
-                  maxWidth: { xs: '100%', sm: '100%', md: '100%' },
-                  minHeight: { xs: 36, sm: 38, md: 40 },
-                  flexGrow: 1,
-                  flexShrink: 1,
-                  flexBasis: 0,
-                  margin: { xs: '0 1px', sm: '0 1px', md: '0 2px' },
-                  borderRadius: { xs: '6px', sm: '8px', md: '10px' },
+                  px: { xs: 1, sm: 1.2, md: 0.7 }, 
+                  py: { xs: 0.8, sm: 1, md: 1 },
+                  // Fixed width on mobile, flexible on desktop
+                  minWidth: { xs: 80, sm: 90, md: 'auto' }, 
+                  maxWidth: { xs: 100, sm: 120, md: '100%' },
+                  minHeight: { xs: 38, sm: 40, md: 40 },
+                  // Don't use flex grow/shrink on mobile scrollable tabs
+                  flexGrow: { xs: 0, md: 1 },
+                  flexShrink: { xs: 0, md: 1 },
+                  flexBasis: { xs: 'auto', md: 0 },
+                  margin: { xs: '0 2px', sm: '0 3px', md: '0 2px' },
+                  borderRadius: { xs: '8px', sm: '8px', md: '10px' },
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   textTransform: 'none',
-                  fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.75rem' },
+                  fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.75rem' },
                   fontWeight: 500,
                   border: '1px solid rgba(92, 107, 192, 0.1)',
                   background: 'linear-gradient(180deg, rgba(255,255,255,0.9), rgba(248,249,255,0.8))',
@@ -402,9 +421,9 @@ const Dashboard = () => {
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   '&:hover': {
-                    transform: 'translateY(-3px)',
+                    transform: 'translateY(-2px)',
                     background: 'linear-gradient(180deg, rgba(255,255,255,1), rgba(240,245,255,0.95))',
-                    boxShadow: '0 4px 10px rgba(92, 107, 192, 0.15)'
+                    boxShadow: '0 3px 8px rgba(92, 107, 192, 0.15)'
                   }
                 },
                 '& .MuiTabs-indicator': {
