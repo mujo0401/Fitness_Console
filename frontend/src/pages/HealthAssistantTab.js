@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -12,8 +12,20 @@ import {
   Zoom,
   Divider,
   Grid,
+  Tooltip,
+  Button,
+  CircularProgress,
+  Skeleton,
+  Badge,
+  Menu,
+  MenuItem,
+  Fade,
+  Backdrop,
+  Drawer,
+  SwipeableDrawer,
+  useMediaQuery,
 } from '@mui/material';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import ChatIcon from '@mui/icons-material/Chat';
 import SendIcon from '@mui/icons-material/Send';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
@@ -25,11 +37,24 @@ import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import NightsStayIcon from '@mui/icons-material/NightsStay';
 import LocalDiningIcon from '@mui/icons-material/LocalDining';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import SettingsIcon from '@mui/icons-material/Settings';
+import MicIcon from '@mui/icons-material/Mic';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import SentimentSatisfiedAltIcon from '@mui/icons-material/SentimentSatisfiedAlt';
+import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import FastfoodIcon from '@mui/icons-material/Fastfood';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TimerIcon from '@mui/icons-material/Timer';
+import AccessibilityNewIcon from '@mui/icons-material/AccessibilityNew';
+import FlareIcon from '@mui/icons-material/Flare';
 import { useAuth } from '../context/AuthContext';
 
 const HealthAssistantTab = () => {
   const theme = useTheme();
   const { isAuthenticated } = useAuth();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const [message, setMessage] = useState('');
@@ -49,6 +74,11 @@ const HealthAssistantTab = () => {
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isVoiceActive, setIsVoiceActive] = useState(false);
+  const [isDataPanelOpen, setIsDataPanelOpen] = useState(false);
+  const [activeInsight, setActiveInsight] = useState(null);
   
   // Predefined suggestions for the chat - different suggestions based on auth status
   const suggestions = isAuthenticated ? [
@@ -265,6 +295,101 @@ const HealthAssistantTab = () => {
     }
   };
   
+  // Sample health insights to display in the data panel
+  const healthInsights = [
+    {
+      id: "insight-1",
+      title: "Heart Rate Zone Analysis",
+      category: "heart",
+      icon: <FavoriteIcon />,
+      color: "#f44336",
+      summary: "You spent 45 minutes in cardio zone yesterday",
+      details: "Your heart rate data shows optimal training zones. Yesterday, you spent 45 minutes in the cardio zone (136-166 BPM), which is great for cardiovascular health. This is 20% more time than your weekly average.",
+      chart: null, // Would contain chart data in a real implementation
+      recommendation: "Try maintaining this level of cardio activity 3-4 times per week for optimal heart health."
+    },
+    {
+      id: "insight-2",
+      title: "Sleep Pattern Analysis",
+      category: "sleep",
+      icon: <NightsStayIcon />,
+      color: "#673ab7",
+      summary: "Your deep sleep is improving this week",
+      details: "Your deep sleep has increased by 18% this week compared to last week. You're now averaging 1.8 hours of deep sleep per night, which is within the recommended range.",
+      chart: null,
+      recommendation: "Continue maintaining a consistent sleep schedule to further improve sleep quality."
+    },
+    {
+      id: "insight-3",
+      title: "Weekly Activity Progress",
+      category: "activity",
+      icon: <DirectionsRunIcon />,
+      color: "#009688",
+      summary: "You've reached 86% of your weekly step goal",
+      details: "You've taken 56,214 steps this week, which is 86% of your 65,000 step weekly goal. You're also 8% more active than last week.",
+      chart: null,
+      recommendation: "You need about 8,786 more steps to reach your weekly goal. A 30-minute walk would help you achieve this."
+    },
+    {
+      id: "insight-4",
+      title: "Nutrition Balance",
+      category: "nutrition",
+      icon: <LocalDiningIcon />,
+      color: "#ff9800",
+      summary: "Your protein intake is below target",
+      details: "Based on your activity levels, your protein intake should be around 100g daily, but your average is currently 75g. This may affect your muscle recovery and energy levels.",
+      chart: null,
+      recommendation: "Consider adding protein-rich foods like Greek yogurt, lean chicken, or plant-based proteins to your diet."
+    },
+  ];
+  
+  // Menu handling functions
+  const handleMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const toggleDrawer = (open) => (event) => {
+    if (event && event.type === 'keydown' && (event.key === 'Tab' || event.key === 'Shift')) {
+      return;
+    }
+    setDrawerOpen(open);
+  };
+
+  const toggleVoiceInput = () => {
+    // In a real implementation, this would activate the browser's speech recognition API
+    setIsVoiceActive(!isVoiceActive);
+    if (!isVoiceActive) {
+      // Simulate voice activation for 3 seconds
+      setTimeout(() => {
+        setIsVoiceActive(false);
+        handleSendMessage("What's my heart rate trend this week?");
+      }, 3000);
+    }
+  };
+
+  const toggleDataPanel = () => {
+    setIsDataPanelOpen(!isDataPanelOpen);
+  };
+
+  const handleInsightClick = (insight) => {
+    setActiveInsight(insight);
+    
+    // Add a message from the assistant about this insight
+    const insightMessage = {
+      id: chatHistory.length + 1,
+      sender: 'assistant',
+      content: `📊 **${insight.title}**: ${insight.details}\n\n💡 **Recommendation**: ${insight.recommendation}`,
+      timestamp: new Date().toISOString(),
+      isInsight: true
+    };
+    
+    setChatHistory(prev => [...prev, insightMessage]);
+  };
+
   // For non-authenticated users, still show the assistant but with limited functionality
   const initialMessages = !isAuthenticated ? [
     { 
@@ -291,6 +416,12 @@ const HealthAssistantTab = () => {
       sender: 'assistant', 
       content: "• Your step count and activity trends\n• Heart rate patterns and zones\n• Sleep quality metrics\n• Nutrition information\n• Workout suggestions based on your data",
       timestamp: new Date().toISOString(),
+    },
+    {
+      id: 3,
+      sender: 'assistant',
+      content: "I have some personalized health insights for you today. Click the 'View Insights' button to see them!",
+      timestamp: new Date().toISOString(),
     }
   ];
   
@@ -300,7 +431,7 @@ const HealthAssistantTab = () => {
   }, [isAuthenticated, initialMessages]);
   
   return (
-    <Box sx={{ p: 2, maxWidth: 1000, mx: 'auto' }}>
+    <Box sx={{ p: { xs: 1, sm: 2 }, maxWidth: 1000, mx: 'auto' }}>
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -310,7 +441,7 @@ const HealthAssistantTab = () => {
           elevation={0}
           sx={{
             p: 0,
-            borderRadius: 4,
+            borderRadius: { xs: 3, sm: 4 },
             background: 'linear-gradient(125deg, #1e3c72, #2a5298)',
             boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
             mb: 4,
@@ -349,23 +480,35 @@ const HealthAssistantTab = () => {
             left: 80
           }} />
           
-          <Box sx={{ position: 'relative', p: 4, zIndex: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 3 }}>
+          <Box sx={{ position: 'relative', p: { xs: 2, sm: 4 }, zIndex: 2 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'flex-start', 
+              mb: 3, 
+              flexDirection: { xs: 'column', sm: 'row' },
+              alignItems: { xs: 'center', sm: 'flex-start' }
+            }}>
               <Avatar
                 sx={{
                   bgcolor: 'white',
-                  width: 70,
-                  height: 70,
-                  mr: 3,
+                  width: { xs: 60, sm: 70 },
+                  height: { xs: 60, sm: 70 },
+                  mr: { xs: 0, sm: 3 },
+                  mb: { xs: 2, sm: 0 },
                   boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
                   border: '4px solid rgba(255,255,255,0.2)',
                   padding: 0.5
                 }}
               >
-                <SmartToyIcon sx={{ color: '#1e3c72', fontSize: 40 }} />
+                <SmartToyIcon sx={{ color: '#1e3c72', fontSize: { xs: 35, sm: 40 } }} />
               </Avatar>
-              <Box>
-                <Typography variant="h4" fontWeight="bold" color="white" sx={{ mb: 0.5 }}>
+              <Box sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
+                <Typography 
+                  variant={isMobile ? "h5" : "h4"} 
+                  fontWeight="bold" 
+                  color="white" 
+                  sx={{ mb: 0.5 }}
+                >
                   AI Health Assistant
                 </Typography>
                 <Typography variant="subtitle1" sx={{ color: 'rgba(255,255,255,0.8)' }}>
@@ -381,6 +524,19 @@ const HealthAssistantTab = () => {
                   />
                 )}
               </Box>
+              
+              {isAuthenticated && !isMobile && (
+                <Box sx={{ ml: 'auto' }}>
+                  <IconButton 
+                    sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.15)', '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' } }}
+                    onClick={toggleDataPanel}
+                  >
+                    <Badge badgeContent={healthInsights.length} color="error">
+                      <TrendingUpIcon />
+                    </Badge>
+                  </IconButton>
+                </Box>
+              )}
             </Box>
             
             <Box 
@@ -395,8 +551,8 @@ const HealthAssistantTab = () => {
               <Box sx={{ 
                 bgcolor: 'rgba(255,255,255,0.15)', 
                 borderRadius: 3, 
-                p: 2,
-                minWidth: 110,
+                p: { xs: 1.5, sm: 2 },
+                minWidth: { xs: 90, sm: 110 },
                 textAlign: 'center'
               }}>
                 <Typography variant="h6" color="white" fontWeight="bold">
@@ -410,8 +566,8 @@ const HealthAssistantTab = () => {
               <Box sx={{ 
                 bgcolor: 'rgba(255,255,255,0.15)', 
                 borderRadius: 3, 
-                p: 2,
-                minWidth: 110,
+                p: { xs: 1.5, sm: 2 },
+                minWidth: { xs: 90, sm: 110 },
                 textAlign: 'center'
               }}>
                 <Typography variant="h6" color="white" fontWeight="bold">
@@ -425,8 +581,8 @@ const HealthAssistantTab = () => {
               <Box sx={{ 
                 bgcolor: 'rgba(255,255,255,0.15)', 
                 borderRadius: 3, 
-                p: 2,
-                minWidth: 110,
+                p: { xs: 1.5, sm: 2 },
+                minWidth: { xs: 90, sm: 110 },
                 textAlign: 'center'
               }}>
                 <Typography variant="h6" color="white" fontWeight="bold">
@@ -437,6 +593,26 @@ const HealthAssistantTab = () => {
                 </Typography>
               </Box>
             </Box>
+            
+            {isAuthenticated && (
+              <Box sx={{ mt: 3, display: { xs: 'flex', sm: 'none' }, justifyContent: 'center' }}>
+                <Button
+                  variant="contained"
+                  color="error"
+                  startIcon={<TrendingUpIcon />}
+                  onClick={toggleDataPanel}
+                  sx={{ 
+                    bgcolor: 'rgba(255,255,255,0.15)', 
+                    color: 'white',
+                    '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' },
+                    borderRadius: 8,
+                    textTransform: 'none'
+                  }}
+                >
+                  View Health Insights <Badge badgeContent={healthInsights.length} color="error" sx={{ ml: 1 }}/>
+                </Button>
+              </Box>
+            )}
           </Box>
           
           <Box 
@@ -506,14 +682,95 @@ const HealthAssistantTab = () => {
           />
         </Box>
         
+        {/* Health Insights Panel - visible when toggled */}
+        {isAuthenticated && (
+          <Drawer
+            anchor={isMobile ? "bottom" : "right"}
+            open={isDataPanelOpen}
+            onClose={() => setIsDataPanelOpen(false)}
+            PaperProps={{
+              sx: {
+                width: isMobile ? '100%' : 320,
+                borderRadius: isMobile ? '16px 16px 0 0' : 0,
+                maxHeight: isMobile ? '80vh' : '100vh',
+                p: 2
+              }
+            }}
+          >
+            <Box sx={{ p: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="h6" fontWeight="bold">Your Health Insights</Typography>
+                <IconButton onClick={() => setIsDataPanelOpen(false)}>
+                  <ChevronRightIcon />
+                </IconButton>
+              </Box>
+              
+              <Divider sx={{ mb: 2 }} />
+              
+              <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+                Based on your latest health data:
+              </Typography>
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {healthInsights.map((insight) => (
+                  <Paper
+                    key={insight.id}
+                    elevation={2}
+                    sx={{ 
+                      p: 2, 
+                      borderRadius: 3,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        transform: 'translateY(-2px)',
+                        boxShadow: 4
+                      },
+                      borderLeft: `4px solid ${insight.color}`
+                    }}
+                    onClick={() => {
+                      handleInsightClick(insight);
+                      setIsDataPanelOpen(false);
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
+                      <Avatar sx={{ bgcolor: alpha(insight.color, 0.15), color: insight.color, width: 32, height: 32 }}>
+                        {insight.icon}
+                      </Avatar>
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        {insight.title}
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2">{insight.summary}</Typography>
+                  </Paper>
+                ))}
+              </Box>
+              
+              <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+                <Button 
+                  variant="outlined" 
+                  color="primary"
+                  startIcon={<ChatIcon />}
+                  onClick={() => {
+                    setIsDataPanelOpen(false);
+                    handleSendMessage("Show me my health trends");
+                  }}
+                  fullWidth
+                >
+                  Ask About My Health Trends
+                </Button>
+              </Box>
+            </Box>
+          </Drawer>
+        )}
+      
         {/* Chat messages container */}
         <Paper 
           elevation={3} 
           sx={{ 
             mb: 3, 
-            p: 3, 
+            p: { xs: 2, sm: 3 }, 
             borderRadius: 3,
-            height: 500,
+            height: { xs: 450, sm: 500 },
             overflowY: 'auto',
             bgcolor: '#f8f9fa',
             backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'20\' height=\'20\' viewBox=\'0 0 20 20\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'%233f51b5\' fill-opacity=\'0.05\' fill-rule=\'evenodd\'%3E%3Ccircle cx=\'3\' cy=\'3\' r=\'1.5\'/%3E%3Ccircle cx=\'13\' cy=\'13\' r=\'1.5\'/%3E%3C/g%3E%3C/svg%3E")',
@@ -522,6 +779,47 @@ const HealthAssistantTab = () => {
             boxShadow: '0 12px 24px rgba(0,0,0,0.1), inset 0 2px 0 rgba(255,255,255,1), inset 0 -1px 0 rgba(0,0,0,0.05)'
           }}
         >
+          {/* Voice active overlay */}
+          {isVoiceActive && (
+            <Backdrop
+              open={true}
+              sx={{
+                position: 'absolute',
+                zIndex: 10,
+                backgroundColor: 'rgba(0,0,0,0.7)',
+                borderRadius: 3,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white'
+              }}
+            >
+              <motion.div
+                animate={{
+                  scale: [1, 1.2, 1],
+                }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                }}
+              >
+                <MicIcon sx={{ fontSize: 80, color: 'white', mb: 2 }} />
+              </motion.div>
+              <Typography variant="h6">Listening...</Typography>
+              <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
+                Speak clearly into your microphone
+              </Typography>
+              <Button 
+                variant="outlined" 
+                sx={{ mt: 3, color: 'white', borderColor: 'white' }}
+                onClick={() => setIsVoiceActive(false)}
+              >
+                Cancel
+              </Button>
+            </Backdrop>
+          )}
+          
           {/* Message bubbles */}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {chatHistory.map((msg) => (
@@ -539,18 +837,18 @@ const HealthAssistantTab = () => {
                     mb: 1,
                   }}
                 >
-                  <Box sx={{ display: 'flex', maxWidth: '80%' }}>
+                  <Box sx={{ display: 'flex', maxWidth: { xs: '90%', sm: '80%' } }}>
                     {msg.sender === 'assistant' && (
                       <Avatar
                         sx={{
-                          bgcolor: theme.palette.primary.main,
+                          bgcolor: msg.isInsight ? '#ff9800' : theme.palette.primary.main,
                           width: 38,
                           height: 38,
                           mr: 1,
                           mt: 0.5
                         }}
                       >
-                        <SmartToyIcon />
+                        {msg.isInsight ? <FlareIcon /> : <SmartToyIcon />}
                       </Avatar>
                     )}
                     
@@ -560,7 +858,11 @@ const HealthAssistantTab = () => {
                         sx={{
                           p: 1.5,
                           borderRadius: 3,
-                          bgcolor: msg.sender === 'user' ? theme.palette.primary.main : theme.palette.background.paper,
+                          bgcolor: msg.sender === 'user' 
+                            ? theme.palette.primary.main 
+                            : msg.isInsight 
+                              ? alpha('#ff9800', 0.1)
+                              : theme.palette.background.paper,
                           color: msg.sender === 'user' ? 'white' : 'inherit',
                           borderTopRightRadius: msg.sender === 'user' ? 0 : 3,
                           borderTopLeftRadius: msg.sender === 'assistant' ? 0 : 3,
@@ -568,7 +870,10 @@ const HealthAssistantTab = () => {
                           maxWidth: '100%',
                           boxShadow: msg.sender === 'user' 
                             ? '0 2px 8px rgba(0,0,0,0.15)' 
-                            : '0 2px 5px rgba(0,0,0,0.08)',
+                            : msg.isInsight
+                              ? '0 2px 12px rgba(255, 152, 0, 0.15)'
+                              : '0 2px 5px rgba(0,0,0,0.08)',
+                          border: msg.isInsight ? `1px solid ${alpha('#ff9800', 0.3)}` : 'none'
                         }}
                       >
                         <Typography
@@ -581,6 +886,22 @@ const HealthAssistantTab = () => {
                         >
                           {msg.content}
                         </Typography>
+                        
+                        {msg.isInsight && (
+                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                            <Chip
+                              size="small"
+                              label="Health Insight"
+                              icon={<TrendingUpIcon sx={{ fontSize: '0.8rem !important' }} />}
+                              sx={{ 
+                                height: 24, 
+                                bgcolor: alpha('#ff9800', 0.15),
+                                color: '#ff9800',
+                                fontSize: '0.7rem'
+                              }}
+                            />
+                          </Box>
+                        )}
                       </Paper>
                       <Typography
                         variant="caption"
@@ -758,12 +1079,12 @@ const HealthAssistantTab = () => {
           component="form"
           elevation={5}
           sx={{
-            p: 2,
+            p: { xs: 1.5, sm: 2 },
             display: 'flex',
             alignItems: 'center',
             borderRadius: 30,
             boxShadow: '0 8px 32px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.05)',
-            gap: 1.5,
+            gap: 1,
             bgcolor: 'white',
             position: 'relative',
             overflow: 'hidden',
@@ -787,6 +1108,64 @@ const HealthAssistantTab = () => {
             handleSendMessage();
           }}
         >
+          {/* Menu */}
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={handleMenuClose}
+            anchorOrigin={{
+              vertical: 'top',
+              horizontal: 'left',
+            }}
+            transformOrigin={{
+              vertical: 'bottom',
+              horizontal: 'left',
+            }}
+          >
+            <MenuItem onClick={() => {
+              handleMenuClose();
+              setChatHistory(initialMessages);
+            }}>
+              <ReplayIcon fontSize="small" sx={{ mr: 1 }} />
+              Reset conversation
+            </MenuItem>
+            {isAuthenticated && (
+              <MenuItem onClick={() => {
+                handleMenuClose();
+                toggleDataPanel();
+              }}>
+                <TrendingUpIcon fontSize="small" sx={{ mr: 1 }} />
+                View health insights
+              </MenuItem>
+            )}
+            <MenuItem onClick={() => {
+              handleMenuClose();
+              toggleVoiceInput();
+            }}>
+              <MicIcon fontSize="small" sx={{ mr: 1 }} />
+              Voice input
+            </MenuItem>
+            <Divider sx={{ my: 1 }} />
+            <MenuItem onClick={() => {
+              handleMenuClose();
+              handleSendMessage("What can you help me with?");
+            }}>
+              <InfoOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
+              What can you do?
+            </MenuItem>
+          </Menu>
+          
+          <IconButton
+            color="inherit"
+            onClick={handleMenuOpen}
+            sx={{ 
+              color: theme.palette.text.secondary,
+              ml: 0.5
+            }}
+          >
+            <MoreVertIcon />
+          </IconButton>
+          
           <TextField
             fullWidth
             multiline
@@ -804,32 +1183,44 @@ const HealthAssistantTab = () => {
               disableUnderline: true,
               style: { fontSize: '16px', lineHeight: '1.5' }
             }}
-            sx={{ ml: 2, flex: 1 }}
+            sx={{ ml: 1, flex: 1 }}
           />
+          
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <IconButton
-              color="inherit"
-              aria-label="refresh"
-              onClick={() => {
-                setChatHistory(initialMessages);
-              }}
-              sx={{ 
-                color: theme.palette.text.secondary,
-                '&:hover': {
-                  color: theme.palette.primary.main
-                }
-              }}
-            >
-              <ReplayIcon fontSize="small" />
-            </IconButton>
+            {!isMobile && (
+              <Tooltip title="Voice input">
+                <IconButton
+                  color="inherit"
+                  onClick={toggleVoiceInput}
+                  sx={{ 
+                    color: isVoiceActive ? 'red' : theme.palette.text.secondary,
+                    animation: isVoiceActive ? 'pulse 1.5s infinite' : 'none',
+                    '@keyframes pulse': {
+                      '0%': {
+                        boxShadow: '0 0 0 0 rgba(255, 0, 0, 0.4)'
+                      },
+                      '70%': {
+                        boxShadow: '0 0 0 10px rgba(255, 0, 0, 0)'
+                      },
+                      '100%': {
+                        boxShadow: '0 0 0 0 rgba(255, 0, 0, 0)'
+                      }
+                    }
+                  }}
+                >
+                  <MicIcon />
+                </IconButton>
+              </Tooltip>
+            )}
+            
             <IconButton
               color="primary"
               aria-label="send message"
               onClick={() => handleSendMessage()}
               disabled={!message.trim() || isLoading}
               sx={{
-                width: 50,
-                height: 50,
+                width: { xs: 45, sm: 50 },
+                height: { xs: 45, sm: 50 },
                 bgcolor: !message.trim() || isLoading 
                   ? alpha(theme.palette.primary.main, 0.1) 
                   : 'linear-gradient(45deg, #3f51b5, #2196f3)',
@@ -860,14 +1251,15 @@ const HealthAssistantTab = () => {
               background: 'linear-gradient(90deg, #3f51b5, #2196f3)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              letterSpacing: '0.5px'
+              letterSpacing: '0.5px',
+              display: { xs: 'none', md: 'block' }
             }}
           >
             Advanced AI Health Assistant Features
           </Typography>
           
           <Grid container spacing={3}>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} sm={6} md={4}>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -888,7 +1280,7 @@ const HealthAssistantTab = () => {
                   }}
                 >
                   <Box sx={{ 
-                    height: 120, 
+                    height: { xs: 80, md: 120 }, 
                     background: 'linear-gradient(120deg, #3f51b5, #1a237e)',
                     display: 'flex',
                     alignItems: 'center',
@@ -903,30 +1295,43 @@ const HealthAssistantTab = () => {
                       opacity: 0.1,
                       backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'white\' fill-opacity=\'1\' fill-rule=\'evenodd\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/svg%3E")'
                     }} />
-                    <MonitorHeartIcon sx={{ fontSize: 60, color: 'white' }} />
+                    <MonitorHeartIcon sx={{ fontSize: { xs: 40, md: 60 }, color: 'white' }} />
                   </Box>
-                  <Box sx={{ p: 3 }}>
+                  <Box sx={{ p: { xs: 2, md: 3 } }}>
                     <Typography variant="h6" fontWeight="bold" gutterBottom color="#3f51b5">
                       Personalized Health Insights
                     </Typography>
-                    <Typography variant="body2">
+                    <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
                       Get detailed analysis of your heart rate patterns, activity levels, and sleep quality trends. Our AI analyzes your historical data to identify patterns and provide actionable recommendations.
                     </Typography>
                     
                     <Box sx={{ mt: 2 }}>
-                      <Chip 
-                        label={isAuthenticated ? "Available Now" : "Connect Account"} 
-                        size="small"
-                        color={isAuthenticated ? "success" : "primary"}
-                        sx={{ fontWeight: 'medium' }}
-                      />
+                      {isAuthenticated ? (
+                        <Button 
+                          variant="outlined" 
+                          size="small" 
+                          color="primary"
+                          onClick={toggleDataPanel}
+                          startIcon={<TrendingUpIcon />}
+                          sx={{ borderRadius: 2 }}
+                        >
+                          View Insights
+                        </Button>
+                      ) : (
+                        <Chip 
+                          label="Connect Account" 
+                          size="small"
+                          color="primary"
+                          sx={{ fontWeight: 'medium' }}
+                        />
+                      )}
                     </Box>
                   </Box>
                 </Paper>
               </motion.div>
             </Grid>
             
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} sm={6} md={4}>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -947,7 +1352,7 @@ const HealthAssistantTab = () => {
                   }}
                 >
                   <Box sx={{ 
-                    height: 120, 
+                    height: { xs: 80, md: 120 }, 
                     background: 'linear-gradient(120deg, #2196f3, #0d47a1)',
                     display: 'flex',
                     alignItems: 'center',
@@ -962,30 +1367,34 @@ const HealthAssistantTab = () => {
                       opacity: 0.1,
                       backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'white\' fill-opacity=\'1\' fill-rule=\'evenodd\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/svg%3E")'
                     }} />
-                    <FitnessCenterIcon sx={{ fontSize: 60, color: 'white' }} />
+                    <FitnessCenterIcon sx={{ fontSize: { xs: 40, md: 60 }, color: 'white' }} />
                   </Box>
-                  <Box sx={{ p: 3 }}>
+                  <Box sx={{ p: { xs: 2, md: 3 } }}>
                     <Typography variant="h6" fontWeight="bold" gutterBottom color="#2196f3">
                       AI Workout Recommendations
                     </Typography>
-                    <Typography variant="body2">
+                    <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
                       Receive customized workout suggestions based on your recent activity levels, recovery status, and fitness goals. Our system adapts recommendations as your fitness progresses.
                     </Typography>
                     
                     <Box sx={{ mt: 2 }}>
-                      <Chip 
-                        label="Available For Everyone" 
-                        size="small"
-                        color="success"
-                        sx={{ fontWeight: 'medium' }}
-                      />
+                      <Button 
+                        variant="outlined" 
+                        size="small" 
+                        color="primary"
+                        onClick={() => handleSendMessage("Recommend a workout based on my recent activity")}
+                        startIcon={<FitnessCenterIcon />}
+                        sx={{ borderRadius: 2 }}
+                      >
+                        Get Workout Plan
+                      </Button>
                     </Box>
                   </Box>
                 </Paper>
               </motion.div>
             </Grid>
             
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} sm={6} md={4} sx={{ display: { xs: 'none', sm: 'block' } }}>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1006,7 +1415,7 @@ const HealthAssistantTab = () => {
                   }}
                 >
                   <Box sx={{ 
-                    height: 120, 
+                    height: { xs: 80, md: 120 }, 
                     background: 'linear-gradient(120deg, #00bcd4, #006064)',
                     display: 'flex',
                     alignItems: 'center',
@@ -1021,23 +1430,27 @@ const HealthAssistantTab = () => {
                       opacity: 0.1,
                       backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'white\' fill-opacity=\'1\' fill-rule=\'evenodd\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/svg%3E")'
                     }} />
-                    <LocalDiningIcon sx={{ fontSize: 60, color: 'white' }} />
+                    <LocalDiningIcon sx={{ fontSize: { xs: 40, md: 60 }, color: 'white' }} />
                   </Box>
-                  <Box sx={{ p: 3 }}>
+                  <Box sx={{ p: { xs: 2, md: 3 } }}>
                     <Typography variant="h6" fontWeight="bold" gutterBottom color="#00bcd4">
                       Nutritional Intelligence
                     </Typography>
-                    <Typography variant="body2">
+                    <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
                       Get personalized nutrition advice based on your activity levels and metabolic patterns. Our AI can suggest optimal meal timing, macronutrient ratios, and specific foods to enhance performance.
                     </Typography>
                     
                     <Box sx={{ mt: 2 }}>
-                      <Chip 
-                        label={isAuthenticated ? "Enhanced with Your Data" : "Basic Version Available"} 
-                        size="small"
-                        color={isAuthenticated ? "success" : "warning"}
-                        sx={{ fontWeight: 'medium' }}
-                      />
+                      <Button 
+                        variant="outlined" 
+                        size="small" 
+                        color="info"
+                        onClick={() => handleSendMessage("Give me meal suggestions based on my activity level")}
+                        startIcon={<RestaurantMenuIcon />}
+                        sx={{ borderRadius: 2 }}
+                      >
+                        Get Meal Ideas
+                      </Button>
                     </Box>
                   </Box>
                 </Paper>
