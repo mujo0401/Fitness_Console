@@ -55,6 +55,14 @@ const Dashboard = () => {
   const [showDebugTools, setShowDebugTools] = useState(true); // Set to false in production
   const [currentTab, setCurrentTab] = useState(0); // Add state for tracking current tab
   const [manualAuthCheck, setManualAuthCheck] = useState(false);
+  
+  // Auto-redirect to Fitness Plan tab if not authenticated and on a protected tab
+  useEffect(() => {
+    if (!isAuthenticated && [0, 1, 2, 3, 7].includes(currentTab)) {
+      // Redirect to Fitness Plan tab (index 4) if user tries to access protected tabs
+      setCurrentTab(4);
+    }
+  }, [isAuthenticated, currentTab]);
 
   useEffect(() => {
     // Check authentication status when component mounts
@@ -142,7 +150,13 @@ const Dashboard = () => {
   };
 
   const handleTabChange = (event, newValue) => {
-    setCurrentTab(newValue);
+    // Only allow changing to protected tabs if authenticated
+    if (!isAuthenticated && [0, 1, 2, 3, 7].includes(newValue)) {
+      // If not authenticated and trying to access protected tab, redirect to Fitness Plan tab
+      setCurrentTab(4);
+    } else {
+      setCurrentTab(newValue);
+    }
   };
 
   // Show enhanced loading state with debug info
@@ -179,42 +193,10 @@ const Dashboard = () => {
     );
   }
 
-  // Login prompt component for tabs that require authentication
-  const LoginPromptCard = ({ handleConnectClick }) => {
+  // Empty component to replace the login prompt - we'll automatically redirect instead
+  const EmptyAccessDeniedComponent = () => {
     return (
-      <Card sx={{ borderRadius: 4, boxShadow: '0 10px 40px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-        <Box sx={{ background: 'linear-gradient(135deg, #3f51b5, #2196f3)', height: 8 }} />
-        <CardContent sx={{ py: 4, px: 3 }}>
-          <Box sx={{ textAlign: 'center' }}>
-            <FitnessCenterIcon sx={{ fontSize: 50, color: theme.palette.primary.main, mb: 2 }} />
-            <Typography variant="h5" component="h2" gutterBottom fontWeight="bold">
-              Connect to Fitbit
-            </Typography>
-            <Typography variant="body1" color="text.secondary" paragraph sx={{ maxWidth: 500, mx: 'auto', mb: 3 }}>
-              This tab requires Fitbit authentication to access your personal health data.
-            </Typography>
-            <Button 
-              variant="contained" 
-              color="primary" 
-              onClick={handleConnectClick}
-              startIcon={<FitnessCenterIcon />}
-              sx={{
-                py: 1,
-                px: 3,
-                borderRadius: 30,
-                background: 'linear-gradient(90deg, #3f51b5, #2196f3)',
-                boxShadow: '0 8px 20px rgba(33, 150, 243, 0.3)',
-                '&:hover': {
-                  boxShadow: '0 10px 30px rgba(33, 150, 243, 0.4)',
-                  background: 'linear-gradient(90deg, #3949ab, #1e88e5)'
-                }
-              }}
-            >
-              Connect Fitbit
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
+      <Box sx={{ height: 0, overflow: 'hidden' }} />
     );
   };
 
@@ -505,13 +487,14 @@ const Dashboard = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
+          style={{ overflow: 'visible' }}
         >
           {/* Heart rate tab content - needs auth */}
           {currentTab === 0 && (
             isAuthenticated ? (
               <HeartTab />
             ) : (
-              <LoginPromptCard handleConnectClick={handleConnectClick} />
+              <EmptyAccessDeniedComponent />
             )
           )}
           
@@ -520,7 +503,7 @@ const Dashboard = () => {
             isAuthenticated ? (
               <ActivityTab />
             ) : (
-              <LoginPromptCard handleConnectClick={handleConnectClick} />
+              <EmptyAccessDeniedComponent />
             )
           )}
           
@@ -529,7 +512,7 @@ const Dashboard = () => {
             isAuthenticated ? (
               <SleepTab />
             ) : (
-              <LoginPromptCard handleConnectClick={handleConnectClick} />
+              <EmptyAccessDeniedComponent />
             )
           )}
           
@@ -538,7 +521,7 @@ const Dashboard = () => {
             isAuthenticated ? (
               <ABMTab />
             ) : (
-              <LoginPromptCard handleConnectClick={handleConnectClick} />
+              <EmptyAccessDeniedComponent />
             )
           )}
           
@@ -551,8 +534,14 @@ const Dashboard = () => {
           {/* Grocery Shop tab - always accessible */}
           {currentTab === 6 && <GroceryTab />}
           
-          {/* Trends tab - always accessible */}
-          {currentTab === 7 && <TrendsTab />}
+          {/* Trends tab - needs auth */}
+          {currentTab === 7 && (
+            isAuthenticated ? (
+              <TrendsTab />
+            ) : (
+              <EmptyAccessDeniedComponent />
+            )
+          )}
           
           {/* Assistant tab - always accessible */}
           {currentTab === 8 && <HealthAssistantTab />}

@@ -106,6 +106,21 @@ const HealthAssistantTab = () => {
     ? suggestions 
     : suggestions.filter(s => s.category === selectedCategory);
   
+  // Debug function to help troubleshoot messaging issues
+  const debugLog = (message, data) => {
+    if (window.DEBUG_HEALTH_ASSISTANT) {
+      console.log(`[HealthAssistant] ${message}`, data);
+    }
+  };
+  
+  // Enable debugging for this component
+  useEffect(() => {
+    window.DEBUG_HEALTH_ASSISTANT = true;
+    return () => {
+      window.DEBUG_HEALTH_ASSISTANT = false;
+    };
+  }, []);
+  
   // Mock Fitbit data that would come from the actual Fitbit API
   const mockFitbitData = {
     steps: {
@@ -157,25 +172,47 @@ const HealthAssistantTab = () => {
     }
   };
   
-  // Only scroll to the bottom of the chat when sending/receiving new messages, not on initial load
-  const [shouldAutoScroll, setShouldAutoScroll] = useState(false);
+  // Configure scrolling and ensure proper display of chat messages
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true); // Default to true for better UX
   
+  // Handle scrolling when chat history changes
   useEffect(() => {
-    // Only scroll if it's not the initial mount and we have new messages
-    if (shouldAutoScroll && chatHistory.length > 0) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    // Always make sure messages are visible
+    debugLog("Chat history changed", { 
+      length: chatHistory.length, 
+      shouldAutoScroll 
+    });
+    
+    if (chatHistory.length > 0) {
+      // Use a slight delay to ensure DOM has updated
+      setTimeout(() => {
+        try {
+          if (messagesEndRef.current) {
+            debugLog("Scrolling to end of messages");
+            messagesEndRef.current.scrollIntoView({ 
+              behavior: shouldAutoScroll ? 'smooth' : 'auto', 
+              block: 'nearest' 
+            });
+          } else {
+            debugLog("Message end ref is null");
+          }
+        } catch (error) {
+          console.error("Error scrolling chat", error);
+        }
+        
+        // Also try a direct approach as backup
+        const container = document.getElementById('health-assistant-chat-container');
+        if (container) {
+          container.scrollTop = container.scrollHeight;
+        }
+      }, 100);
     }
   }, [chatHistory, shouldAutoScroll]);
-  
-  // Set auto-scroll when sending/receiving messages
-  useEffect(() => {
-    // Initialize with auto-scroll disabled
-    setShouldAutoScroll(false);
-  }, []);
   
   // Function to get response from "AI"
   const getAIResponse = async (userMessage) => {
     // This would be replaced with an actual API call to a backend service
+    debugLog("Getting AI response for", userMessage);
     setIsLoading(true);
     
     // Simulate API delay
@@ -183,6 +220,9 @@ const HealthAssistantTab = () => {
     
     let response = "";
     const messageLower = userMessage.toLowerCase();
+    
+    // Make sure UI updates to show loading state
+    window.dispatchEvent(new Event('resize'));
     
     // For non-authenticated users, provide general health information
     if (!isAuthenticated) {
@@ -278,27 +318,47 @@ const HealthAssistantTab = () => {
     
     // Add user message to chat
     const userMessage = {
-      id: chatHistory.length + 1,
+      id: Date.now(), // Use timestamp for unique ID
       sender: 'user',
       content: messageToSend,
       timestamp: new Date().toISOString(),
     };
     
+    // Update with user message first
     setChatHistory(prev => [...prev, userMessage]);
     setMessage('');
     
-    // Get AI response
-    const response = await getAIResponse(messageToSend);
-    
-    // Add AI response to chat
-    const aiMessage = {
-      id: chatHistory.length + 2,
-      sender: 'assistant',
-      content: response,
-      timestamp: new Date().toISOString(),
-    };
-    
-    setChatHistory(prev => [...prev, aiMessage]);
+    try {
+      // Get AI response
+      const response = await getAIResponse(messageToSend);
+      
+      // Add AI response to chat
+      const aiMessage = {
+        id: Date.now() + 1, // Another unique ID
+        sender: 'assistant',
+        content: response,
+        timestamp: new Date().toISOString(),
+      };
+      
+      // Update with AI response
+      setChatHistory(prev => [...prev, aiMessage]);
+      
+      // Log for debugging
+      console.log("Message exchange complete:", messageToSend, response);
+    } catch (error) {
+      console.error("Error in chat exchange:", error);
+      
+      // Add error message to chat
+      const errorMessage = {
+        id: Date.now() + 1,
+        sender: 'assistant',
+        content: "I'm sorry, I encountered an error processing your request. Please try again.",
+        timestamp: new Date().toISOString(),
+        isError: true
+      };
+      
+      setChatHistory(prev => [...prev, errorMessage]);
+    }
   };
   
   // Handle sending a message with the Enter key
@@ -397,14 +457,20 @@ const HealthAssistantTab = () => {
     
     // Add a message from the assistant about this insight
     const insightMessage = {
-      id: chatHistory.length + 1,
+      id: Date.now(), // Use timestamp for unique ID 
       sender: 'assistant',
       content: `📊 **${insight.title}**: ${insight.details}\n\n💡 **Recommendation**: ${insight.recommendation}`,
       timestamp: new Date().toISOString(),
       isInsight: true
     };
     
+    console.log("Adding insight message to chat:", insightMessage);
     setChatHistory(prev => [...prev, insightMessage]);
+    
+    // Force a redraw after a slight delay to ensure UI updates
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 200);
   };
 
   // For non-authenticated users, still show the assistant but with limited functionality
@@ -445,14 +511,35 @@ const HealthAssistantTab = () => {
   // Initialize chat with appropriate messages based on auth status
   useEffect(() => {
     setChatHistory(initialMessages);
+    
+    // Force render on initial load - important to ensure messages are visible
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+      
+      // Ensure the component is in view - prevent scrolling issues forcing the tab out of view
+      window.scrollTo(0, 0);
+      
+      // Disable auto-scrolling on initial load to prevent pushing header out of view
+      setShouldAutoScroll(false);
+    }, 100);
   }, [isAuthenticated, initialMessages]);
   
   return (
-    <Box sx={{ p: { xs: 1, sm: 2 }, maxWidth: 1000, mx: 'auto' }}>
+    <Box 
+      sx={{ 
+        p: { xs: 1, sm: 2 }, 
+        maxWidth: 1000, 
+        mx: 'auto',
+        overflow: 'visible',
+        height: 'auto' 
+      }}
+    >
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
+        id="health-assistant-main-container"
+        initial={{ opacity: 0, y: 0 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
+        style={{ overflow: 'visible' }}
       >
         <Paper
           elevation={0}
@@ -783,12 +870,12 @@ const HealthAssistantTab = () => {
         {/* Chat messages container */}
         <Paper 
           elevation={3} 
+          id="health-assistant-chat-container"
           sx={{ 
             mb: 3, 
             p: { xs: 2, sm: 3 }, 
             borderRadius: 3,
-            height: { xs: 450, sm: 500 },
-            overflowY: 'auto',
+            height: { xs: 420, sm: 450 }, // Reduced height to prevent pushing header off screen
             bgcolor: '#f8f9fa',
             backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'20\' height=\'20\' viewBox=\'0 0 20 20\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'%233f51b5\' fill-opacity=\'0.05\' fill-rule=\'evenodd\'%3E%3Ccircle cx=\'3\' cy=\'3\' r=\'1.5\'/%3E%3Ccircle cx=\'13\' cy=\'13\' r=\'1.5\'/%3E%3C/g%3E%3C/svg%3E")',
             backgroundSize: '20px 20px',
@@ -796,6 +883,8 @@ const HealthAssistantTab = () => {
             boxShadow: '0 12px 24px rgba(0,0,0,0.1), inset 0 2px 0 rgba(255,255,255,1), inset 0 -1px 0 rgba(0,0,0,0.05)',
             display: 'flex',
             flexDirection: 'column',
+            overflow: 'hidden', // Important for containing child scrollable elements
+            mt: 2, // Added margin at top to ensure it doesn't push content up
           }}
         >
           {/* Voice active overlay */}
@@ -846,8 +935,10 @@ const HealthAssistantTab = () => {
             gap: 2, 
             overflowY: 'auto',
             flexGrow: 1, // This makes the messages container fill the available space
-            height: '100%',
-            pb: 2 // Add padding at the bottom to ensure last message is fully visible
+            height: 'calc(100% - 20px)', // Account for padding and prevent overflow issues
+            maxHeight: { xs: 380, sm: 420 }, // Limit height to prevent pushing header out of view
+            pb: 2, // Add padding at the bottom to ensure last message is fully visible
+            mt: 1 // Space at the top for readability
           }}>
             {chatHistory.map((msg) => (
               <Zoom 
@@ -1072,7 +1163,16 @@ const HealthAssistantTab = () => {
               </Box>
             )}
             {/* This ref is used for scrolling to bottom */}
-            <Box ref={messagesEndRef} sx={{ height: 1 }} />
+            <Box 
+              ref={messagesEndRef} 
+              sx={{ 
+                height: 20,
+                width: '100%',
+                display: 'block',
+                visibility: 'hidden' 
+              }} 
+              id="message-end-anchor"
+            />
           </Box>
         </Paper>
         
