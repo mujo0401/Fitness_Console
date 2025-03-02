@@ -57,39 +57,23 @@ const Dashboard = () => {
   const [alertMessage, setAlertMessage] = useState('');
   const [alertSeverity, setAlertSeverity] = useState('info');
   const [showDebugTools, setShowDebugTools] = useState(true); // Set to false in production
-  const [currentTab, setCurrentTab] = useState(-1); // Use -1 for Info tab, which should be the landing page
+  const [currentTab, setCurrentTab] = useState(10); // Use 10 for Info tab (now the last tab)
   const [manualAuthCheck, setManualAuthCheck] = useState(false);
   
-  // Define fixed tab component references to ensure they don't change between renders
-  // A fundamental problem: When adding the Information tab with index -1, the visual order and 
-  // numeric indices in the tab selection logic got misaligned.
-  // 
-  // Let's use explicit indices that match the physical order of tabs in the UI:
-  // Tab component order in JSX:
-  // 1. Information (index -1)
-  // 2. Heart Rate (index 0)
-  // 3. Activity (index 1)
-  // 4. Sleep (index 2)
-  // 5. ABM (index 3)
-  // 6. Fitness Plan (index 4)
-  // 7. Exercise Coach (index 5)
-  // 8. Music (index 6)
-  // 9. Grocery Shop (index 7)
-  // 10. Trends (index 8)
-  // 11. Assistant (index 9)
-  //
+  // Simplified tab mapping with Information tab at the end (index 10)
+  // This aligns with the visual order in the UI and avoids negative indices
   const tabComponentsMap = {
-    '-1': InfoTab,           // Information (tab index -1)
-    '0': HeartTab,           // Heart Rate (tab index 0)
-    '1': ActivityTab,        // Activity (tab index 1)
-    '2': SleepTab,           // Sleep (tab index 2)
-    '3': ABMTab,             // ABM (tab index 3)
-    '4': FitnessTab,         // Fitness Plan (tab index 4)
-    '5': ExerciseCoach,      // Exercise Coach (tab index 5)
-    '6': MusicTab,           // Music (tab index 6)
-    '7': GroceryTab,         // Grocery Shop (tab index 7)
-    '8': TrendsTab,          // Trends (tab index 8)
-    '9': HealthAssistantTab  // Assistant (tab index 9)
+    '0': HeartTab,           // Heart Rate (index 0)
+    '1': ActivityTab,        // Activity (index 1)
+    '2': SleepTab,           // Sleep (index 2)
+    '3': ABMTab,             // ABM (index 3)
+    '4': FitnessTab,         // Fitness Plan (index 4)
+    '5': ExerciseCoach,      // Exercise Coach (index 5)
+    '6': MusicTab,           // Music (index 6)
+    '7': GroceryTab,         // Grocery Shop (index 7)
+    '8': TrendsTab,          // Trends (index 8)
+    '9': HealthAssistantTab, // Assistant (index 9)
+    '10': InfoTab            // Information (index 10) - now last tab
   };
   
   // Auto-redirect to Fitness Plan tab if not authenticated and on a protected tab
@@ -102,22 +86,13 @@ const Dashboard = () => {
 
   // Set default tab to Info when app loads
   useEffect(() => {
-    if (currentTab === -1) {
+    if (currentTab === 10) {
       // Default to Info tab as landing page
-      console.log('Setting default tab to Info tab (index -1)');
+      console.log('Setting default tab to Info tab (index 10)');
     }
     
-    // Debug current tab display
+    // Simple debug log
     console.log(`Current tab index: ${currentTab}`);
-    const tabNames = [
-      "Info (-1)", "Heart Rate (0)", "Activity (1)", "Sleep (2)", "ABM (3)",
-      "Fitness Plan (4)", "Exercise Coach (5)", "Music (6)", "Grocery (7)",
-      "Trends (8)", "Assistant (9)"
-    ];
-    const adjustedIndex = currentTab + 1; // Adjust for -1 index
-    if (adjustedIndex >= 0 && adjustedIndex < tabNames.length) {
-      console.log(`Displaying: ${tabNames[adjustedIndex]}`);
-    }
   }, [currentTab]);
 
   useEffect(() => {
@@ -206,14 +181,8 @@ const Dashboard = () => {
   };
 
   const handleTabChange = (event, newValue) => {
-    // Critical debugging - specifically to identify which of the visible tabs 
-    // corresponds to which numeric index
-    console.log(`----- TAB SELECTION -----`);
-    console.log(`Tab clicked: Index ${newValue}, visible position ${newValue + 1}`);
-    
-    // Get the component that should be rendered for this tab
-    const tabComponent = tabComponentsMap[newValue.toString()];
-    console.log(`Component for index ${newValue}: ${tabComponent?.name || tabComponent?.displayName || 'Unknown'}`);
+    // Simple logging
+    console.log(`Tab clicked: Index ${newValue}`);
     
     // Only allow changing to protected tabs if authenticated
     if (!isAuthenticated && [0, 1, 2, 3, 8].includes(newValue)) {
@@ -224,7 +193,6 @@ const Dashboard = () => {
       console.log(`Setting current tab to index ${newValue}`);
       setCurrentTab(newValue);
     }
-    console.log(`-------------------------`);
   };
 
   // Show enhanced loading state with debug info
@@ -359,11 +327,10 @@ const Dashboard = () => {
               value={currentTab} 
               onChange={handleTabChange} 
               aria-label="dashboard tabs"
-              variant={{ xs: 'scrollable', md: 'fullWidth' }}
-              scrollButtons={{ xs: 'auto', md: false }}
+              variant="scrollable" // Always scrollable
+              scrollButtons="auto"
               centered={false}
               allowScrollButtonsMobile={true}
-              visibleScrollbar={false}
               TabIndicatorProps={{
                 sx: { display: 'none' }
               }}
@@ -375,55 +342,41 @@ const Dashboard = () => {
                 maxWidth: '100%',
                 position: 'relative',
                 '& .MuiTabs-flexContainer': {
-                  gap: { xs: 0.5, sm: 0.6, md: 0.8 },
-                  // Only justify space-between on larger screens
-                  justifyContent: { xs: 'flex-start', md: 'space-between' },
+                  gap: 1, // Consistent spacing
                 },
-                // Style for scroll buttons on mobile
+                // Style for scroll buttons
                 '& .MuiTabs-scrollButtons': {
                   opacity: 1,
                   color: '#5C6BC0',
-                  width: { xs: 24, sm: 28 },
-                  height: { xs: 24, sm: 28 },
-                  backgroundColor: 'rgba(255,255,255,0.8)',
+                  backgroundColor: 'rgba(255,255,255,0.9)',
                   borderRadius: '50%',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  padding: '4px',
+                  boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
                   '&.Mui-disabled': {
-                    opacity: 0.2,
-                  },
-                  '&:hover': {
-                    backgroundColor: 'rgba(255,255,255,0.95)',
+                    opacity: 0.3,
                   }
                 },
                 '& .MuiTab-root': {
                   color: '#5C6BC0', // Indigo color for tabs
-                  px: { xs: 1, sm: 1.2, md: 0.7 }, 
-                  py: { xs: 0.8, sm: 1, md: 1 },
-                  // Fixed width on mobile, flexible on desktop
-                  minWidth: { xs: 80, sm: 90, md: 'auto' }, 
-                  maxWidth: { xs: 100, sm: 120, md: '100%' },
-                  minHeight: { xs: 38, sm: 40, md: 40 },
-                  // Don't use flex grow/shrink on mobile scrollable tabs
-                  flexGrow: { xs: 0, md: 1 },
-                  flexShrink: { xs: 0, md: 1 },
-                  flexBasis: { xs: 'auto', md: 0 },
-                  margin: { xs: '0 2px', sm: '0 3px', md: '0 2px' },
-                  borderRadius: { xs: '8px', sm: '8px', md: '10px' },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  px: { xs: 1.5, sm: 2 }, 
+                  py: { xs: 1, sm: 1.2 },
+                  minWidth: { xs: 100, sm: 110 }, // Fixed width for consistency
+                  minHeight: 40,
+                  margin: '0 2px',
+                  borderRadius: '8px',
                   textTransform: 'none',
-                  fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.75rem' },
-                  fontWeight: 500,
+                  fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                  fontWeight: 600,
                   border: '1px solid rgba(92, 107, 192, 0.1)',
                   background: 'linear-gradient(180deg, rgba(255,255,255,0.9), rgba(248,249,255,0.8))',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
                   backdropFilter: 'blur(8px)',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   '&:hover': {
-                    transform: 'translateY(-2px)',
-                    background: 'linear-gradient(180deg, rgba(255,255,255,1), rgba(240,245,255,0.95))',
-                    boxShadow: '0 3px 8px rgba(92, 107, 192, 0.15)'
+                    background: 'rgba(255,255,255,0.95)',
+                    boxShadow: '0 3px 6px rgba(92, 107, 192, 0.15)'
                   }
                 },
                 '& .MuiTabs-indicator': {
@@ -431,23 +384,7 @@ const Dashboard = () => {
                 }
               }}
             >
-              {/* Information tab - landing page */}
-              <Tab 
-                icon={<InfoIcon />}
-                label="Information"
-                sx={{
-                  fontWeight: 600,
-                  '&.Mui-selected': {
-                    color: 'white',
-                    fontWeight: 700,
-                    background: 'linear-gradient(135deg, #607D8B, #90A4AE)',
-                    border: '1px solid rgba(96, 125, 139, 0.8)',
-                    boxShadow: '0 4px 12px rgba(96, 125, 139, 0.4), inset 0 0 6px rgba(255, 255, 255, 0.3)'
-                  }
-                }}
-              />
-            
-              {/* Health data tabs - disabled when not authenticated */}
+              {/* Heart Rate tab (moved Information tab to the end) */}
               <Tab 
                 icon={<FavoriteIcon />}
                 label="Heart Rate"
@@ -640,6 +577,22 @@ const Dashboard = () => {
                   }
                 }}
               />
+              
+              {/* Information tab - moved to the end */}
+              <Tab 
+                icon={<InfoIcon />}
+                label="Information"
+                sx={{
+                  fontWeight: 600,
+                  '&.Mui-selected': {
+                    color: 'white',
+                    fontWeight: 700,
+                    background: 'linear-gradient(135deg, #607D8B, #90A4AE)',
+                    border: '1px solid rgba(96, 125, 139, 0.8)',
+                    boxShadow: '0 4px 12px rgba(96, 125, 139, 0.4), inset 0 0 6px rgba(255, 255, 255, 0.3)'
+                  }
+                }}
+              />
             </Tabs>
             <Divider sx={{ borderColor: 'rgba(0, 0, 0, 0.08)' }} />
           </Paper>
@@ -653,7 +606,7 @@ const Dashboard = () => {
           transition={{ duration: 0.4 }}
           style={{ overflow: 'visible', paddingTop: '8px' }}
         >
-          {/* NEW APPROACH: Simple and direct tab rendering to avoid confusion */}
+          {/* SIMPLIFIED APPROACH: Direct rendering with simplified logic */}
           {(() => {
             const requiresAuth = [0, 1, 2, 3, 8].includes(currentTab);
             
@@ -662,21 +615,12 @@ const Dashboard = () => {
               return <EmptyAccessDeniedComponent />;
             }
             
-            // Enhanced debugging for tab rendering
-            console.log(`Rendering tab with index: ${currentTab}`);
+            // Get the component from our map
+            const TabComponent = tabComponentsMap[currentTab.toString()];
             
-            // Get the component from our fixed map with string key
-            const tabKey = currentTab.toString();
-            const TabComponent = tabComponentsMap[tabKey];
-            
-            // Debug which tab is being rendered
-            console.log(`Selected tab:
-            - Index: ${currentTab}
-            - Key: ${tabKey}
-            - Component: ${TabComponent?.name || TabComponent?.displayName || 'Unknown'}`);
-            
+            // Basic logging and fallback
             if (!TabComponent) {
-              console.error(`No component found for tab index ${currentTab} (key: ${tabKey})`);
+              console.error(`No component found for tab index ${currentTab}`);
               return <Typography color="error">Tab content not found</Typography>;
             }
             
