@@ -18,7 +18,8 @@ import {
   IconButton,
   Divider,
   Chip,
-  useTheme
+  useTheme,
+  alpha
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
