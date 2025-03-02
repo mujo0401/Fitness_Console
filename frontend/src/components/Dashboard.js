@@ -213,18 +213,27 @@ const Dashboard = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ pt: 4, pb: 4, position: 'relative' }}>
+    <Container 
+      maxWidth="lg" 
+      sx={{ 
+        pt: { xs: 2, sm: 3, md: 4 }, 
+        pb: { xs: 2, sm: 3, md: 4 }, 
+        px: { xs: 1, sm: 2, md: 3 },
+        position: 'relative' 
+      }}
+    >
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <Box className="dashboard-header" sx={{ mb: 4 }}>
+        <Box className="dashboard-header" sx={{ mb: { xs: 2, sm: 3, md: 4 } }}>
           <Typography 
             variant="h4" 
             component="h1" 
             sx={{ 
               fontWeight: 'bold',
+              fontSize: { xs: '1.75rem', sm: '2.125rem', md: '2.5rem' },
               background: 'linear-gradient(90deg, #3f51b5, #2196f3)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -233,7 +242,13 @@ const Dashboard = () => {
           >
             Health Console
           </Typography>
-          <Typography variant="subtitle1" color="text.secondary">
+          <Typography 
+            variant="subtitle1" 
+            color="text.secondary"
+            sx={{ 
+              fontSize: { xs: '0.875rem', sm: '1rem' }
+            }}
+          >
             View and analyze your personal health metrics
           </Typography>
           
@@ -262,14 +277,14 @@ const Dashboard = () => {
           <Paper 
             elevation={8} 
             sx={{ 
-              borderRadius: '20px', 
-              mb: 4, 
+              borderRadius: { xs: '16px', sm: '20px' }, 
+              mb: { xs: 2, sm: 3, md: 4 }, 
               background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(240, 245, 255, 0.9))',
               overflow: 'visible',
               boxShadow: '0 10px 30px rgba(33, 150, 243, 0.2), 0 -5px 15px rgba(63, 81, 181, 0.1)',
               border: '1px solid rgba(255,255,255,0.8)',
               position: 'sticky',
-              top: 16,
+              top: { xs: 8, sm: 12, md: 16 },
               zIndex: 1100,
               backdropFilter: 'blur(10px)',
               '&::before': {
@@ -317,17 +332,17 @@ const Dashboard = () => {
                 },
                 '& .MuiTab-root': {
                   color: '#5C6BC0', // Indigo color for tabs
-                  px: { xs: 1, sm: 1.2 }, 
-                  py: 1.2,
-                  minWidth: { xs: 70, sm: 90 }, 
-                  maxWidth: 120,
-                  minHeight: 42,
-                  width: { xs: 70, sm: 90 }, // Reduced consistent width for all tabs
-                  margin: '0 3px',
-                  borderRadius: '12px',
+                  px: { xs: 0.5, sm: 1, md: 1.2 }, 
+                  py: { xs: 0.8, sm: 1, md: 1.2 },
+                  minWidth: { xs: 60, sm: 70, md: 90 }, 
+                  maxWidth: { xs: 100, sm: 110, md: 120 },
+                  minHeight: { xs: 36, sm: 40, md: 42 },
+                  width: { xs: 60, sm: 70, md: 90 }, // Reduced consistent width for all tabs
+                  margin: { xs: '0 2px', sm: '0 3px' },
+                  borderRadius: { xs: '8px', sm: '10px', md: '12px' },
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   textTransform: 'none',
-                  fontSize: '0.85rem',
+                  fontSize: { xs: '0.75rem', sm: '0.8rem', md: '0.85rem' },
                   fontWeight: 500,
                   border: '1px solid rgba(92, 107, 192, 0.1)',
                   background: 'linear-gradient(180deg, rgba(255,255,255,0.9), rgba(248,249,255,0.8))',

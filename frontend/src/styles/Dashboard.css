@@ -3,6 +3,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
     margin-bottom: 1.5rem;
   }
   
@@ -121,5 +122,35 @@
     
     .options-button {
       align-self: flex-end;
+    }
+    
+    .stat-value {
+      font-size: 1.5rem;
+    }
+    
+    .chart-container {
+      padding: 0.75rem;
+    }
+    
+    .data-card {
+      padding: 0.75rem;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .dashboard-header {
+      margin-bottom: 1rem;
+    }
+    
+    .chart-title {
+      font-size: 1rem;
+    }
+    
+    .stat-value {
+      font-size: 1.25rem;
+    }
+    
+    .stat-label {
+      font-size: 0.75rem;
     }
   }

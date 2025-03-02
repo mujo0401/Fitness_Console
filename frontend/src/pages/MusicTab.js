@@ -870,8 +870,8 @@ const MusicTab = () => {
         <Box
           sx={{
             position: 'fixed',
-            bottom: 20,
-            right: 20,
+            bottom: { xs: 10, sm: 15, md: 20 },
+            right: { xs: 10, sm: 15, md: 20 },
             zIndex: 1000,
           }}
         >
@@ -879,8 +879,8 @@ const MusicTab = () => {
             // Expanded mini player
             <Card
               sx={{
-                width: 300,
-                borderRadius: 3,
+                width: { xs: 260, sm: 300 },
+                borderRadius: { xs: 2, sm: 3 },
                 background: 'linear-gradient(145deg, #5C1B9D, #2341DD)',
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
                 overflow: 'hidden',
@@ -994,8 +994,8 @@ const MusicTab = () => {
               color="primary"
               sx={{
                 background: 'linear-gradient(145deg, #5C1B9D, #2341DD)',
-                width: 60,
-                height: 60,
+                width: { xs: 50, sm: 60 },
+                height: { xs: 50, sm: 60 },
                 position: 'relative',
                 boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
               }}
@@ -1053,7 +1053,7 @@ const MusicTab = () => {
   };
 
   return (
-    <Box sx={{ p: 2 }}>
+    <Box sx={{ p: { xs: 1, sm: 1.5, md: 2 } }}>
       {/* Alert for errors and notifications */}
       <Snackbar
         open={alertOpen}
@@ -1199,17 +1199,17 @@ const MusicTab = () => {
         transition={{ duration: 0.5 }}
       >
         {/* Main content */}
-        <Grid container spacing={3}>
+        <Grid container spacing={{ xs: 2, sm: 2, md: 3 }}>
           {/* Player and controls column */}
           <Grid item xs={12} md={5} lg={4}>
             <Card 
               elevation={3} 
               sx={{ 
-                borderRadius: 4, 
+                borderRadius: { xs: 3, md: 4 }, 
                 overflow: 'hidden', 
-                mb: 3,
+                mb: { xs: 2, sm: 3 },
                 position: 'sticky',
-                top: 16,
+                top: { xs: 8, sm: 12, md: 16 },
                 background: 'linear-gradient(145deg, #5C1B9D, #2341DD)'
               }}
             >
@@ -1599,13 +1599,13 @@ const MusicTab = () => {
             <Paper
               elevation={3}
               sx={{ 
-                borderRadius: 2, 
-                mb: 3,
+                borderRadius: { xs: 1.5, sm: 2 }, 
+                mb: { xs: 2, sm: 3 },
                 display: 'flex',
                 flexDirection: { xs: 'column', sm: 'row' },
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                p: 1
+                p: { xs: 0.5, sm: 1 }
               }}
             >
               <Tabs 
@@ -2151,7 +2151,7 @@ const MusicTab = () => {
               </Typography>
             </Box>
           ) : (
-            <Box sx={{ p: 2 }}>
+            <Box sx={{ p: { xs: 1, sm: 1.5, md: 2 } }}>
               <Typography variant="h6" gutterBottom>
                 {todaysWorkout.name}
               </Typography>

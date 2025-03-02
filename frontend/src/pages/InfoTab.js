@@ -332,22 +332,41 @@ const InfoTab = () => {
   ];
   
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ p: { xs: 2, sm: 4 } }}>
+    <Container maxWidth="lg" disableGutters sx={{ overflow: 'hidden' }}>
+      <Box sx={{ p: { xs: 1.5, sm: 3, md: 4 } }}>
         {/* Hero Section */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7 }}
         >
-          <GlassPaper elevation={0} sx={{ mb: 5, p: 4, textAlign: 'center' }}>
-            <Typography variant="h2" component="h1" sx={{ mb: 2, fontWeight: 800 }}>
+          <GlassPaper elevation={0} sx={{ mb: 5, p: { xs: 2, sm: 3, md: 4 }, textAlign: 'center' }}>
+            <Typography 
+              variant="h2" 
+              component="h1" 
+              sx={{ 
+                mb: 2, 
+                fontWeight: 800,
+                fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' }
+              }}
+            >
               <GradientText gradient="linear-gradient(90deg, #3f51b5, #2196f3, #00bcd4)">
                 Health Console
               </GradientText>
             </Typography>
             
-            <Typography variant="h5" color="textSecondary" sx={{ mb: 4, maxWidth: '800px', mx: 'auto', lineHeight: 1.5 }}>
+            <Typography 
+              variant="h5" 
+              color="textSecondary" 
+              sx={{ 
+                mb: 4, 
+                maxWidth: '800px', 
+                mx: 'auto', 
+                lineHeight: 1.5,
+                fontSize: { xs: '1rem', sm: '1.15rem', md: '1.25rem' },
+                px: { xs: 1, md: 0 }
+              }}
+            >
               Your comprehensive health management system, integrating fitness tracking, nutrition, sleep analysis, and personalized coaching in one unified platform.
             </Typography>
             
@@ -439,9 +458,9 @@ const InfoTab = () => {
           initial="hidden"
           animate="show"
         >
-          <Grid container spacing={3}>
+          <Grid container spacing={{ xs: 2, sm: 3 }}>
             {tabInfo.map((tab) => (
-              <Grid item xs={12} sm={6} md={4} key={tab.id} component={motion.div} variants={itemVariants}>
+              <Grid item xs={12} sm={6} lg={4} key={tab.id} component={motion.div} variants={itemVariants}>
                 <GradientBorder color={tab.color}>
                   <FeatureCard elevation={0} color={tab.color}>
                     <Box
@@ -520,7 +539,7 @@ const InfoTab = () => {
             Here's how everything works together:
           </Typography>
           
-          <Grid container spacing={3}>
+          <Grid container spacing={{ xs: 2, sm: 3 }}>
             {integrationFeatures.map((feature) => (
               <Grid item xs={12} md={6} key={feature.id}>
                 <Card 
@@ -619,9 +638,9 @@ const InfoTab = () => {
         </Typography>
         
         <Box sx={{ mb: 6 }}>
-          <Grid container spacing={3}>
+          <Grid container spacing={{ xs: 2, sm: 3 }}>
             {technicalFeatures.map((feature, index) => (
-              <Grid item xs={12} sm={6} md={4} lg={2.4} key={feature.id}>
+              <Grid item xs={6} sm={4} md={2.4} key={feature.id}>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -654,10 +673,23 @@ const InfoTab = () => {
                     >
                       {feature.icon}
                     </Avatar>
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                    <Typography 
+                      variant="h6" 
+                      gutterBottom 
+                      sx={{ 
+                        fontWeight: 600, 
+                        fontSize: { xs: '0.9rem', sm: '1rem', md: '1.125rem' } 
+                      }}
+                    >
                       {feature.title}
                     </Typography>
-                    <Typography variant="body2" color="textSecondary">
+                    <Typography 
+                      variant="body2" 
+                      color="textSecondary"
+                      sx={{ 
+                        fontSize: { xs: '0.75rem', sm: '0.8rem', md: '0.875rem' }
+                      }}
+                    >
                       {feature.description}
                     </Typography>
                   </Card>
