@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "react-virtualized-auto-sizer": "^1.0.25"
+  }
+}
