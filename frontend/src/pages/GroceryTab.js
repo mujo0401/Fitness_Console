@@ -695,126 +695,118 @@ const storeDatabase = [
 // Default to a mix of national chains as initial data
 const mockStores = storeDatabase.slice(0, 5);
 
-// Function to fetch nearby stores based on user location
-// In a real implementation, this would connect to store locator APIs
+// Mock data for stores by region
+const mockStoresByRegion = {
+  MN: [
+    { id: 11, name: "Lunds & Byerlys - Minneapolis", chain: "Lunds & Byerlys", address: "1450 W Lake St, Minneapolis, MN 55408", distance: 1.2, coordinates: { lat: 44.9521, lng: -93.2985 }, deliveryAvailable: true, rating: 4.7, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+    { id: 13, name: "Cub Foods - Uptown", chain: "Cub Foods", address: "1104 Lagoon Ave, Minneapolis, MN 55408", distance: 1.8, coordinates: { lat: 44.9521, lng: -93.2907 }, deliveryAvailable: true, rating: 4.2, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+    { id: 1, name: "Whole Foods Market - Minneapolis", chain: "Whole Foods", address: "222 Hennepin Ave, Minneapolis, MN 55401", distance: 2.5, coordinates: { lat: 44.9865, lng: -93.2706 }, deliveryAvailable: true, rating: 4.6, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+    { id: 12, name: "Kowalski's Market - Uptown", chain: "Kowalski's", address: "2440 Hennepin Ave, Minneapolis, MN 55405", distance: 2.7, coordinates: { lat: 44.9581, lng: -93.2896 }, deliveryAvailable: true, rating: 4.8, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+    { id: 2, name: "Trader Joe's - Downtown", chain: "Trader Joe's", address: "721 Washington Ave S, Minneapolis, MN 55415", distance: 3.2, coordinates: { lat: 44.9764, lng: -93.2568 }, deliveryAvailable: true, rating: 4.5, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+    { id: 3, name: "Target - Nicollet Mall", chain: "Target", address: "900 Nicollet Mall, Minneapolis, MN 55403", distance: 3.5, coordinates: { lat: 44.9737, lng: -93.2751 }, deliveryAvailable: true, rating: 4.3, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+    { id: 15, name: "Festival Foods - Minneapolis", chain: "Festival Foods", address: "4500 Central Ave NE, Minneapolis, MN 55421", distance: 5.8, coordinates: { lat: 45.0462, lng: -93.2393 }, deliveryAvailable: true, rating: 4.4, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" }
+  ],
+  CA: [
+    { id: 21, name: "Gelson's - Hollywood", chain: "Gelson's", address: "5877 Franklin Ave, Los Angeles, CA 90028", distance: 1.4, coordinates: { lat: 34.1050, lng: -118.3168 }, deliveryAvailable: true, rating: 4.7, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+    { id: 1, name: "Whole Foods Market - DTLA", chain: "Whole Foods", address: "788 S Grand Ave, Los Angeles, CA 90017", distance: 2.1, coordinates: { lat: 34.0467, lng: -118.2565 }, deliveryAvailable: true, rating: 4.6, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+    { id: 2, name: "Trader Joe's - Hollywood", chain: "Trader Joe's", address: "1600 Vine St, Los Angeles, CA 90028", distance: 2.3, coordinates: { lat: 34.1012, lng: -118.3265 }, deliveryAvailable: true, rating: 4.5, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+    { id: 23, name: "Vons - Sunset", chain: "Vons", address: "1342 Sunset Blvd, Los Angeles, CA 90026", distance: 2.8, coordinates: { lat: 34.0765, lng: -118.2605 }, deliveryAvailable: true, rating: 4.1, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+    { id: 10, name: "Sprouts Farmers Market - Hollywood", chain: "Sprouts", address: "5660 Sunset Blvd, Los Angeles, CA 90028", distance: 3.2, coordinates: { lat: 34.0981, lng: -118.3121 }, deliveryAvailable: true, rating: 4.4, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+    { id: 22, name: "Raley's - Los Feliz", chain: "Raley's", address: "1800 N Vermont Ave, Los Angeles, CA 90027", distance: 3.7, coordinates: { lat: 34.1046, lng: -118.2919 }, deliveryAvailable: true, rating: 4.3, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" }
+  ],
+  NY: [
+    { id: 1, name: "Whole Foods Market - Columbus Circle", chain: "Whole Foods", address: "10 Columbus Circle, New York, NY 10019", distance: 1.3, coordinates: { lat: 40.7686, lng: -73.9832 }, deliveryAvailable: true, rating: 4.6, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+    { id: 17, name: "Fairway Market - Upper West Side", chain: "Fairway", address: "2131 Broadway, New York, NY 10023", distance: 1.9, coordinates: { lat: 40.7829, lng: -73.9809 }, deliveryAvailable: true, rating: 4.5, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+    { id: 2, name: "Trader Joe's - Union Square", chain: "Trader Joe's", address: "142 E 14th St, New York, NY 10003", distance: 2.4, coordinates: { lat: 40.7344, lng: -73.9877 }, deliveryAvailable: true, rating: 4.4, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+    { id: 20, name: "ShopRite - Chelsea", chain: "ShopRite", address: "401 W 42nd St, New York, NY 10036", distance: 2.7, coordinates: { lat: 40.7592, lng: -73.9933 }, deliveryAvailable: true, rating: 4.2, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+    { id: 18, name: "Wegmans - Brooklyn Navy Yard", chain: "Wegmans", address: "21 Flushing Ave, Brooklyn, NY 11201", distance: 4.6, coordinates: { lat: 40.7009, lng: -73.9715 }, deliveryAvailable: true, rating: 4.8, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+    { id: 5, name: "Target - Midtown", chain: "Target", address: "112 W 34th St, New York, NY 10120", distance: 2.9, coordinates: { lat: 40.7509, lng: -73.9886 }, deliveryAvailable: true, rating: 4.1, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" }
+  ],
+  TX: [
+    { id: 26, name: "H-E-B - South Congress", chain: "H-E-B", address: "1000 E 41st St, Austin, TX 78751", distance: 1.6, coordinates: { lat: 30.3004, lng: -97.7145 }, deliveryAvailable: true, rating: 4.8, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+    { id: 1, name: "Whole Foods Market - Downtown", chain: "Whole Foods", address: "525 N Lamar Blvd, Austin, TX 78703", distance: 2.2, coordinates: { lat: 30.2723, lng: -97.7533 }, deliveryAvailable: true, rating: 4.7, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+    { id: 29, name: "Central Market - North Lamar", chain: "Central Market", address: "4001 N Lamar Blvd, Austin, TX 78756", distance: 2.8, coordinates: { lat: 30.3080, lng: -97.7404 }, deliveryAvailable: true, rating: 4.9, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+    { id: 2, name: "Trader Joe's - Downtown", chain: "Trader Joe's", address: "211 Walter Seaholm Dr, Austin, TX 78701", distance: 3.1, coordinates: { lat: 30.2658, lng: -97.7533 }, deliveryAvailable: true, rating: 4.4, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+    { id: 10, name: "Sprouts Farmers Market - Lamar", chain: "Sprouts", address: "4006 S Lamar Blvd, Austin, TX 78704", distance: 3.5, coordinates: { lat: 30.2392, lng: -97.7935 }, deliveryAvailable: true, rating: 4.3, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" },
+    { id: 5, name: "Target - Tech Ridge", chain: "Target", address: "12901 N I-35, Austin, TX 78753", distance: 7.2, coordinates: { lat: 30.4069, lng: -97.6758 }, deliveryAvailable: true, rating: 4.2, logo: "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80" }
+  ]
+};
+
+// Helper function for random delivery time
+const randomDeliveryTime = () => {
+  const baseMinutes = Math.floor(Math.random() * 20) + 25; // 25-45 minutes base
+  const rangeMinutes = Math.floor(Math.random() * 15) + 5; // 5-20 minute range
+  return `${baseMinutes}-${baseMinutes + rangeMinutes} min`;
+};
+
+// Function to find nearby stores with advanced metrics
 const findNearbyStores = async (lat, lng) => {
   try {
-    // This would be a real API call to store locator services in a production app
-    console.log(`Finding stores near coordinates: ${lat}, ${lng}`);
+    console.log(`Finding nearby stores for coordinates: ${lat}, ${lng}`);
+    
+    // Function to calculate distance between two coordinate points (Haversine formula)
+    const calculateDistance = (lat1, lon1, lat2, lon2) => {
+      const R = 6371e3; // Earth radius in meters
+      const φ1 = lat1 * Math.PI / 180; // Convert to radians
+      const φ2 = lat2 * Math.PI / 180;
+      const Δφ = (lat2 - lat1) * Math.PI / 180;
+      const Δλ = (lon2 - lon1) * Math.PI / 180;
+      
+      const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ/2) * Math.sin(Δλ/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      
+      const distance = R * c / 1609.34; // Convert meters to miles
+      return distance;
+    };
     
     // Simulate API response delay
     await new Promise(resolve => setTimeout(resolve, 800));
     
-    // Determine region based on geolocation
-    let region = "national";
+    // Find the closest region
+    let closestRegion = 'MN';
+    let minDistance = Infinity;
     
-    // Create a geographically-based clustering of stores for the location
-    // This is a simplified version of what a real store locator API would do
+    // Calculate the distance to each region's reference point
+    const regionCoordinates = {
+      MN: { lat: 44.9778, lng: -93.2650 }, // Minneapolis
+      CA: { lat: 34.0522, lng: -118.2437 }, // Los Angeles
+      NY: { lat: 40.7128, lng: -74.0060 }, // New York
+      TX: { lat: 30.2672, lng: -97.7431 }  // Austin
+    };
     
-    // Midwest (Minnesota, Wisconsin, Illinois, Michigan, etc.)
-    if (lat > 40.0 && lat < 49.0 && lng > -97.0 && lng < -82.0) {
-      region = "Midwest";
-    }
-    // East Coast (New York, Boston, Philadelphia, etc.)
-    else if (lat > 37.0 && lat < 45.0 && lng > -80.0 && lng < -70.0) {
-      region = "East";
-    }
-    // West Coast (California, Oregon, Washington)
-    else if (lat > 32.0 && lat < 49.0 && lng > -125.0 && lng < -115.0) {
-      region = "West";
-    }
-    // South (Texas, Florida, Georgia, etc.)
-    else if (lat > 25.0 && lat < 37.0 && lng > -106.0 && lng < -75.0) {
-      region = "South";
-    }
-    
-    console.log(`Detected region: ${region}`);
-    
-    // Get regional stores first
-    const regionalStores = storeDatabase.filter(store => 
-      store.region === region || !store.region
-    );
-    
-    // Generate a list of 5-8 nearby stores
-    const numStores = Math.floor(Math.random() * 4) + 5;
-    
-    // If we don't have enough regional stores, add some national chains
-    const nationalChains = storeDatabase.filter(store => !store.region).slice(0, 5);
-    
-    // Combine and shuffle
-    let availableStores = [...regionalStores, ...nationalChains];
-    availableStores = availableStores
-      .sort(() => 0.5 - Math.random())
-      .slice(0, numStores);
-    
-    // Street names for address generation
-    const streetNames = [
-      "Main St", "Park Ave", "Oak Dr", "Maple St", "Washington Ave", 
-      "Market St", "Broadway", "Lake Rd", "River St", "Highland Ave"
-    ];
-    
-    // Now create unique store locations near the specified coordinates
-    const nearbyStores = availableStores.map(store => {
-      // Generate a realistic address
-      const streetNumber = Math.floor(Math.random() * 9000) + 100;
-      const street = streetNames[Math.floor(Math.random() * streetNames.length)];
-      
-      // Generate realistic zip code
-      const zipCode = Math.floor(Math.random() * 90000) + 10000;
-      
-      // City name based on region
-      let city;
-      let state;
-      
-      if (region === "Midwest") {
-        const cities = ["Minneapolis", "St. Paul", "Milwaukee", "Chicago", "Detroit"];
-        const states = ["MN", "WI", "IL", "MI"];
-        city = cities[Math.floor(Math.random() * cities.length)];
-        state = states[Math.floor(Math.random() * states.length)];
-      } else if (region === "East") {
-        const cities = ["New York", "Boston", "Philadelphia", "Washington DC"];
-        const states = ["NY", "MA", "PA", "MD"];
-        city = cities[Math.floor(Math.random() * cities.length)];
-        state = states[Math.floor(Math.random() * states.length)];
-      } else if (region === "West") {
-        const cities = ["Los Angeles", "San Francisco", "Seattle", "Portland"];
-        const states = ["CA", "WA", "OR"];
-        city = cities[Math.floor(Math.random() * cities.length)];
-        state = states[Math.floor(Math.random() * states.length)];
-      } else if (region === "South") {
-        const cities = ["Dallas", "Houston", "Atlanta", "Miami", "Orlando"];
-        const states = ["TX", "GA", "FL"];
-        city = cities[Math.floor(Math.random() * cities.length)];
-        state = states[Math.floor(Math.random() * states.length)];
-      } else {
-        const cities = ["Denver", "Phoenix", "Las Vegas", "Salt Lake City"];
-        const states = ["CO", "AZ", "NV", "UT"];
-        city = cities[Math.floor(Math.random() * cities.length)];
-        state = states[Math.floor(Math.random() * states.length)];
+    for (const [region, coords] of Object.entries(regionCoordinates)) {
+      const distance = calculateDistance(lat, lng, coords.lat, coords.lng);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestRegion = region;
       }
+    }
+    
+    console.log(`Closest region: ${closestRegion} (${minDistance.toFixed(1)} miles)`);
+    
+    // Get stores for the closest region
+    let storesForRegion = mockStoresByRegion[closestRegion] || mockStoresByRegion.MN;
+    
+    // Calculate exact distances for each store
+    const storesWithRealDistances = storesForRegion.map(store => {
+      const actualDistance = store.coordinates ? 
+        calculateDistance(lat, lng, store.coordinates.lat, store.coordinates.lng) : 
+        store.distance;
       
-      // Random distance between 0.5 and 8 miles
-      const distance = (Math.random() * 7.5 + 0.5).toFixed(1);
-      
-      // Create a formatted address
-      const address = `${streetNumber} ${street}, ${city}, ${state} ${zipCode}`;
-      
-      // Return the enhanced store object
       return {
         ...store,
-        address,
-        distance: parseFloat(distance),
-        // Add a small suffix to ensure store names are unique
-        name: store.name + (Math.random() > 0.5 ? ` - ${city}` : '')
+        distance: Math.round(actualDistance * 100) / 100,
+        estimatedDeliveryTime: randomDeliveryTime(),
       };
     });
     
     // Sort by distance
-    return nearbyStores.sort((a, b) => a.distance - b.distance);
+    return storesWithRealDistances.sort((a, b) => a.distance - b.distance);
   } catch (error) {
-    console.error('Error fetching nearby stores:', error);
-    // Generate some default stores as fallback
-    return generateFallbackStores();
+    console.error('Error finding nearby stores:', error);
+    return mockStoresByRegion.MN; // Return Minnesota stores as fallback
   }
 };
 
@@ -2505,12 +2497,298 @@ const HealthAssistantChat = () => {
   );
 };
 
+// Recipe template database
+const recipeTemplates = [
+  {
+    template: "protein_with_veggies",
+    name: "{protein} with {vegetable} and {grain}",
+    description: "Delicious {protein} served with {vegetable} and a side of {grain}, seasoned with herbs and spices.",
+    requiresTypes: ["protein", "vegetable"],
+    optionalTypes: ["grain", "herb"],
+    preparationTime: "30 minutes",
+    baseCalories: 350,
+    baseImage: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80",
+    possibleDietTypes: ["High-Protein", "Low-Carb", "Paleo"]
+  },
+  {
+    template: "vegetable_salad",
+    name: "{vegetable} Salad with {protein}",
+    description: "Fresh {vegetable} salad topped with {protein} and dressed with {condiment}.",
+    requiresTypes: ["vegetable"],
+    optionalTypes: ["protein", "condiment", "herb"],
+    preparationTime: "15 minutes",
+    baseCalories: 250,
+    baseImage: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80",
+    possibleDietTypes: ["Vegan", "Vegetarian", "Low-Carb", "Keto"]
+  },
+  {
+    template: "grain_bowl",
+    name: "{grain} Bowl with {protein} and {vegetable}",
+    description: "Hearty {grain} bowl topped with {protein} and {vegetable}, finished with {condiment}.",
+    requiresTypes: ["grain"],
+    optionalTypes: ["protein", "vegetable", "condiment"],
+    preparationTime: "25 minutes",
+    baseCalories: 400,
+    baseImage: "https://images.unsplash.com/photo-1505576399279-565b52d4ac71?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80",
+    possibleDietTypes: ["Vegetarian", "Mediterranean", "High-Protein"]
+  },
+  {
+    template: "smoothie",
+    name: "{fruit} and {vegetable} Smoothie",
+    description: "Refreshing smoothie with {fruit}, {vegetable}, and {dairy} for a nutritious boost.",
+    requiresTypes: ["fruit"],
+    optionalTypes: ["vegetable", "dairy", "nuts_seeds"],
+    preparationTime: "10 minutes",
+    baseCalories: 200,
+    baseImage: "https://images.unsplash.com/photo-1577805947697-89e18249d767?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80",
+    possibleDietTypes: ["Vegan", "Vegetarian", "Gluten-Free"]
+  },
+  {
+    template: "stir_fry",
+    name: "{protein} Stir Fry with {vegetable}",
+    description: "Quick and flavorful stir fry with {protein} and {vegetable}, served over {grain}.",
+    requiresTypes: ["protein", "vegetable"],
+    optionalTypes: ["grain", "condiment"],
+    preparationTime: "20 minutes",
+    baseCalories: 380,
+    baseImage: "https://images.unsplash.com/photo-1512058564366-18510be2db19?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80",
+    possibleDietTypes: ["High-Protein", "Low-Carb"]
+  }
+];
+
+// Generate dynamic recipes based on ingredients
+const generateDynamicRecipes = (cartItems) => {
+  if (!cartItems || cartItems.length < 2) return [];
+  
+  // Helper function to categorize ingredients
+  const categorizeIngredient = (name) => {
+    name = name.toLowerCase();
+    
+    // Check protein ingredients
+    if (name.includes('chicken') || name.includes('beef') || 
+        name.includes('fish') || name.includes('salmon') || 
+        name.includes('tofu') || name.includes('turkey') || 
+        name.includes('egg') || name.includes('yogurt')) {
+      return "protein";
+    }
+    
+    // Check produce/vegetables
+    if (name.includes('spinach') || name.includes('kale') || 
+        name.includes('broccoli') || name.includes('pepper') || 
+        name.includes('carrot') || name.includes('tomato') || 
+        name.includes('lettuce') || name.includes('onion') ||
+        name.includes('zucchini') || name.includes('cucumber')) {
+      return "vegetable";
+    }
+    
+    // Check fruits
+    if (name.includes('apple') || name.includes('banana') || 
+        name.includes('berry') || name.includes('berries') || 
+        name.includes('orange') || name.includes('pear') || 
+        name.includes('mango') || name.includes('pineapple') ||
+        name.includes('avocado')) {
+      return "fruit";
+    }
+    
+    // Check grains
+    if (name.includes('rice') || name.includes('quinoa') || 
+        name.includes('pasta') || name.includes('bread') || 
+        name.includes('oat') || name.includes('barley') ||
+        name.includes('couscous') || name.includes('farro')) {
+      return "grain";
+    }
+    
+    // Check dairy
+    if (name.includes('milk') || name.includes('cheese') || 
+        name.includes('yogurt') || name.includes('cream')) {
+      return "dairy";
+    }
+    
+    // Check nuts and seeds
+    if (name.includes('almond') || name.includes('walnut') || 
+        name.includes('cashew') || name.includes('pecan') || 
+        name.includes('chia') || name.includes('flax') ||
+        name.includes('seed') || name.includes('nut')) {
+      return "nuts_seeds";
+    }
+    
+    // Check herbs and spices
+    if (name.includes('basil') || name.includes('thyme') || 
+        name.includes('cilantro') || name.includes('mint') || 
+        name.includes('parsley') || name.includes('oregano') ||
+        name.includes('spice') || name.includes('herb')) {
+      return "herb";
+    }
+    
+    // Check condiments
+    if (name.includes('oil') || name.includes('vinegar') || 
+        name.includes('sauce') || name.includes('dressing') || 
+        name.includes('honey') || name.includes('syrup') ||
+        name.includes('mayo') || name.includes('mustard')) {
+      return "condiment";
+    }
+    
+    return "other";
+  };
+  
+  // Group cart items by category
+  const groupedIngredients = {};
+  cartItems.forEach(item => {
+    const category = categorizeIngredient(item.name);
+    if (!groupedIngredients[category]) {
+      groupedIngredients[category] = [];
+    }
+    groupedIngredients[category].push(item);
+  });
+  
+  console.log("Grouped ingredients by category:", Object.keys(groupedIngredients));
+  
+  // Find suitable recipe templates based on available ingredients
+  const matchingTemplates = recipeTemplates.filter(template => {
+    // Check if we have all required ingredient types
+    return template.requiresTypes.every(type => groupedIngredients[type] && groupedIngredients[type].length > 0);
+  });
+  
+  if (matchingTemplates.length === 0) return [];
+  
+  // Select up to 3 templates to create recipes from
+  const selectedTemplates = matchingTemplates
+    .sort(() => 0.5 - Math.random()) // Shuffle
+    .slice(0, 3);
+  
+  // Generate actual recipes from templates
+  return selectedTemplates.map((template, index) => {
+    // Pick ingredients for each required slot
+    const selectedIngredients = [];
+    const ingredientNames = {};
+    
+    // Fill required ingredient slots
+    template.requiresTypes.forEach(type => {
+      if (groupedIngredients[type] && groupedIngredients[type].length > 0) {
+        // Pick a random ingredient of this type
+        const randomIndex = Math.floor(Math.random() * groupedIngredients[type].length);
+        const ingredient = groupedIngredients[type][randomIndex];
+        
+        selectedIngredients.push(ingredient.name);
+        ingredientNames[type] = ingredient.name;
+      }
+    });
+    
+    // Fill optional ingredient slots if available
+    template.optionalTypes.forEach(type => {
+      if (groupedIngredients[type] && groupedIngredients[type].length > 0) {
+        // 70% chance to include an optional ingredient
+        if (Math.random() > 0.3) {
+          const randomIndex = Math.floor(Math.random() * groupedIngredients[type].length);
+          const ingredient = groupedIngredients[type][randomIndex];
+          
+          selectedIngredients.push(ingredient.name);
+          ingredientNames[type] = ingredient.name;
+        }
+      }
+    });
+    
+    // Customize the recipe name and description using the selected ingredients
+    let customizedName = template.name;
+    let customizedDescription = template.description;
+    
+    // Replace placeholders with actual ingredient names
+    Object.entries(ingredientNames).forEach(([type, name]) => {
+      const cleanName = name.replace(/,.*$/, ''); // Remove anything after a comma
+      customizedName = customizedName.replace(`{${type}}`, cleanName);
+      customizedDescription = customizedDescription.replace(`{${type}}`, cleanName);
+    });
+    
+    // Handle any remaining placeholders
+    customizedName = customizedName.replace(/{[^}]+}/g, ''); // Remove any remaining placeholders
+    customizedDescription = customizedDescription.replace(/{[^}]+}/g, ''); // Remove any remaining placeholders
+    
+    // Clean up double spaces
+    customizedName = customizedName.replace(/\s+/g, ' ').trim();
+    customizedDescription = customizedDescription.replace(/\s+/g, ' ').trim();
+    
+    // Determine applicable diet types based on ingredients
+    const dietTypes = [];
+    
+    // Add template's possible diet types if they apply to our ingredients
+    template.possibleDietTypes.forEach(dietType => {
+      if (dietType === "Vegan" && !selectedIngredients.some(ing => 
+        ing.toLowerCase().includes('meat') || ing.toLowerCase().includes('chicken') || 
+        ing.toLowerCase().includes('beef') || ing.toLowerCase().includes('fish') ||
+        ing.toLowerCase().includes('egg') || ing.toLowerCase().includes('milk') ||
+        ing.toLowerCase().includes('cheese') || ing.toLowerCase().includes('yogurt'))) {
+        dietTypes.push(dietType);
+      } else if (dietType === "Vegetarian" && !selectedIngredients.some(ing => 
+        ing.toLowerCase().includes('meat') || ing.toLowerCase().includes('chicken') || 
+        ing.toLowerCase().includes('beef') || ing.toLowerCase().includes('fish'))) {
+        dietTypes.push(dietType);
+      } else if (dietType === "High-Protein" && selectedIngredients.some(ing => 
+        ing.toLowerCase().includes('chicken') || ing.toLowerCase().includes('beef') || 
+        ing.toLowerCase().includes('fish') || ing.toLowerCase().includes('egg') ||
+        ing.toLowerCase().includes('yogurt') || ing.toLowerCase().includes('tofu'))) {
+        dietTypes.push(dietType);
+      } else if (dietType === "Low-Carb" && !selectedIngredients.some(ing => 
+        ing.toLowerCase().includes('rice') || ing.toLowerCase().includes('pasta') || 
+        ing.toLowerCase().includes('bread') || ing.toLowerCase().includes('potato'))) {
+        dietTypes.push(dietType);
+      } else if (dietType === "Paleo" && !selectedIngredients.some(ing => 
+        ing.toLowerCase().includes('grain') || ing.toLowerCase().includes('dairy') || 
+        ing.toLowerCase().includes('legume'))) {
+        dietTypes.push(dietType);
+      } else if (dietType === "Gluten-Free" && !selectedIngredients.some(ing => 
+        ing.toLowerCase().includes('wheat') || ing.toLowerCase().includes('gluten'))) {
+        dietTypes.push(dietType);
+      } else if (dietType === "Mediterranean" && selectedIngredients.some(ing => 
+        ing.toLowerCase().includes('olive oil') || ing.toLowerCase().includes('fish') || 
+        ing.toLowerCase().includes('vegetable'))) {
+        dietTypes.push(dietType);
+      } else if (dietType === "Keto" && !selectedIngredients.some(ing => 
+        ing.toLowerCase().includes('sugar') || ing.toLowerCase().includes('grain') || 
+        ing.toLowerCase().includes('rice') || ing.toLowerCase().includes('potato'))) {
+        dietTypes.push(dietType);
+      }
+    });
+    
+    // Add a few more common diet types if applicable
+    if (!selectedIngredients.some(ing => ing.toLowerCase().includes('gluten'))) {
+      dietTypes.push("Gluten-Free");
+    }
+    
+    // Remove duplicates
+    const uniqueDietTypes = [...new Set(dietTypes)];
+    
+    // Calculate approximate calories based on ingredients and template base
+    const calorieModifier = selectedIngredients.length * 25; // 25 calories per ingredient
+    const calories = template.baseCalories + calorieModifier;
+    
+    // Calculate match percentage based on how many ingredient slots were filled
+    const totalSlots = template.requiresTypes.length + template.optionalTypes.length;
+    const filledSlots = Object.keys(ingredientNames).length;
+    const matchPercentage = Math.round((filledSlots / totalSlots) * 100);
+    
+    return {
+      id: 1000 + index,
+      name: customizedName,
+      description: customizedDescription,
+      ingredients: selectedIngredients,
+      preparationTime: template.preparationTime,
+      calories,
+      image: template.baseImage,
+      dietTypes: uniqueDietTypes,
+      matchPercentage: Math.max(70, matchPercentage) // Minimum 70% match
+    };
+  });
+};
+
 // Helper component for recipe suggestions
 const RecipeSuggestions = ({ cartItems, recipes }) => {
   const theme = useTheme();
   
-  // Filter recipes based on cart items
-  const getMatchingRecipes = () => {
+  // Generate dynamic recipes based on cart items
+  const dynamicRecipes = generateDynamicRecipes(cartItems);
+  
+  // Filter static recipes based on cart items
+  const getMatchingStaticRecipes = () => {
     if (!cartItems || cartItems.length === 0) return recipes;
     
     const cartItemNames = cartItems.map(item => item.name);
@@ -2530,7 +2808,11 @@ const RecipeSuggestions = ({ cartItems, recipes }) => {
       .sort((a, b) => b.matchPercentage - a.matchPercentage);
   };
   
-  const matchingRecipes = getMatchingRecipes();
+  // Combine static and dynamic recipes
+  const staticRecipes = getMatchingStaticRecipes();
+  const allRecipes = [...dynamicRecipes, ...staticRecipes].slice(0, 4); // Limit to 4 total recipes
+  
+  const matchingRecipes = allRecipes;
   
   return (
     <Box>
@@ -2706,44 +2988,93 @@ const GroceryTab = () => {
   // Get unique categories
   const categories = ['All', ...new Set(groceryItems.map(item => item.category))];
   
-  // Function to fetch real grocery data from external API
-  const fetchRealGroceryData = async (searchQuery) => {
-    try {
-      // First, look for any matches in our existing mock data
-      let filtered = mockGroceryItems.filter(item => {
-        const itemNameLower = item.name.toLowerCase();
-        const searchTermLower = searchQuery.toLowerCase();
-        return itemNameLower.includes(searchTermLower);
-      });
-      
-      // If we find matches in our existing data, use those
-      if (filtered.length > 0) {
-        return filtered;
-      }
-      
-      // If no matches found, generate dynamic grocery items for the search term
-      console.log(`Generating dynamic grocery data for: ${searchQuery}`);
-      
-      // Simulating API response delay
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Create a dynamic item based on the search query
-      // This simulates what would happen with a real API
-      const dynamicItems = generateDynamicGroceryItems(searchQuery);
-      
-      // Add these dynamically generated items to our existing items
-      // so they'll be available for future searches
-      setGroceryItems(prevItems => [...prevItems, ...dynamicItems]);
-      
-      return dynamicItems;
-    } catch (error) {
-      console.error('Error fetching grocery data:', error);
-      return []; // Return empty array on error
+  // Function to fetch grocery data based on search term
+const fetchRealGroceryData = async (searchQuery) => {
+  try {
+    console.log(`Fetching grocery data for: ${searchQuery}`);
+    
+    // Simulate API response delay
+    await new Promise(resolve => setTimeout(resolve, 400));
+    
+    // For demo purposes, we'll first search our existing grocery database
+    const existingMatches = mockGroceryItems.filter(item => {
+      const itemNameLower = item.name.toLowerCase();
+      const searchTermLower = searchQuery.toLowerCase();
+      return itemNameLower.includes(searchTermLower);
+    });
+    
+    // If we found matches in our existing database, return those
+    if (existingMatches.length > 0) {
+      return existingMatches;
     }
-  };
+    
+    // If no matches found, dynamically generate new items
+    const dynamicItems = generateDynamicGroceryItems(searchQuery);
+    
+    // Add these dynamically generated items to our existing items
+    // so they'll be available for future searches
+    setGroceryItems(prevItems => [...prevItems, ...dynamicItems]);
+    
+    return dynamicItems;
+  } catch (error) {
+    console.error('Error fetching grocery data:', error);
+    return []; // Return empty array on error
+  }
+};
   
-  // Function to generate dynamic grocery items based on search term
-  const generateDynamicGroceryItems = (searchQuery) => {
+  // Food category definitions for search matching
+const foodCategories = {
+  'fruits': ['apple', 'banana', 'orange', 'strawberry', 'blueberry', 'raspberry', 'blackberry', 'grape', 'watermelon', 'kiwi', 'pineapple', 'mango', 'peach', 'pear', 'plum', 'cherry', 'avocado'],
+  'vegetables': ['carrot', 'broccoli', 'spinach', 'lettuce', 'tomato', 'potato', 'onion', 'garlic', 'cucumber', 'pepper', 'zucchini', 'eggplant', 'asparagus', 'kale', 'cabbage', 'cauliflower'],
+  'protein': ['chicken', 'beef', 'pork', 'turkey', 'fish', 'salmon', 'tuna', 'tofu', 'tempeh', 'eggs', 'steak', 'shrimp', 'lamb'],
+  'dairy': ['milk', 'cheese', 'yogurt', 'butter', 'cream', 'cottage cheese', 'sour cream', 'kefir', 'icecream'],
+  'grains': ['bread', 'rice', 'pasta', 'cereal', 'oats', 'quinoa', 'barley', 'couscous', 'farro', 'cornmeal', 'flour', 'tortilla'],
+  'nuts_seeds': ['almond', 'walnut', 'pecan', 'cashew', 'peanut', 'chia', 'flax', 'pumpkin seed', 'sunflower seed', 'pistachio', 'hazelnut'],
+  'beverages': ['coffee', 'tea', 'juice', 'soda', 'water', 'smoothie', 'kombucha', 'wine', 'beer', 'cocktail', 'milk']
+};
+
+// Variable to track the next ID for dynamic items
+let nextId = 2000;
+
+// Function to dynamically generate grocery items based on search term
+const generateDynamicGroceryItems = (searchQuery) => {
+  if (!searchQuery || searchQuery.trim() === '') return [];
+  
+  // Clean up and normalize the search query
+  const query = searchQuery.toLowerCase().trim();
+  const results = [];
+  
+  // Try to match the search query to a food category or specific food
+  let matchedCategory = null;
+  let matchedFoods = [];
+  
+  // Check if search directly matches a category
+  for (const [category, foods] of Object.entries(foodCategories)) {
+    if (query.includes(category)) {
+      matchedCategory = category;
+      matchedFoods = foods.slice(0, 10); // Limit to 10 foods from this category
+      break;
+    }
+  }
+  
+  // If no category match, check if search matches any specific food
+  if (!matchedCategory) {
+    for (const [category, foods] of Object.entries(foodCategories)) {
+      const matchedFood = foods.find(food => query.includes(food) || food.includes(query));
+      if (matchedFood) {
+        matchedCategory = category;
+        // Find similar foods in the same category
+        matchedFoods = foods.filter(food => 
+          food.includes(matchedFood.substring(0, 3)) || 
+          matchedFood.includes(food.substring(0, 3))
+        ).slice(0, 8); // Limit to 8 similar foods
+        break;
+      }
+    }
+  }
+  
+  // If we still have no matched foods, use the original approach
+  if (matchedFoods.length === 0) {
     // Categories we can assign to new items
     const categories = ['Produce', 'Protein', 'Dairy', 'Grains', 'Snacks', 'Beverages', 'Nuts & Seeds', 'Condiments', 'Baking', 'Canned Goods'];
     
@@ -2761,196 +3092,294 @@ const GroceryTab = () => {
     const randomUnit = units[Math.floor(Math.random() * units.length)];
     
     // Capitalize the search term for item name
-    const capitalizedName = searchQuery
+    const name = searchQuery
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ');
     
-    // Randomly assign a category that makes sense for the search term
-    // This is a simple approach; a real API would have more sophisticated categorization
-    let category = categories[Math.floor(Math.random() * categories.length)];
+    // Default to Produce category if nothing matched
+    const displayCategory = 'Produce';
     
-    // Try to make smarter category assignments based on keywords
-    const foodKeywords = {
-      fruit: ['apple', 'banana', 'berry', 'orange', 'grape', 'melon', 'pear', 'peach', 'plum', 'fruit'],
-      vegetable: ['broccoli', 'carrot', 'spinach', 'lettuce', 'tomato', 'potato', 'onion', 'pepper', 'vegetable'],
-      protein: ['chicken', 'beef', 'pork', 'fish', 'tofu', 'turkey', 'lamb', 'eggs', 'protein'],
-      dairy: ['milk', 'cheese', 'yogurt', 'butter', 'cream', 'dairy'],
-      grain: ['bread', 'rice', 'pasta', 'cereal', 'oat', 'quinoa', 'grain']
+    // Create nutrition data
+    const nutrition = {
+      calories: Math.floor(Math.random() * 100) + 20,
+      protein: Math.floor(Math.random() * 3) + 1,
+      carbs: Math.floor(Math.random() * 20) + 5,
+      fat: Math.floor(Math.random() * 2) + 0.1,
+      fiber: Math.floor(Math.random() * 5) + 2
     };
     
-    // Try to determine a more appropriate category
-    const searchLower = searchQuery.toLowerCase();
-    for (const [key, keywords] of Object.entries(foodKeywords)) {
-      if (keywords.some(keyword => searchLower.includes(keyword))) {
-        // Map our internal categories to displayable categories
-        if (key === 'fruit' || key === 'vegetable') category = 'Produce';
-        else if (key === 'protein') category = 'Protein';
-        else if (key === 'dairy') category = 'Dairy';
-        else if (key === 'grain') category = 'Grains';
-        break;
-      }
-    }
+    // Select some diet types
+    const selectedDietTypes = ['Vegan', 'Vegetarian', 'Gluten-Free'];
     
-    // Generate random nutrition facts that make sense for the category
-    let nutrition;
-    switch(category) {
-      case 'Produce':
-        nutrition = {
-          calories: Math.floor(Math.random() * 100) + 20,
-          protein: Math.floor(Math.random() * 3) + 1,
-          carbs: Math.floor(Math.random() * 20) + 5,
-          fat: Math.floor(Math.random() * 2) + 0.1,
-          fiber: Math.floor(Math.random() * 5) + 2
-        };
-        break;
-      case 'Protein':
-        nutrition = {
-          calories: Math.floor(Math.random() * 150) + 100,
-          protein: Math.floor(Math.random() * 25) + 15,
-          carbs: Math.floor(Math.random() * 5),
-          fat: Math.floor(Math.random() * 15) + 2,
-          fiber: 0
-        };
-        break;
-      case 'Dairy':
-        nutrition = {
-          calories: Math.floor(Math.random() * 120) + 60,
-          protein: Math.floor(Math.random() * 8) + 3,
-          carbs: Math.floor(Math.random() * 12) + 1,
-          fat: Math.floor(Math.random() * 10) + 2,
-          fiber: 0
-        };
-        break;
-      case 'Grains':
-        nutrition = {
-          calories: Math.floor(Math.random() * 150) + 100,
-          protein: Math.floor(Math.random() * 5) + 2,
-          carbs: Math.floor(Math.random() * 30) + 20,
-          fat: Math.floor(Math.random() * 3) + 0.5,
-          fiber: Math.floor(Math.random() * 5) + 1
-        };
-        break;
-      case 'Nuts & Seeds':
-        nutrition = {
-          calories: Math.floor(Math.random() * 100) + 150,
-          protein: Math.floor(Math.random() * 8) + 5,
-          carbs: Math.floor(Math.random() * 10) + 5,
-          fat: Math.floor(Math.random() * 15) + 8,
-          fiber: Math.floor(Math.random() * 5) + 2
-        };
-        break;
-      default:
-        nutrition = {
-          calories: Math.floor(Math.random() * 200) + 100,
-          protein: Math.floor(Math.random() * 10) + 1,
-          carbs: Math.floor(Math.random() * 25) + 5,
-          fat: Math.floor(Math.random() * 10) + 1,
-          fiber: Math.floor(Math.random() * 4) + 0
-        };
-    }
-    
-    // Generate between 2-4 random diet types that make sense for the category
-    const numDietTypes = Math.floor(Math.random() * 3) + 2;
-    const randomDietTypes = [];
-    
-    // Add diet types that might make sense based on category
-    if (category === 'Produce') {
-      randomDietTypes.push('Vegan', 'Vegetarian', 'Gluten-Free');
-    } else if (category === 'Protein' && !searchLower.includes('tofu')) {
-      randomDietTypes.push('Keto', 'Paleo', 'High-Protein');
-    } else if (category === 'Grains' && !searchLower.includes('wheat')) {
-      randomDietTypes.push('Vegetarian', 'Mediterranean');
-    }
-    
-    // Fill remaining diet type slots with random ones
-    while (randomDietTypes.length < numDietTypes) {
-      const randomDiet = dietTypes[Math.floor(Math.random() * dietTypes.length)];
-      if (!randomDietTypes.includes(randomDiet)) {
-        randomDietTypes.push(randomDiet);
-      }
-    }
-    
-    // Random store sections based on category
-    let relevantStoreSections;
-    switch(category) {
-      case 'Produce':
-        relevantStoreSections = ['Produce'];
-        break;
-      case 'Protein':
-        relevantStoreSections = ['Meat', 'Refrigerated', 'Frozen'];
-        break;
-      case 'Dairy':
-        relevantStoreSections = ['Dairy', 'Refrigerated'];
-        break;
-      case 'Grains':
-        relevantStoreSections = ['Dry Goods', 'Bakery', 'Baking'];
-        break;
-      default:
-        relevantStoreSections = storeSections;
-    }
-    
-    // Pick 1-2 store sections
-    const numSections = Math.floor(Math.random() * 2) + 1;
-    const productStoreSections = [];
-    for (let i = 0; i < numSections; i++) {
-      const randomIndex = Math.floor(Math.random() * relevantStoreSections.length);
-      const section = relevantStoreSections[randomIndex];
-      if (!productStoreSections.includes(section)) {
-        productStoreSections.push(section);
-      }
-    }
+    // Generate store sections
+    const storeSections = ['Produce'];
     
     // Generate store locations
     const storeLocations = [
       { 
         store: "Whole Foods", 
         aisle: `${Math.floor(Math.random() * 20) + 1}`, 
-        section: productStoreSections[0] 
+        section: 'Produce'
       },
       { 
         store: "Trader Joe's", 
         aisle: `${Math.floor(Math.random() * 10) + 1}`, 
-        section: productStoreSections[0] 
+        section: 'Produce'
       }
     ];
     
-    // Generate a placeholder image based on category
-    // In a real implementation, this would be a real product image
-    const imagePlaceholders = {
-      'Produce': 'https://images.unsplash.com/photo-1610348725531-843dff563e2c',
-      'Protein': 'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f',
-      'Dairy': 'https://images.unsplash.com/photo-1628088062854-d1870b4553da',
-      'Grains': 'https://images.unsplash.com/photo-1586201375761-83865001e31c',
-      'Snacks': 'https://images.unsplash.com/photo-1621939514649-280e2ee25f60',
-      'Beverages': 'https://images.unsplash.com/photo-1550583724-b2692b85b150'
-    };
+    // Generate image URL
+    const imageUrl = 'https://images.unsplash.com/photo-1610348725531-843dff563e2c';
     
-    const imageUrl = imagePlaceholders[category] || 'https://images.unsplash.com/photo-1604742763101-7cbec5bc45f1';
+    // Default to organic
+    const isOrganic = true;
     
-    // Generate a random ID that doesn't conflict with existing items
-    // Start at 1000 to avoid conflicts with hardcoded items
-    const newId = Math.max(...groceryItems.map(item => item.id), 1000) + 1;
-    
-    // Create new dynamic item
+    // Create new grocery item
     const newItem = {
-      id: newId,
-      name: capitalizedName,
-      category: category,
+      id: nextId++,
+      name,
+      category: displayCategory,
       price: parseFloat(randomPrice),
       unit: randomUnit,
-      nutrition: nutrition,
-      dietTypes: randomDietTypes,
-      isOrganic: Math.random() > 0.5, // 50% chance of being organic
-      storeSections: productStoreSections,
-      storeLocations: storeLocations,
+      nutrition,
+      dietTypes: selectedDietTypes,
+      isOrganic,
+      storeSections,
+      storeLocations,
       image: `${imageUrl}?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80`
     };
     
-    // Return as an array of one new item
-    // In a real API, this would be multiple matching items
-    return [newItem];
-  };
+    results.push(newItem);
+  } else {
+    // Create items based on matched foods
+    for (const food of matchedFoods) {
+      // Convert category to displayable format
+      let displayCategory;
+      switch(matchedCategory) {
+        case 'fruits':
+        case 'vegetables':
+          displayCategory = 'Produce';
+          break;
+        case 'protein':
+          displayCategory = 'Protein';
+          break;
+        case 'dairy':
+          displayCategory = 'Dairy';
+          break;
+        case 'grains':
+          displayCategory = 'Grains';
+          break;
+        case 'nuts_seeds':
+          displayCategory = 'Nuts & Seeds';
+          break;
+        case 'beverages':
+          displayCategory = 'Beverages';
+          break;
+        default:
+          displayCategory = 'Produce';
+      }
+      
+      // Generate nutrition data based on category
+      let nutrition;
+      switch(displayCategory) {
+        case 'Produce':
+          nutrition = {
+            calories: Math.floor(Math.random() * 100) + 20,
+            protein: Math.floor(Math.random() * 3) + 1,
+            carbs: Math.floor(Math.random() * 20) + 5,
+            fat: Math.floor(Math.random() * 2) + 0.1,
+            fiber: Math.floor(Math.random() * 5) + 2
+          };
+          break;
+        case 'Protein':
+          nutrition = {
+            calories: Math.floor(Math.random() * 150) + 100,
+            protein: Math.floor(Math.random() * 25) + 15,
+            carbs: Math.floor(Math.random() * 5),
+            fat: Math.floor(Math.random() * 15) + 2,
+            fiber: 0
+          };
+          break;
+        case 'Dairy':
+          nutrition = {
+            calories: Math.floor(Math.random() * 120) + 60,
+            protein: Math.floor(Math.random() * 8) + 3,
+            carbs: Math.floor(Math.random() * 12) + 1,
+            fat: Math.floor(Math.random() * 10) + 2,
+            fiber: 0
+          };
+          break;
+        case 'Grains':
+          nutrition = {
+            calories: Math.floor(Math.random() * 150) + 100,
+            protein: Math.floor(Math.random() * 5) + 2,
+            carbs: Math.floor(Math.random() * 30) + 20,
+            fat: Math.floor(Math.random() * 3) + 0.5,
+            fiber: Math.floor(Math.random() * 5) + 1
+          };
+          break;
+        case 'Nuts & Seeds':
+          nutrition = {
+            calories: Math.floor(Math.random() * 100) + 150,
+            protein: Math.floor(Math.random() * 8) + 5,
+            carbs: Math.floor(Math.random() * 10) + 5,
+            fat: Math.floor(Math.random() * 15) + 8,
+            fiber: Math.floor(Math.random() * 5) + 2
+          };
+          break;
+        default:
+          nutrition = {
+            calories: Math.floor(Math.random() * 200) + 100,
+            protein: Math.floor(Math.random() * 10) + 1,
+            carbs: Math.floor(Math.random() * 25) + 5,
+            fat: Math.floor(Math.random() * 10) + 1,
+            fiber: Math.floor(Math.random() * 4) + 0
+          };
+      }
+      
+      // Generate diet types based on category
+      let dietTypes = [];
+      if (displayCategory === 'Produce') {
+        dietTypes = ['Vegan', 'Vegetarian', 'Gluten-Free', 'Paleo', 'Whole30'];
+      } else if (displayCategory === 'Protein') {
+        if (food.includes('tofu') || food.includes('tempeh')) {
+          dietTypes = ['Vegan', 'Vegetarian', 'Gluten-Free'];
+        } else {
+          dietTypes = ['Keto', 'Paleo', 'High-Protein', 'Low-Carb'];
+        }
+      } else if (displayCategory === 'Dairy') {
+        dietTypes = ['Vegetarian', 'Keto', 'High-Protein'];
+      } else if (displayCategory === 'Grains') {
+        if (food.includes('quinoa') || food.includes('rice')) {
+          dietTypes = ['Gluten-Free', 'Vegetarian', 'Vegan'];
+        } else {
+          dietTypes = ['Vegetarian', 'Vegan', 'Mediterranean'];
+        }
+      } else if (displayCategory === 'Nuts & Seeds') {
+        dietTypes = ['Vegan', 'Vegetarian', 'Paleo', 'Keto', 'Gluten-Free'];
+      }
+      
+      // Capitalize the food name
+      const name = food
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+      
+      // Random price based on category
+      let price;
+      switch(displayCategory) {
+        case 'Produce':
+          price = (Math.random() * 4 + 0.99).toFixed(2);
+          break;
+        case 'Protein':
+          price = (Math.random() * 10 + 4.99).toFixed(2);
+          break;
+        case 'Dairy':
+          price = (Math.random() * 3 + 2.99).toFixed(2);
+          break;
+        case 'Grains':
+          price = (Math.random() * 4 + 1.99).toFixed(2);
+          break;
+        case 'Nuts & Seeds':
+          price = (Math.random() * 6 + 3.99).toFixed(2);
+          break;
+        default:
+          price = (Math.random() * 5 + 1.99).toFixed(2);
+      }
+      
+      // Units based on category
+      let unit;
+      switch(displayCategory) {
+        case 'Produce':
+          unit = Math.random() > 0.5 ? 'lb' : 'each';
+          break;
+        case 'Protein':
+          unit = 'lb';
+          break;
+        case 'Dairy':
+          unit = Math.random() > 0.5 ? 'oz' : 'qt';
+          break;
+        case 'Grains':
+          unit = Math.random() > 0.5 ? 'oz' : 'lb';
+          break;
+        case 'Nuts & Seeds':
+          unit = 'oz';
+          break;
+        default:
+          unit = 'each';
+      }
+      
+      // Store sections based on category
+      let storeSections;
+      switch(displayCategory) {
+        case 'Produce':
+          storeSections = ['Produce'];
+          break;
+        case 'Protein':
+          storeSections = ['Meat', 'Refrigerated'];
+          break;
+        case 'Dairy':
+          storeSections = ['Dairy', 'Refrigerated'];
+          break;
+        case 'Grains':
+          storeSections = ['Dry Goods', 'Bakery'];
+          break;
+        case 'Nuts & Seeds':
+          storeSections = ['Nuts & Seeds', 'Snacks', 'Health Foods'];
+          break;
+        default:
+          storeSections = ['Produce'];
+      }
+      
+      // Generate store locations
+      const storeLocations = [
+        { 
+          store: "Whole Foods", 
+          aisle: `${Math.floor(Math.random() * 20) + 1}`, 
+          section: storeSections[0] 
+        },
+        { 
+          store: "Trader Joe's", 
+          aisle: `${Math.floor(Math.random() * 10) + 1}`, 
+          section: storeSections[0] 
+        }
+      ];
+      
+      // Generate image URL based on category
+      const imagePlaceholders = {
+        'Produce': 'https://images.unsplash.com/photo-1610348725531-843dff563e2c',
+        'Protein': 'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f',
+        'Dairy': 'https://images.unsplash.com/photo-1628088062854-d1870b4553da',
+        'Grains': 'https://images.unsplash.com/photo-1586201375761-83865001e31c',
+        'Nuts & Seeds': 'https://images.unsplash.com/photo-1536816579748-4ecb3f03d72a',
+        'Beverages': 'https://images.unsplash.com/photo-1550583724-b2692b85b150'
+      };
+      
+      const imageUrl = imagePlaceholders[displayCategory] || 'https://images.unsplash.com/photo-1604742763101-7cbec5bc45f1';
+      
+      // Create the new grocery item
+      const newItem = {
+        id: nextId++,
+        name: name,
+        category: displayCategory,
+        price: parseFloat(price),
+        unit: unit,
+        nutrition: nutrition,
+        dietTypes: dietTypes,
+        isOrganic: Math.random() > 0.5, // 50% chance of being organic
+        storeSections: storeSections,
+        storeLocations: storeLocations,
+        image: `${imageUrl}?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80`
+      };
+      
+      results.push(newItem);
+    }
+  }
+  
+  // Return dynamic items
+  return results;
+};
 
   // State for search loading indicators
   const [isSearching, setIsSearching] = useState(false);
@@ -3134,108 +3563,120 @@ const GroceryTab = () => {
     setTimeout(() => setIsSearching(false), 1000);
   };
   
-  // Helper function to refresh some ingredients in a meal plan
-  const refreshMealPlanIngredients = async (ingredients, dietType) => {
-    // Copy the existing ingredients
-    const refreshedIngredients = [...ingredients];
-    
-    // Determine how many ingredients to refresh (50-80% of the ingredients for more variety)
-    const numToRefresh = Math.floor(Math.random() * (ingredients.length * 0.3) + (ingredients.length * 0.5));
-    console.log(`Refreshing ${numToRefresh} out of ${ingredients.length} ingredients`);
-    
-    // Keep track of refreshed indexes to avoid duplicates
-    const refreshedIndexes = new Set();
-    
-    // Refresh random ingredients
-    for (let i = 0; i < numToRefresh; i++) {
-      // Pick a random ingredient to refresh
-      let randomIndex;
-      do {
-        randomIndex = Math.floor(Math.random() * ingredients.length);
-      } while (refreshedIndexes.has(randomIndex));
-      
-      refreshedIndexes.add(randomIndex);
-      
-      // Get the existing ingredient
-      const ingredient = ingredients[randomIndex];
-      
-      try {
-        // Get a new replacement ingredient that fits the diet type
-        // First try to find a replacement from existing grocery items
-        const category = getCategoryFromName(ingredient.name);
-        
-        // Create search terms based on category and diet type
-        const searchTerms = [];
-        
-        // Add category-based search terms
-        if (category === 'protein') {
-          if (dietType === 'Vegan') {
-            searchTerms.push('tofu', 'tempeh', 'seitan', 'lentils', 'beans');
-          } else if (dietType === 'Vegetarian') {
-            searchTerms.push('eggs', 'tofu', 'cheese', 'yogurt', 'cottage cheese');
-          } else if (dietType === 'Keto') {
-            searchTerms.push('beef', 'chicken', 'salmon', 'tuna', 'eggs');
-          } else {
-            searchTerms.push('chicken', 'fish', 'beef', 'pork', 'turkey');
-          }
-        } else if (category === 'vegetable') {
-          searchTerms.push('broccoli', 'spinach', 'kale', 'peppers', 'cauliflower', 'brussels sprouts', 'asparagus');
-        } else if (category === 'fruit') {
-          if (dietType === 'Keto') {
-            searchTerms.push('avocado', 'olives', 'berries');
-          } else {
-            searchTerms.push('apple', 'orange', 'berries', 'pear', 'banana', 'kiwi');
-          }
-        } else if (category === 'grain') {
-          if (dietType === 'Keto' || dietType === 'Paleo') {
-            searchTerms.push('coconut flour', 'almond flour');
-          } else if (dietType === 'Gluten-Free') {
-            searchTerms.push('quinoa', 'rice', 'gluten-free oats', 'buckwheat');
-          } else {
-            searchTerms.push('quinoa', 'rice', 'farro', 'oats', 'barley');
-          }
-        } else if (category === 'nuts') {
-          searchTerms.push('almonds', 'walnuts', 'cashews', 'pecans', 'pistachios');
-        } else if (category === 'dairy') {
-          if (dietType === 'Vegan') {
-            searchTerms.push('almond milk', 'oat milk', 'soy milk', 'coconut yogurt');
-          } else if (dietType === 'Paleo' || dietType === 'Dairy-Free') {
-            searchTerms.push('coconut milk', 'almond milk');
-          } else {
-            searchTerms.push('yogurt', 'milk', 'cheese', 'cottage cheese');
-          }
-        } else {
-          // For unknown categories, use generic search terms
-          searchTerms.push('food', 'healthy', 'organic');
-        }
-        
-        // Pick a random search term
-        const searchTerm = searchTerms[Math.floor(Math.random() * searchTerms.length)];
-        
-        // Try to find or generate a new item
-        let newItems = await fetchRealGroceryData(searchTerm);
-        
-        // If we found matching items, pick one
-        if (newItems && newItems.length > 0) {
-          // Pick a random item from the results
-          const newItem = newItems[Math.floor(Math.random() * newItems.length)];
-          
-          // Update the ingredient with the new item
-          refreshedIngredients[randomIndex] = {
-            itemId: newItem.id,
-            name: newItem.name,
-            quantity: ingredient.quantity, // Keep the same quantity
-            unit: newItem.unit
-          };
-        }
-      } catch (error) {
-        console.error('Error refreshing ingredient:', error);
-        // If there's an error, keep the original ingredient
-      }
+  // Function to refresh and update meal plan ingredients
+const refreshMealPlanIngredients = async (ingredients, dietType) => {
+  console.log(`Refreshing meal plan for ${dietType} diet`);
+  
+  // Get the diet-specific ingredient suggestions
+  const dietIngredients = {
+    "High-Protein": {
+      proteins: ['chicken breast', 'turkey', 'salmon', 'tuna', 'eggs', 'greek yogurt', 'cottage cheese', 'tofu'],
+      produce: ['spinach', 'broccoli', 'kale', 'peppers', 'brussels sprouts', 'blueberries', 'strawberries'],
+      grains: ['quinoa', 'brown rice', 'oats'],
+      others: ['protein powder', 'chia seeds', 'almonds', 'walnuts']
+    },
+    "Mediterranean": {
+      proteins: ['fish', 'salmon', 'chicken', 'beans', 'lentils', 'chickpeas'],
+      produce: ['tomatoes', 'cucumber', 'olives', 'spinach', 'eggplant', 'zucchini', 'oranges', 'grapes'],
+      grains: ['bulgur', 'farro', 'couscous', 'whole grain bread'],
+      others: ['olive oil', 'feta cheese', 'yogurt', 'hummus', 'tahini', 'walnuts']
+    },
+    "Keto": {
+      proteins: ['beef', 'bacon', 'salmon', 'chicken thighs', 'eggs', 'pork'],
+      produce: ['avocado', 'spinach', 'zucchini', 'cauliflower', 'broccoli', 'cabbage', 'berries'],
+      grains: ['almond flour', 'coconut flour'],
+      others: ['butter', 'olive oil', 'coconut oil', 'cheese', 'heavy cream', 'nuts', 'seeds']
+    },
+    "Vegan": {
+      proteins: ['tofu', 'tempeh', 'seitan', 'lentils', 'beans', 'chickpeas', 'edamame'],
+      produce: ['spinach', 'kale', 'broccoli', 'sweet potatoes', 'mushrooms', 'berries', 'bananas'],
+      grains: ['quinoa', 'brown rice', 'oats', 'farro', 'barley'],
+      others: ['nutritional yeast', 'chia seeds', 'flax seeds', 'almond milk', 'cashews', 'peanut butter']
+    },
+    "Paleo": {
+      proteins: ['chicken', 'beef', 'turkey', 'pork', 'eggs', 'salmon', 'tuna'],
+      produce: ['spinach', 'kale', 'broccoli', 'sweet potatoes', 'berries', 'apples', 'avocado'],
+      grains: [],
+      others: ['almond flour', 'coconut flour', 'olive oil', 'coconut oil', 'almonds', 'walnuts']
+    },
+    "Gluten-Free": {
+      proteins: ['chicken', 'beef', 'fish', 'eggs', 'tofu'],
+      produce: ['spinach', 'broccoli', 'carrots', 'peppers', 'berries', 'apples', 'bananas'],
+      grains: ['rice', 'quinoa', 'gluten-free oats', 'buckwheat'],
+      others: ['almond flour', 'tapioca flour', 'gluten-free bread', 'chia seeds']
     }
+  }[dietType] || { proteins: [], produce: [], grains: [], others: [] };
+  
+  // Create a fresh ingredients list
+  const getRefreshedIngredients = async () => {
+    const refreshedIngredients = [];
     
+    // Determine percentage of ingredients to refresh (30-50%)
+    const refreshRatio = Math.random() * 0.2 + 0.3;
+    const numToKeep = Math.floor(ingredients.length * (1 - refreshRatio));
+    
+    // Keep some existing ingredients
+    const ingredientsToKeep = [...ingredients]
+      .sort(() => 0.5 - Math.random())
+      .slice(0, numToKeep);
+    
+    refreshedIngredients.push(...ingredientsToKeep);
+    console.log(`Kept ${ingredientsToKeep.length} original ingredients`);
+    
+    // Track categories we've already added to avoid duplicates
+    const addedCategories = new Set(ingredientsToKeep.map(ing => getCategoryFromName(ing.name)));
+    
+    // Add new ingredients from each category
+    const addNewIngredients = async (categoryItems, categoryName, count) => {
+      if (categoryItems.length === 0) return;
+      
+      // Skip if we already have enough of this category
+      if (addedCategories.has(categoryName) && Math.random() > 0.3) return;
+      
+      // Randomly pick items from the category
+      const shuffled = [...categoryItems].sort(() => 0.5 - Math.random());
+      const selected = shuffled.slice(0, count);
+      
+      for (const item of selected) {
+        try {
+          // Try to find or generate a new item
+          const newItems = await fetchRealGroceryData(item);
+          
+          // If we found matching items, pick one
+          if (newItems && newItems.length > 0) {
+            // Pick first item that matches
+            const newItem = newItems[0];
+            
+            // Create a new ingredient entry
+            refreshedIngredients.push({
+              itemId: newItem.id,
+              name: newItem.name,
+              quantity: (Math.random() * 2 + 0.5).toFixed(1), // Random quantity between 0.5 and 2.5
+              unit: newItem.unit
+            });
+            
+            addedCategories.add(categoryName);
+          }
+        } catch (error) {
+          console.error(`Error adding ${item} ingredient:`, error);
+        }
+      }
+    };
+    
+    // Add ingredients from each category based on diet type
+    await addNewIngredients(dietIngredients.proteins, 'protein', 2);
+    await addNewIngredients(dietIngredients.produce, 'vegetable', 3);
+    await addNewIngredients(dietIngredients.grains, 'grain', 1);
+    await addNewIngredients(dietIngredients.others, 'other', 2);
+    
+    console.log(`Created refreshed ingredient list with ${refreshedIngredients.length} items`);
     return refreshedIngredients;
   };
+  
+  // Generate and return the refreshed ingredients
+  const refreshedIngredients = await getRefreshedIngredients();
+  return refreshedIngredients;
+};
   
   // Helper function to determine category from item name
   const getCategoryFromName = (name) => {
