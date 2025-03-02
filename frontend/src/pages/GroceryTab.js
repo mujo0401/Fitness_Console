@@ -3113,7 +3113,7 @@ const generateDynamicGroceryItems = (searchQuery) => {
     const selectedDietTypes = ['Vegan', 'Vegetarian', 'Gluten-Free'];
     
     // Generate store sections
-    const storeSections = ['Produce'];
+    const produceSections = ['Produce'];
     
     // Generate store locations
     const storeLocations = [
@@ -3145,7 +3145,7 @@ const generateDynamicGroceryItems = (searchQuery) => {
       nutrition,
       dietTypes: selectedDietTypes,
       isOrganic,
-      storeSections,
+      produceSections,
       storeLocations,
       image: `${imageUrl}?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80`
     };
