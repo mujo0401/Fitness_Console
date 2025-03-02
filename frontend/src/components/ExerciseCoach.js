@@ -31,6 +31,7 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import TimerIcon from '@mui/icons-material/Timer';
 import SpeedIcon from '@mui/icons-material/Speed';
+import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 
 import { heartRateService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
