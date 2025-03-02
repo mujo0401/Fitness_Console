@@ -1,7 +1,11 @@
 import os
 import requests
+import sys
 from flask import Blueprint, jsonify, request
-from ..config import Config
+
+# Add the parent directory to sys.path to allow absolute imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config import Config
 
 # Create blueprint
 google_places_bp = Blueprint('google_places', __name__)
