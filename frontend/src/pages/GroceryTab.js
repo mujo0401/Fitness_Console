@@ -1091,8 +1091,8 @@ const GroceryItemCard = React.memo(({ item, onAdd, isAdded, cartQuantity = 0 }) 
   );
 });
 
-// Meal Planning Questionnaire component
-const MealPlanQuestionnaire = ({ onComplete }) => {
+// Local helper component for meal planning
+const LocalMealPlanQuestionnaire = ({ onComplete }) => {
   const theme = useTheme();
   const [activeStep, setActiveStep] = useState(0);
   const [formData, setFormData] = useState({
