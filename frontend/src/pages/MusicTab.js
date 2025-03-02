@@ -453,30 +453,57 @@ const MusicTab = () => {
       setTimeout(() => {
         // First look for exact artist match in mock artists
         const artistMatch = mockArtists.find(artist => 
-          artist.name.toLowerCase() === searchTerm.toLowerCase()
+          artist.name.toLowerCase() === searchTerm.toLowerCase() ||
+          artist.name.toLowerCase().includes(searchTerm.toLowerCase())
         );
         
         let filtered;
         if (artistMatch) {
+          console.log("Found artist match:", artistMatch);
           // If artist found, show all songs by that artist
           filtered = mockSongs.filter(song => 
-            song.artist.toLowerCase() === artistMatch.name.toLowerCase()
+            song.artist.toLowerCase().includes(artistMatch.name.toLowerCase())
           );
           
           // If no songs found for exact artist, search by genre instead
           if (filtered.length === 0) {
+            console.log("No songs found for artist, searching by genre:", artistMatch.genre);
             filtered = mockSongs.filter(song => 
               song.tags.some(tag => tag.toLowerCase() === artistMatch.genre.toLowerCase())
             );
           }
         } else {
-          // General search by title, artist, album, or genre
-          filtered = mockSongs.filter(song => 
-            song.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            song.artist.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            song.album.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            song.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-          );
+          // More flexible search - use partial matching for all fields
+          const searchTermLower = searchTerm.toLowerCase();
+          filtered = mockSongs.filter(song => {
+            const titleMatch = song.title.toLowerCase().includes(searchTermLower);
+            const artistMatch = song.artist.toLowerCase().includes(searchTermLower);
+            const albumMatch = song.album.toLowerCase().includes(searchTermLower);
+            const tagMatch = song.tags.some(tag => tag.toLowerCase().includes(searchTermLower));
+            
+            // Log the search results for debugging
+            if (titleMatch || artistMatch || albumMatch || tagMatch) {
+              console.log("Match found:", song.title, "by", song.artist);
+              return true;
+            }
+            return false;
+          });
+        }
+        
+        console.log(`Search for "${searchTerm}" found ${filtered.length} results`);
+        
+        if (filtered.length === 0) {
+          // If no exact matches, try a more fuzzy search
+          const searchWords = searchTerm.toLowerCase().split(' ');
+          filtered = mockSongs.filter(song => {
+            return searchWords.some(word => 
+              song.title.toLowerCase().includes(word) ||
+              song.artist.toLowerCase().includes(word) ||
+              song.album.toLowerCase().includes(word) ||
+              song.tags.some(tag => tag.toLowerCase().includes(word))
+            );
+          });
+          console.log(`Fuzzy search found ${filtered.length} results`);
         }
         
         setFilteredSongs(filtered);

@@ -263,63 +263,51 @@ const Dashboard = () => {
               value={currentTab} 
               onChange={handleTabChange} 
               aria-label="dashboard tabs"
-              variant="scrollable"
-              scrollButtons="auto"
+              variant="standard"
+              scrollButtons={false}
               textColor="primary"
               indicatorColor="primary"
+              centered
               sx={{ 
                 px: { xs: 1, sm: 2 },
                 pt: 2,
                 pb: 0,
                 '& .MuiTabs-flexContainer': {
-                  gap: { xs: 0, sm: 0 } // Reduced gap between tabs
+                  justifyContent: 'space-between',
+                  gap: { xs: 2, sm: 3, md: 4 } // Increased gap between tabs
                 },
                 '& .MuiTab-root': {
-                  px: { xs: 1, sm: 1.5 }, // Reduce padding of individual tabs
-                  minWidth: { xs: 'auto', sm: 'auto' } // Allow tabs to be narrower
+                  px: { xs: 1.5, sm: 2 }, // Increased padding for tabs
+                  minWidth: { xs: 80, sm: 100, md: 120 }, // Wider tabs to fit text
+                  borderRadius: '10px 10px 0 0',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    backgroundColor: 'rgba(0,0,0,0.03)'
+                  }
                 },
                 '& .MuiTabs-indicator': {
-                  height: 3,
-                  borderRadius: '3px 3px 0 0',
-                  background: 'linear-gradient(90deg, #3f51b5, #2196f3)'
+                  height: 4,
+                  borderRadius: '4px 4px 0 0',
+                  background: 'linear-gradient(90deg, #3f51b5, #2196f3)',
+                  boxShadow: '0 0 8px rgba(33, 150, 243, 0.5)'
                 }
               }}
             >
               {/* Health data tabs - disabled when not authenticated */}
               <Tab 
-                icon={<FavoriteIcon />} 
-                aria-label="Heart Rate"
+                icon={<FavoriteIcon />}
+                label="Heart Rate"
                 disabled={!isAuthenticated}
                 sx={{
                   minHeight: 60,
-                  minWidth: { xs: 'auto', sm: 'auto' },
-                  borderRadius: '10px 10px 0 0',
                   fontWeight: 600,
-                  transition: 'all 0.2s ease',
-                  '&::after': {
-                    content: '"Heart Rate"',
-                    position: 'absolute',
-                    top: '110%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: 'rgba(0,0,0,0.8)',
-                    color: 'white',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    whiteSpace: 'nowrap',
-                    opacity: 0,
-                    visibility: 'hidden',
-                    transition: 'all 0.2s ease',
-                    zIndex: 1000,
-                  },
-                  '&:hover::after': {
-                    opacity: 1,
-                    visibility: 'visible',
-                  },
+                  transition: 'all 0.3s ease',
                   '&.Mui-selected': {
                     color: '#f44336',
                     fontWeight: 700,
+                    backgroundColor: 'rgba(244, 67, 54, 0.05)',
+                    boxShadow: '0 4px 10px rgba(244, 67, 54, 0.15)'
                   },
                   '&:hover': {
                     bgcolor: 'rgba(244, 67, 54, 0.04)',
@@ -332,38 +320,17 @@ const Dashboard = () => {
               />
               <Tab 
                 icon={<DirectionsRunIcon />}
-                aria-label="Activity"
+                label="Activity"
                 disabled={!isAuthenticated}
                 sx={{
                   minHeight: 60,
-                  minWidth: { xs: 'auto', sm: 'auto' },
-                  borderRadius: '10px 10px 0 0',
                   fontWeight: 600,
-                  transition: 'all 0.2s ease',
-                  '&::after': {
-                    content: '"Activity"',
-                    position: 'absolute',
-                    top: '110%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: 'rgba(0,0,0,0.8)',
-                    color: 'white',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    whiteSpace: 'nowrap',
-                    opacity: 0,
-                    visibility: 'hidden',
-                    transition: 'all 0.2s ease',
-                    zIndex: 1000,
-                  },
-                  '&:hover::after': {
-                    opacity: 1,
-                    visibility: 'visible',
-                  },
+                  transition: 'all 0.3s ease',
                   '&.Mui-selected': {
                     color: '#009688',
                     fontWeight: 700,
+                    backgroundColor: 'rgba(0, 150, 136, 0.05)',
+                    boxShadow: '0 4px 10px rgba(0, 150, 136, 0.15)'
                   },
                   '&:hover': {
                     bgcolor: 'rgba(0, 150, 136, 0.04)',
@@ -376,38 +343,17 @@ const Dashboard = () => {
               />
               <Tab 
                 icon={<BedtimeIcon />}
-                aria-label="Sleep"
+                label="Sleep"
                 disabled={!isAuthenticated}
                 sx={{
                   minHeight: 60,
-                  minWidth: { xs: 'auto', sm: 'auto' },
-                  borderRadius: '10px 10px 0 0',
                   fontWeight: 600,
-                  transition: 'all 0.2s ease',
-                  '&::after': {
-                    content: '"Sleep"',
-                    position: 'absolute',
-                    top: '110%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: 'rgba(0,0,0,0.8)',
-                    color: 'white',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    whiteSpace: 'nowrap',
-                    opacity: 0,
-                    visibility: 'hidden',
-                    transition: 'all 0.2s ease',
-                    zIndex: 1000,
-                  },
-                  '&:hover::after': {
-                    opacity: 1,
-                    visibility: 'visible',
-                  },
+                  transition: 'all 0.3s ease',
                   '&.Mui-selected': {
                     color: '#673ab7',
                     fontWeight: 700,
+                    backgroundColor: 'rgba(103, 58, 183, 0.05)',
+                    boxShadow: '0 4px 10px rgba(103, 58, 183, 0.15)'
                   },
                   '&:hover': {
                     bgcolor: 'rgba(103, 58, 183, 0.04)',
@@ -420,38 +366,17 @@ const Dashboard = () => {
               />
               <Tab 
                 icon={<PersonOutlineIcon />}
-                aria-label="ABM"
+                label="ABM"
                 disabled={!isAuthenticated}
                 sx={{
                   minHeight: 60,
-                  minWidth: { xs: 'auto', sm: 'auto' },
-                  borderRadius: '10px 10px 0 0',
                   fontWeight: 600,
-                  transition: 'all 0.2s ease',
-                  '&::after': {
-                    content: '"ABM"',
-                    position: 'absolute',
-                    top: '110%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: 'rgba(0,0,0,0.8)',
-                    color: 'white',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    whiteSpace: 'nowrap',
-                    opacity: 0,
-                    visibility: 'hidden',
-                    transition: 'all 0.2s ease',
-                    zIndex: 1000,
-                  },
-                  '&:hover::after': {
-                    opacity: 1,
-                    visibility: 'visible',
-                  },
+                  transition: 'all 0.3s ease',
                   '&.Mui-selected': {
                     color: '#9c27b0',
                     fontWeight: 700,
+                    backgroundColor: 'rgba(156, 39, 176, 0.05)',
+                    boxShadow: '0 4px 10px rgba(156, 39, 176, 0.15)'
                   },
                   '&:hover': {
                     bgcolor: 'rgba(156, 39, 176, 0.04)',
@@ -465,37 +390,16 @@ const Dashboard = () => {
               {/* Always accessible tabs */}
               <Tab 
                 icon={<SportsIcon />}
-                aria-label="Fitness Plan"
+                label="Fitness Plan"
                 sx={{
                   minHeight: 60,
-                  minWidth: { xs: 'auto', sm: 'auto' },
-                  borderRadius: '10px 10px 0 0',
                   fontWeight: 600,
-                  transition: 'all 0.2s ease',
-                  '&::after': {
-                    content: '"Fitness Plan"',
-                    position: 'absolute',
-                    top: '110%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: 'rgba(0,0,0,0.8)',
-                    color: 'white',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    whiteSpace: 'nowrap',
-                    opacity: 0,
-                    visibility: 'hidden',
-                    transition: 'all 0.2s ease',
-                    zIndex: 1000,
-                  },
-                  '&:hover::after': {
-                    opacity: 1,
-                    visibility: 'visible',
-                  },
+                  transition: 'all 0.3s ease',
                   '&.Mui-selected': {
                     color: '#4caf50',
                     fontWeight: 700,
+                    backgroundColor: 'rgba(76, 175, 80, 0.05)',
+                    boxShadow: '0 4px 10px rgba(76, 175, 80, 0.15)'
                   },
                   '&:hover': {
                     bgcolor: 'rgba(76, 175, 80, 0.04)',
@@ -505,37 +409,16 @@ const Dashboard = () => {
               />
               <Tab 
                 icon={<HeadsetMicIcon />}
-                aria-label="Exercise Coach"
+                label="Exercise Coach"
                 sx={{
                   minHeight: 60,
-                  minWidth: { xs: 'auto', sm: 'auto' },
-                  borderRadius: '10px 10px 0 0',
                   fontWeight: 600,
-                  transition: 'all 0.2s ease',
-                  '&::after': {
-                    content: '"Exercise Coach"',
-                    position: 'absolute',
-                    top: '110%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: 'rgba(0,0,0,0.8)',
-                    color: 'white',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    whiteSpace: 'nowrap',
-                    opacity: 0,
-                    visibility: 'hidden',
-                    transition: 'all 0.2s ease',
-                    zIndex: 1000,
-                  },
-                  '&:hover::after': {
-                    opacity: 1,
-                    visibility: 'visible',
-                  },
+                  transition: 'all 0.3s ease',
                   '&.Mui-selected': {
                     color: '#2196f3',
                     fontWeight: 700,
+                    backgroundColor: 'rgba(33, 150, 243, 0.05)',
+                    boxShadow: '0 4px 10px rgba(33, 150, 243, 0.15)'
                   },
                   '&:hover': {
                     bgcolor: 'rgba(33, 150, 243, 0.04)',
@@ -545,37 +428,16 @@ const Dashboard = () => {
               />
               <Tab 
                 icon={<MusicNoteIcon />}
-                aria-label="Music"
+                label="Music"
                 sx={{
                   minHeight: 60,
-                  minWidth: { xs: 'auto', sm: 'auto' },
-                  borderRadius: '10px 10px 0 0',
                   fontWeight: 600,
-                  transition: 'all 0.2s ease',
-                  '&::after': {
-                    content: '"Music"',
-                    position: 'absolute',
-                    top: '110%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: 'rgba(0,0,0,0.8)',
-                    color: 'white',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    whiteSpace: 'nowrap',
-                    opacity: 0,
-                    visibility: 'hidden',
-                    transition: 'all 0.2s ease',
-                    zIndex: 1000,
-                  },
-                  '&:hover::after': {
-                    opacity: 1,
-                    visibility: 'visible',
-                  },
+                  transition: 'all 0.3s ease',
                   '&.Mui-selected': {
                     color: '#9c27b0',
                     fontWeight: 700,
+                    backgroundColor: 'rgba(156, 39, 176, 0.05)',
+                    boxShadow: '0 4px 10px rgba(156, 39, 176, 0.15)'
                   },
                   '&:hover': {
                     bgcolor: 'rgba(156, 39, 176, 0.04)',
@@ -585,37 +447,16 @@ const Dashboard = () => {
               />
               <Tab 
                 icon={<ShoppingCartIcon />}
-                aria-label="Grocery Shop"
+                label="Grocery Shop"
                 sx={{
                   minHeight: 60,
-                  minWidth: { xs: 'auto', sm: 'auto' },
-                  borderRadius: '10px 10px 0 0',
                   fontWeight: 600,
-                  transition: 'all 0.2s ease',
-                  '&::after': {
-                    content: '"Grocery Shop"',
-                    position: 'absolute',
-                    top: '110%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: 'rgba(0,0,0,0.8)',
-                    color: 'white',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    whiteSpace: 'nowrap',
-                    opacity: 0,
-                    visibility: 'hidden',
-                    transition: 'all 0.2s ease',
-                    zIndex: 1000,
-                  },
-                  '&:hover::after': {
-                    opacity: 1,
-                    visibility: 'visible',
-                  },
+                  transition: 'all 0.3s ease',
                   '&.Mui-selected': {
                     color: '#43a047',
                     fontWeight: 700,
+                    backgroundColor: 'rgba(67, 160, 71, 0.05)',
+                    boxShadow: '0 4px 10px rgba(67, 160, 71, 0.15)'
                   },
                   '&:hover': {
                     bgcolor: 'rgba(67, 160, 71, 0.04)',
@@ -625,38 +466,17 @@ const Dashboard = () => {
               />
               <Tab 
                 icon={<AutoGraphIcon />}
-                aria-label="Trends"
+                label="Trends"
                 disabled={!isAuthenticated}
                 sx={{
                   minHeight: 60,
-                  minWidth: { xs: 'auto', sm: 'auto' },
-                  borderRadius: '10px 10px 0 0',
                   fontWeight: 600,
-                  transition: 'all 0.2s ease',
-                  '&::after': {
-                    content: '"Trends"',
-                    position: 'absolute',
-                    top: '110%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: 'rgba(0,0,0,0.8)',
-                    color: 'white',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    whiteSpace: 'nowrap',
-                    opacity: 0,
-                    visibility: 'hidden',
-                    transition: 'all 0.2s ease',
-                    zIndex: 1000,
-                  },
-                  '&:hover::after': {
-                    opacity: 1,
-                    visibility: 'visible',
-                  },
+                  transition: 'all 0.3s ease',
                   '&.Mui-selected': {
                     color: '#ff9800',
                     fontWeight: 700,
+                    backgroundColor: 'rgba(255, 152, 0, 0.05)',
+                    boxShadow: '0 4px 10px rgba(255, 152, 0, 0.15)'
                   },
                   '&:hover': {
                     bgcolor: 'rgba(255, 152, 0, 0.04)',
@@ -669,37 +489,16 @@ const Dashboard = () => {
               />
               <Tab 
                 icon={<ChatIcon />}
-                aria-label="Assistant"
+                label="Assistant"
                 sx={{
                   minHeight: 60,
-                  minWidth: { xs: 'auto', sm: 'auto' },
-                  borderRadius: '10px 10px 0 0',
                   fontWeight: 600,
-                  transition: 'all 0.2s ease',
-                  '&::after': {
-                    content: '"Assistant"',
-                    position: 'absolute',
-                    top: '110%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: 'rgba(0,0,0,0.8)',
-                    color: 'white',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    whiteSpace: 'nowrap',
-                    opacity: 0,
-                    visibility: 'hidden',
-                    transition: 'all 0.2s ease',
-                    zIndex: 1000,
-                  },
-                  '&:hover::after': {
-                    opacity: 1,
-                    visibility: 'visible',
-                  },
+                  transition: 'all 0.3s ease',
                   '&.Mui-selected': {
                     color: '#2196f3',
                     fontWeight: 700,
+                    backgroundColor: 'rgba(33, 150, 243, 0.05)',
+                    boxShadow: '0 4px 10px rgba(33, 150, 243, 0.15)'
                   },
                   '&:hover': {
                     bgcolor: 'rgba(33, 150, 243, 0.04)',
