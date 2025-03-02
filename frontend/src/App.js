@@ -10,6 +10,8 @@ import Dashboard from './components/Dashboard';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import RateLimitNotification from './components/RateLimitNotification';
+import ProfilePage from './pages/ProfilePage';
+import SettingsPage from './pages/SettingsPage';
 import './styles/App.css';
 import './styles/mobile.css';
 
@@ -157,7 +159,7 @@ const googleFontStyles = (
 );
 
 function App() {
-  const { checkAuthStatus } = useAuth();
+  const { checkAuthStatus, isAuthenticated } = useAuth();
 
   useEffect(() => {
     // Check if user is authenticated on app load
@@ -219,6 +221,8 @@ function App() {
             }}>
               <Routes>
                 <Route path="/" element={<Dashboard />} />
+                <Route path="/profile" element={isAuthenticated ? <ProfilePage /> : <Navigate to="/" />} />
+                <Route path="/settings" element={isAuthenticated ? <SettingsPage /> : <Navigate to="/" />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Box>
