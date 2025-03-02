@@ -2988,37 +2988,155 @@ const GroceryTab = () => {
   // Get unique categories
   const categories = ['All', ...new Set(groceryItems.map(item => item.category))];
   
-  // Function to fetch grocery data based on search term
+  // Function to fetch grocery data based on search term using Open Food Facts API
 const fetchRealGroceryData = async (searchQuery) => {
   try {
     console.log(`Fetching grocery data for: ${searchQuery}`);
     
-    // Simulate API response delay
-    await new Promise(resolve => setTimeout(resolve, 400));
-    
-    // For demo purposes, we'll first search our existing grocery database
+    // First check if we already have matches in our existing database
     const existingMatches = mockGroceryItems.filter(item => {
       const itemNameLower = item.name.toLowerCase();
       const searchTermLower = searchQuery.toLowerCase();
       return itemNameLower.includes(searchTermLower);
     });
     
-    // If we found matches in our existing database, return those
     if (existingMatches.length > 0) {
+      console.log(`Found ${existingMatches.length} existing matches for "${searchQuery}"`);
       return existingMatches;
     }
     
-    // If no matches found, dynamically generate new items
-    const dynamicItems = generateDynamicGroceryItems(searchQuery);
+    // If no matches found in existing data, fetch from Open Food Facts API
+    console.log(`Fetching from Open Food Facts API for: ${searchQuery}`);
     
-    // Add these dynamically generated items to our existing items
-    // so they'll be available for future searches
+    // Encode search query for URL
+    const encodedQuery = encodeURIComponent(searchQuery);
+    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodedQuery}&search_simple=1&action=process&json=1&page_size=20`;
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`Open Food Facts API returned status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('Open Food Facts API response:', data);
+    
+    // Check if we have valid products
+    if (!data.products || data.products.length === 0) {
+      console.log('No products found in API response, falling back to generated items');
+      // Fall back to generated items if no API results
+      const dynamicItems = generateDynamicGroceryItems(searchQuery);
+      setGroceryItems(prevItems => [...prevItems, ...dynamicItems]);
+      return dynamicItems;
+    }
+    
+    // Convert the API results to our groceryItems format
+    const apiItems = data.products.map((product, index) => {
+      // Extract product categories (use first one for simplicity)
+      const categories = product.categories_tags ? 
+        product.categories_tags[0]?.replace('en:', '') : 'Food';
+      
+      // Map category to our format
+      let displayCategory = 'Other';
+      if (categories) {
+        if (categories.includes('fruit') || categories.includes('vegetable')) {
+          displayCategory = 'Produce';
+        } else if (categories.includes('meat') || categories.includes('poultry') || categories.includes('seafood')) {
+          displayCategory = 'Protein';
+        } else if (categories.includes('dairy') || categories.includes('milk') || categories.includes('cheese')) {
+          displayCategory = 'Dairy';
+        } else if (categories.includes('grain') || categories.includes('bread') || categories.includes('cereal')) {
+          displayCategory = 'Grains';
+        } else if (categories.includes('nut') || categories.includes('seed')) {
+          displayCategory = 'Nuts & Seeds';
+        } else if (categories.includes('beverage') || categories.includes('drink')) {
+          displayCategory = 'Beverages';
+        }
+      }
+      
+      // Extract nutrition data
+      const nutrients = product.nutriments || {};
+      
+      // Generate nutrition data based on API response or defaults
+      const nutrition = {
+        calories: Math.round(nutrients['energy-kcal_100g'] || nutrients['energy_100g'] / 4.184 || 100),
+        protein: Math.round((nutrients.proteins_100g || 2) * 10) / 10,
+        carbs: Math.round((nutrients.carbohydrates_100g || 10) * 10) / 10,
+        fat: Math.round((nutrients.fat_100g || 2) * 10) / 10,
+        fiber: Math.round((nutrients.fiber_100g || 1) * 10) / 10
+      };
+      
+      // Extract image URL or use placeholder
+      const imageUrl = product.image_url || product.image_small_url || 
+        'https://images.unsplash.com/photo-1604742763101-7cbec5bc45f1';
+      
+      // Extract product name
+      const name = product.product_name || product.product_name_en || searchQuery;
+      
+      // Generate price (not available in API)
+      const price = (Math.random() * 5 + 1.99).toFixed(2);
+      
+      // Generate diet types based on API data
+      const dietTypes = [];
+      if (product.labels_tags) {
+        if (product.labels_tags.includes('en:vegan') || product.labels_tags.includes('en:vegan-status-vegan')) {
+          dietTypes.push('Vegan');
+        }
+        if (product.labels_tags.includes('en:vegetarian') || product.labels_tags.includes('en:vegetarian-status-vegetarian')) {
+          dietTypes.push('Vegetarian');
+        }
+        if (product.labels_tags.includes('en:gluten-free')) {
+          dietTypes.push('Gluten-Free');
+        }
+        if (product.labels_tags.includes('en:organic')) {
+          dietTypes.push('Organic');
+        }
+      }
+      
+      // Add more diet types if needed
+      if (dietTypes.length === 0) {
+        // Add some default diet types based on category
+        if (displayCategory === 'Produce') {
+          dietTypes.push('Vegan', 'Vegetarian', 'Gluten-Free');
+        } else if (displayCategory === 'Protein' && !name.toLowerCase().includes('meat')) {
+          dietTypes.push('High-Protein');
+        }
+      }
+      
+      // Create the new grocery item
+      return {
+        id: nextId++,
+        name: name.charAt(0).toUpperCase() + name.slice(1).toLowerCase(),
+        category: displayCategory,
+        price: parseFloat(price),
+        unit: product.quantity ? product.quantity.split(' ').pop() || 'each' : 'each',
+        nutrition,
+        dietTypes: dietTypes.length > 0 ? dietTypes : ['Vegetarian'],
+        isOrganic: product.labels_tags?.includes('en:organic') || false,
+        storeSections: [displayCategory],
+        storeLocations: [
+          { store: "Whole Foods", aisle: `${Math.floor(Math.random() * 20) + 1}`, section: displayCategory },
+          { store: "Trader Joe's", aisle: `${Math.floor(Math.random() * 10) + 1}`, section: displayCategory }
+        ],
+        image: `${imageUrl}`
+      };
+    });
+    
+    console.log(`Converted ${apiItems.length} API items to grocery format`);
+    
+    // Add the API items to our existing items for future searches
+    setGroceryItems(prevItems => [...prevItems, ...apiItems]);
+    
+    return apiItems;
+  } catch (error) {
+    console.error('Error fetching grocery data:', error);
+    
+    // If API request fails, fall back to generated items
+    console.log('Falling back to generated items due to API error');
+    const dynamicItems = generateDynamicGroceryItems(searchQuery);
     setGroceryItems(prevItems => [...prevItems, ...dynamicItems]);
     
     return dynamicItems;
-  } catch (error) {
-    console.error('Error fetching grocery data:', error);
-    return []; // Return empty array on error
   }
 };
   
@@ -3938,7 +4056,7 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
                 <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, mb: 3 }}>
                   <Box sx={{ flexGrow: 1 }}>
                     <TextField
-                      placeholder="Search groceries (e.g. strawberries, protein, vegan)..."
+                      placeholder="Search any ingredient (e.g. apple, bread, rice, cheese)..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       fullWidth
@@ -3955,10 +4073,10 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
                     />
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
                       <Typography variant="caption" color="text.secondary">
-                        Search by name, category, diet type, or food group
+                        Search for any ingredient - powered by Open Food Facts API
                       </Typography>
                       <Chip 
-                        label="Connects to grocery APIs" 
+                        label="Uses Open Food Facts API" 
                         variant="outlined" 
                         size="small" 
                         icon={<InfoOutlinedIcon fontSize="small" />}
