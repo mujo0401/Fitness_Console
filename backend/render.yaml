@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: fitbit-dashboard
+    name: health-hustle
     env: python
     buildCommand: pip install -r requirements.txt && cd frontend && npm ci && npm run build && cd .. && mkdir -p backend/static && cp -r frontend/build/* backend/static/
     startCommand: gunicorn backend.app:app
@@ -15,4 +15,4 @@ services:
       - key: FITBIT_CLIENT_SECRET
         sync: false
       - key: FRONTEND_URL
-        value: "https://fitbit-dashboard.onrender.com"
+        value: "https://health-hustle.com"
