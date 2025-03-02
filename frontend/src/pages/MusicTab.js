@@ -78,42 +78,46 @@ export const MusicPlayerContext = createContext();
 // Custom hook to use the music player context
 export const useMusicPlayer = () => useContext(MusicPlayerContext);
 
-// Mock data for YouTube Music API integration
-// In a real app, you would use an actual YouTube Music API or a third-party API
-const mockGenres = [
+// YouTube Data API Integration
+// This file uses the real YouTube Data API for music searches
+
+// API KEY - This would normally be stored in environment variables
+// For demo purposes only - this key would typically be restricted or proxied through a backend
+const YOUTUBE_API_KEY = 'AIzaSyA-dlBUjVQeuc4a6ZN4RkNUjDFsu-F0Nrc';
+
+// Genre list for categorization
+const musicGenres = [
   'Workout', 'Running', 'High Intensity', 'Cardio', 'Dance', 'Hip Hop', 
   'Rock', 'Pop', 'Electronic', 'Motivation', 'Focus', 'Chill', 'Metal',
   'R&B', 'Latin', 'Country', 'Jazz', 'Classical', 'Indie', 'Alternative'
 ];
 
-// Mock artists data
-const mockArtists = [
-  { name: 'Metallica', genre: 'Metal' },
-  { name: 'Beyoncé', genre: 'Pop' },
-  { name: 'Eminem', genre: 'Hip Hop' },
-  { name: 'Dua Lipa', genre: 'Pop' },
-  { name: 'Ed Sheeran', genre: 'Pop' },
-  { name: 'Queen', genre: 'Rock' },
-  { name: 'Kendrick Lamar', genre: 'Hip Hop' },
-  { name: 'AC/DC', genre: 'Rock' },
-  { name: 'Taylor Swift', genre: 'Pop' },
-  { name: 'Drake', genre: 'Hip Hop' },
-  { name: 'The Weeknd', genre: 'R&B' },
-  { name: 'Ariana Grande', genre: 'Pop' },
-  { name: 'Bad Bunny', genre: 'Latin' },
-  { name: 'Daft Punk', genre: 'Electronic' },
-  { name: 'Coldplay', genre: 'Rock' },
-  { name: 'Breaking Benjamin', genre: 'Metal' },
-  { name: 'Linkin Park', genre: 'Rock' },
-  { name: 'Imagine Dragons', genre: 'Rock' },
-  { name: 'Twenty One Pilots', genre: 'Alternative' },
-  { name: 'Post Malone', genre: 'Hip Hop' },
-  { name: 'Rihanna', genre: 'Pop' },
-  { name: 'Bruno Mars', genre: 'Pop' },
-  { name: 'Billie Eilish', genre: 'Pop' },
-  { name: 'Adele', genre: 'Pop' },
-  { name: 'Justin Bieber', genre: 'Pop' }
-];
+// Helper function to detect genre from title/description
+const detectGenre = (text) => {
+  const lowerText = text.toLowerCase();
+  
+  // Check if any genre appears in the text
+  for (const genre of musicGenres) {
+    if (lowerText.includes(genre.toLowerCase())) {
+      return genre;
+    }
+  }
+  
+  // Default mappings for certain keywords
+  if (lowerText.includes('workout') || lowerText.includes('exercise') || lowerText.includes('fitness')) {
+    return 'Workout';
+  } else if (lowerText.includes('metal') || lowerText.includes('rock') || lowerText.includes('hard')) {
+    return 'Rock';
+  } else if (lowerText.includes('hip hop') || lowerText.includes('rap')) {
+    return 'Hip Hop';
+  } else if (lowerText.includes('edm') || lowerText.includes('electronic') || lowerText.includes('techno')) {
+    return 'Electronic';
+  } else if (lowerText.includes('relax') || lowerText.includes('sleep')) {
+    return 'Chill';
+  } else {
+    return 'Pop'; // Default genre
+  }
+};
 
 const mockPlaylists = [
   {
@@ -477,131 +481,119 @@ const MusicTab = () => {
     };
   }, []);
   
-  // Define some mock songs for new artists
-  const additionalSongs = [
-    {
-      id: 'song-bb1',
-      title: 'The Diary of Jane',
-      artist: 'Breaking Benjamin',
-      album: 'Phobia',
-      thumbnail: 'https://i.ytimg.com/vi/DWaB4PXCwFU/mqdefault.jpg',
-      duration: 220,
-      videoId: 'DWaB4PXCwFU',
-      bpm: 132,
-      tags: ['Rock', 'Metal', 'Alternative'],
-      liked: false
-    },
-    {
-      id: 'song-bb2',
-      title: 'I Will Not Bow',
-      artist: 'Breaking Benjamin',
-      album: 'Dear Agony',
-      thumbnail: 'https://i.ytimg.com/vi/7qrRzNidzIc/mqdefault.jpg',
-      duration: 231,
-      videoId: '7qrRzNidzIc',
-      bpm: 128,
-      tags: ['Rock', 'Metal', 'Alternative'],
-      liked: false
-    },
-    {
-      id: 'song-bb3',
-      title: 'Breath',
-      artist: 'Breaking Benjamin',
-      album: 'Phobia',
-      thumbnail: 'https://i.ytimg.com/vi/mFK9t0iQU-M/mqdefault.jpg',
-      duration: 215,
-      videoId: 'mFK9t0iQU-M',
-      bpm: 120,
-      tags: ['Rock', 'Metal', 'Alternative'],
-      liked: false
-    },
-    {
-      id: 'song-lp1',
-      title: 'In The End',
-      artist: 'Linkin Park',
-      album: 'Hybrid Theory',
-      thumbnail: 'https://i.ytimg.com/vi/eVTXPUF4Oz4/mqdefault.jpg',
-      duration: 216,
-      videoId: 'eVTXPUF4Oz4',
-      bpm: 105,
-      tags: ['Rock', 'Alternative', 'Nu Metal'],
-      liked: false
+  // Function to search YouTube using the Data API
+  const searchYouTube = async (query) => {
+    try {
+      const response = await fetch(
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=20&q=${encodeURIComponent(query + ' music')}&type=video&videoCategoryId=10&key=${YOUTUBE_API_KEY}`
+      );
+      
+      if (!response.ok) {
+        throw new Error('YouTube API request failed');
+      }
+      
+      const data = await response.json();
+      console.log('YouTube API response:', data);
+      
+      // Transform YouTube data into our format
+      return data.items.map(item => ({
+        id: item.id.videoId,
+        title: item.snippet.title,
+        artist: item.snippet.channelTitle,
+        album: 'YouTube Music',
+        thumbnail: item.snippet.thumbnails.medium.url,
+        duration: 0, // We don't get duration from search API, would need another call
+        videoId: item.id.videoId,
+        bpm: Math.floor(Math.random() * 60) + 100, // Random BPM between 100-160
+        tags: [detectGenre(item.snippet.title + ' ' + item.snippet.description)],
+        liked: false
+      }));
+    } catch (error) {
+      console.error('Error searching YouTube:', error);
+      return [];
     }
-  ];
+  };
+  
+  // Function to get video details including duration
+  const getVideoDetails = async (videoId) => {
+    try {
+      const response = await fetch(
+        `https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${videoId}&key=${YOUTUBE_API_KEY}`
+      );
+      
+      if (!response.ok) {
+        throw new Error('YouTube API request failed');
+      }
+      
+      const data = await response.json();
+      
+      if (data.items && data.items.length > 0) {
+        const duration = data.items[0].contentDetails.duration; // ISO 8601 format
+        // Convert ISO 8601 duration to seconds
+        const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
+        
+        const hours = (match[1] && match[1].replace('H', '')) || 0;
+        const minutes = (match[2] && match[2].replace('M', '')) || 0;
+        const seconds = (match[3] && match[3].replace('S', '')) || 0;
+        
+        return parseInt(hours) * 3600 + parseInt(minutes) * 60 + parseInt(seconds);
+      }
+      
+      return 0;
+    } catch (error) {
+      console.error('Error getting video details:', error);
+      return 0;
+    }
+  };
 
-  // Add additional songs to the mock data
-  const allSongs = [...mockSongs, ...additionalSongs];
-
-  // Update filtered songs when search term changes
+  // Update filtered songs when search term changes - Using real YouTube API
   useEffect(() => {
-    if (searchTerm) {
+    // Use a cached set of results for empty search to avoid API calls
+    if (!searchTerm) {
+      setFilteredSongs(mockSongs);
+      return;
+    }
+    
+    // Fetch from YouTube
+    const fetchData = async () => {
       setLoading(true);
-      // Simulate API request delay
-      setTimeout(() => {
-        const searchTermLower = searchTerm.toLowerCase().trim();
+      try {
+        // Search YouTube
+        const results = await searchYouTube(searchTerm);
         
-        // First prioritize exact artist matches
-        const artistMatch = mockArtists.find(artist => 
-          artist.name.toLowerCase() === searchTermLower ||
-          artist.name.toLowerCase().includes(searchTermLower)
-        );
-        
-        let filtered;
-        if (artistMatch) {
-          console.log("Found artist match:", artistMatch.name);
+        if (results.length > 0) {
+          // Get duration for first video for better UX
+          if (results[0]) {
+            const duration = await getVideoDetails(results[0].videoId);
+            results[0].duration = duration;
+          }
           
-          // Find all songs by this artist - check our extended song list
-          filtered = allSongs.filter(song => 
-            song.artist.toLowerCase() === artistMatch.name.toLowerCase() || 
-            song.artist.toLowerCase().includes(artistMatch.name.toLowerCase())
+          // Store results
+          setFilteredSongs(results);
+        } else {
+          // Fallback to mock data if no results
+          console.log('No YouTube results, falling back to mock data');
+          
+          const matchingMockSongs = mockSongs.filter(song => 
+            song.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            song.artist.toLowerCase().includes(searchTerm.toLowerCase())
           );
           
-          console.log(`Found ${filtered.length} songs by ${artistMatch.name}`);
-          
-          // If no songs found for artist, try genre search as fallback
-          if (filtered.length === 0) {
-            console.log("No songs found for artist, searching by genre:", artistMatch.genre);
-            filtered = allSongs.filter(song => 
-              song.tags.some(tag => tag.toLowerCase() === artistMatch.genre.toLowerCase())
-            );
-          }
-        } else {
-          // No exact artist match, do a more comprehensive search
-          filtered = allSongs.filter(song => {
-            // Search in all fields
-            const titleMatch = song.title.toLowerCase().includes(searchTermLower);
-            const artistMatch = song.artist.toLowerCase().includes(searchTermLower);
-            const albumMatch = song.album.toLowerCase().includes(searchTermLower);
-            const tagMatch = song.tags.some(tag => tag.toLowerCase().includes(searchTermLower));
-            
-            return titleMatch || artistMatch || albumMatch || tagMatch;
-          });
+          setFilteredSongs(matchingMockSongs.length > 0 ? matchingMockSongs : mockSongs.slice(0, 5));
         }
-        
-        console.log(`Search for "${searchTerm}" found ${filtered.length} results`);
-        
-        // If still no results, try word-by-word fuzzy search
-        if (filtered.length === 0) {
-          console.log("Trying fuzzy search...");
-          const searchWords = searchTermLower.split(' ').filter(word => word.length > 1);
-          
-          filtered = allSongs.filter(song => {
-            return searchWords.some(word => 
-              song.title.toLowerCase().includes(word) ||
-              song.artist.toLowerCase().includes(word) ||
-              song.album.toLowerCase().includes(word) ||
-              song.tags.some(tag => tag.toLowerCase().includes(word))
-            );
-          });
-          console.log(`Fuzzy search found ${filtered.length} results`);
-        }
-        
-        setFilteredSongs(filtered);
+      } catch (error) {
+        console.error('Error fetching from YouTube:', error);
+        setFilteredSongs(mockSongs.slice(0, 5)); // Fallback
+      } finally {
         setLoading(false);
-      }, 300);
-    } else {
-      setFilteredSongs(mockSongs);
-    }
+      }
+    };
+    
+    const timer = setTimeout(() => {
+      fetchData();
+    }, 500); // Debounce search
+    
+    return () => clearTimeout(timer);
   }, [searchTerm]);
   
   // Effect to sync with workout if enabled
@@ -636,30 +628,55 @@ const MusicTab = () => {
     }
   }, [syncWithWorkout, todaysWorkout, queue.length, currentSong]);
   
-  // Initialize YouTube player
+  // Initialize YouTube player with improved error handling
   const initializeYouTubePlayer = () => {
     if (typeof window.YT === 'undefined' || !window.YT.Player) {
       // If YT is not yet loaded, try again in 100ms
+      console.log('YouTube API not ready yet, retrying in 100ms');
       setTimeout(initializeYouTubePlayer, 100);
       return;
     }
     
-    playerRef.current = new window.YT.Player('youtube-player', {
-      height: '0',
-      width: '0',
-      playerVars: {
-        'playsinline': 1,
-        'controls': 0,
-        'disablekb': 1,
-        'enablejsapi': 1,
-        'modestbranding': 1,
-        'rel': 0
-      },
-      events: {
-        'onReady': onPlayerReady,
-        'onStateChange': onPlayerStateChange
+    console.log('Initializing YouTube player');
+    
+    try {
+      // Check if element exists
+      const playerElement = document.getElementById('youtube-player');
+      if (!playerElement) {
+        console.error('YouTube player element not found');
+        return;
       }
-    });
+      
+      playerRef.current = new window.YT.Player('youtube-player', {
+        height: '0',
+        width: '0',
+        playerVars: {
+          'playsinline': 1,
+          'controls': 0,
+          'disablekb': 1,
+          'enablejsapi': 1,
+          'modestbranding': 1,
+          'rel': 0,
+          'origin': window.location.origin
+        },
+        events: {
+          'onReady': onPlayerReady,
+          'onStateChange': onPlayerStateChange,
+          'onError': (event) => {
+            console.error('YouTube player error:', event.data);
+            // Handle player errors - could offer to try again
+            setAlertMessage(`YouTube player error: ${event.data}. Try another song.`);
+          }
+        }
+      });
+      
+      // If we have a stored song from previous session, load it
+      if (window.musicPlayerState && window.musicPlayerState.currentSong) {
+        console.log('Restoring previous song in player', window.musicPlayerState.currentSong.videoId);
+      }
+    } catch (error) {
+      console.error('Error initializing YouTube player:', error);
+    }
   };
   
   const onPlayerReady = (event) => {
@@ -667,6 +684,35 @@ const MusicTab = () => {
     console.log("YouTube player ready");
     // Set initial volume
     event.target.setVolume(volume);
+    
+    // If we have a stored song from previous session, load it
+    if (window.musicPlayerState && window.musicPlayerState.currentSong) {
+      console.log('Loading previously playing song', window.musicPlayerState.currentSong.videoId);
+      
+      // We need to actually load the video and potentially play it
+      if (playerRef.current && window.musicPlayerState.videoId) {
+        try {
+          // Restore the video
+          playerRef.current.loadVideoById(window.musicPlayerState.videoId);
+          
+          // Seek to the stored position if available
+          if (window.musicPlayerState.currentTime) {
+            playerRef.current.seekTo(window.musicPlayerState.currentTime);
+          }
+          
+          // Resume playback if it was playing
+          if (window.musicPlayerState.isPlaying) {
+            // Small delay to ensure video is loaded
+            setTimeout(() => {
+              playerRef.current.playVideo();
+              setIsPlaying(true);
+            }, 300);
+          }
+        } catch (error) {
+          console.error('Error restoring player state:', error);
+        }
+      }
+    }
   };
   
   const onPlayerStateChange = (event) => {
@@ -972,7 +1018,7 @@ const MusicTab = () => {
     }
   };
   
-  // Persist player state when component unmounts
+  // Fix player persistence across tabs and ensure continuous playback
   useEffect(() => {
     // Create global reference to maintain player state across tab changes
     if (!window.musicPlayerState) {
@@ -980,36 +1026,47 @@ const MusicTab = () => {
         currentSong: null,
         isPlaying: false,
         currentTime: 0,
-        playerRef: null,
+        videoId: null,
         queue: []
       };
     }
     
-    // Restore state from global if available when component mounts
-    if (window.musicPlayerState.currentSong && !currentSong) {
-      setCurrentSong(window.musicPlayerState.currentSong);
-      setIsPlaying(window.musicPlayerState.isPlaying);
-      setCurrentTime(window.musicPlayerState.currentTime);
-      if (window.musicPlayerState.queue.length > 0) {
-        setQueue(window.musicPlayerState.queue);
-      }
-    }
-    
-    return () => {
-      // Save current state when component unmounts
-      if (currentSong) {
-        window.musicPlayerState = {
-          currentSong,
-          isPlaying,
-          currentTime,
-          playerRef: playerRef.current,
-          queue
-        };
-        // Always show mini player when navigating away but only if a song exists
+    // This runs when the component mounts
+    const initializePlayer = () => {
+      // If we have stored state and no current song, restore from the stored state
+      if (window.musicPlayerState.currentSong && !currentSong) {
+        console.log('Restoring music player state from cache');
+        setCurrentSong(window.musicPlayerState.currentSong);
+        
+        // We don't immediately set isPlaying to true as we need to ensure player is ready
+        if (window.musicPlayerState.queue.length > 0) {
+          setQueue(window.musicPlayerState.queue);
+        }
+        
+        // Set mini player state
         setShowMiniPlayer(true);
       }
     };
-  }, [currentSong, isPlaying, currentTime, queue]);
+    
+    initializePlayer();
+    
+    // When component unmounts, save state globally
+    return () => {
+      if (currentSong) {
+        console.log('Saving music player state before unmount');
+        window.musicPlayerState = {
+          currentSong,
+          isPlaying, 
+          currentTime,
+          videoId: currentSong.videoId,
+          queue
+        };
+        
+        // Always show mini player when navigating away
+        setShowMiniPlayer(true);
+      }
+    };
+  }, []);
 
   // Mini player component
   const MiniPlayer = () => {
