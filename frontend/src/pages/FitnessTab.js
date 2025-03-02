@@ -26,7 +26,8 @@ import {
   alpha,
   Stack,
   Alert,
-  Snackbar
+  Snackbar,
+  Switch
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
