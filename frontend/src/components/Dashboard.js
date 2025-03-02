@@ -1,6 +1,6 @@
 // frontend/src/components/Dashboard.js
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useRef } from 'react';
 import { 
   Box, 
   Container, 
@@ -59,6 +59,21 @@ const Dashboard = () => {
   const [showDebugTools, setShowDebugTools] = useState(true); // Set to false in production
   const [currentTab, setCurrentTab] = useState(-1); // Use -1 for Info tab, which should be the landing page
   const [manualAuthCheck, setManualAuthCheck] = useState(false);
+  
+  // Define fixed tab component references to ensure they don't change between renders
+  const tabComponents = useRef({
+    '-1': InfoTab,           // Information
+    '0': HeartTab,           // Heart Rate
+    '1': ActivityTab,        // Activity
+    '2': SleepTab,           // Sleep
+    '3': ABMTab,             // ABM
+    '4': FitnessTab,         // Fitness Plan
+    '5': ExerciseCoach,      // Exercise Coach
+    '6': MusicTab,           // Music
+    '7': GroceryTab,         // Grocery Shop 
+    '8': TrendsTab,          // Trends
+    '9': HealthAssistantTab  // Assistant
+  });
   
   // Auto-redirect to Fitness Plan tab if not authenticated and on a protected tab
   useEffect(() => {
@@ -228,7 +243,7 @@ const Dashboard = () => {
 
   return (
     <Container 
-      maxWidth="lg" 
+      maxWidth="xl" 
       sx={{ 
         pt: { xs: 2, sm: 3, md: 4 }, 
         pb: { xs: 2, sm: 3, md: 4 }, 
@@ -317,8 +332,9 @@ const Dashboard = () => {
               value={currentTab} 
               onChange={handleTabChange} 
               aria-label="dashboard tabs"
-              variant="scrollable"
-              scrollButtons="auto"
+              variant="fullWidth"
+              scrollButtons={false}
+              centered
               TabIndicatorProps={{
                 sx: { display: 'none' }
               }}
@@ -330,38 +346,32 @@ const Dashboard = () => {
                 maxWidth: '100%',
                 position: 'relative',
                 '& .MuiTabs-flexContainer': {
-                  gap: 0.5 // Reduced gap between tabs
-                },
-                '& .MuiTabs-scrollButtons': {
-                  backgroundColor: 'rgba(255,255,255,0.15)',
-                  borderRadius: '50%',
-                  width: 30,
-                  height: 30,
-                  m: 0.5,
-                  opacity: 0.8,
-                  '&:hover': {
-                    opacity: 1,
-                    backgroundColor: 'rgba(255,255,255,0.25)',
-                  }
+                  gap: { xs: 0.25, sm: 0.3, md: 0.4 }, // Reduced even more
+                  justifyContent: 'space-between',
                 },
                 '& .MuiTab-root': {
                   color: '#5C6BC0', // Indigo color for tabs
-                  px: { xs: 0.5, sm: 1, md: 1.2 }, 
-                  py: { xs: 0.8, sm: 1, md: 1.2 },
-                  minWidth: { xs: 60, sm: 70, md: 90 }, 
-                  maxWidth: { xs: 100, sm: 110, md: 120 },
-                  minHeight: { xs: 36, sm: 40, md: 42 },
-                  width: { xs: 60, sm: 70, md: 90 }, // Reduced consistent width for all tabs
-                  margin: { xs: '0 2px', sm: '0 3px' },
-                  borderRadius: { xs: '8px', sm: '10px', md: '12px' },
+                  px: { xs: 0.3, sm: 0.5, md: 0.7 }, 
+                  py: { xs: 0.6, sm: 0.8, md: 1 },
+                  minWidth: { xs: 'auto', sm: 'auto', md: 'auto' }, 
+                  maxWidth: { xs: '100%', sm: '100%', md: '100%' },
+                  minHeight: { xs: 36, sm: 38, md: 40 },
+                  flexGrow: 1,
+                  flexShrink: 1,
+                  flexBasis: 0,
+                  margin: { xs: '0 1px', sm: '0 1px', md: '0 2px' },
+                  borderRadius: { xs: '6px', sm: '8px', md: '10px' },
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   textTransform: 'none',
-                  fontSize: { xs: '0.75rem', sm: '0.8rem', md: '0.85rem' },
+                  fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.75rem' },
                   fontWeight: 500,
                   border: '1px solid rgba(92, 107, 192, 0.1)',
                   background: 'linear-gradient(180deg, rgba(255,255,255,0.9), rgba(248,249,255,0.8))',
                   boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
                   backdropFilter: 'blur(8px)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
                   '&:hover': {
                     transform: 'translateY(-3px)',
                     background: 'linear-gradient(180deg, rgba(255,255,255,1), rgba(240,245,255,0.95))',
@@ -595,41 +605,27 @@ const Dashboard = () => {
           transition={{ duration: 0.4 }}
           style={{ overflow: 'visible', paddingTop: '8px' }}
         >
-          {/* Define all tab components with their index and auth requirements in an array for more reliable rendering */}
+          {/* NEW APPROACH: Simple and direct tab rendering to avoid confusion */}
           {(() => {
-            // Define tab configuration with proper ordering
-            const tabConfig = [
-              { index: -1, component: InfoTab, requiresAuth: false, label: 'Information' },
-              { index: 0, component: HeartTab, requiresAuth: true, label: 'Heart Rate' },
-              { index: 1, component: ActivityTab, requiresAuth: true, label: 'Activity' },
-              { index: 2, component: SleepTab, requiresAuth: true, label: 'Sleep' },
-              { index: 3, component: ABMTab, requiresAuth: true, label: 'ABM' },
-              { index: 4, component: FitnessTab, requiresAuth: false, label: 'Fitness Plan' },
-              { index: 5, component: ExerciseCoach, requiresAuth: false, label: 'Exercise Coach' },
-              { index: 6, component: MusicTab, requiresAuth: false, label: 'Music' },
-              { index: 7, component: GroceryTab, requiresAuth: false, label: 'Grocery Shop' },
-              { index: 8, component: TrendsTab, requiresAuth: true, label: 'Trends' },
-              { index: 9, component: HealthAssistantTab, requiresAuth: false, label: 'Assistant' }
-            ];
+            const requiresAuth = [0, 1, 2, 3, 8].includes(currentTab);
             
-            // Find the current tab configuration
-            const currentTabConfig = tabConfig.find(tab => tab.index === currentTab);
-            
-            // Log which tab is being rendered
-            if (currentTabConfig) {
-              console.log(`Rendering tab: ${currentTabConfig.label} (index: ${currentTabConfig.index})`);
-            } else {
-              console.log(`Tab index ${currentTab} not found in configuration`);
-              return null;
-            }
-            
-            // If tab requires auth and user is not authenticated, show empty component
-            if (currentTabConfig.requiresAuth && !isAuthenticated) {
+            // Show auth warning if needed
+            if (requiresAuth && !isAuthenticated) {
               return <EmptyAccessDeniedComponent />;
             }
             
-            // Otherwise render the tab component
-            const TabComponent = currentTabConfig.component;
+            // Log what component we're rendering
+            console.log(`Tab index: ${currentTab}, rendering specific component`);
+            
+            // Get the component from our fixed lookup table
+            const TabComponent = tabComponents.current[currentTab.toString()];
+            
+            if (!TabComponent) {
+              console.error(`No component found for tab index ${currentTab}`);
+              return null;
+            }
+            
+            // Render the component
             return (
               <Suspense fallback={<CircularProgress />}>
                 <TabComponent />
