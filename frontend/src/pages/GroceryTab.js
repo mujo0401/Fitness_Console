@@ -742,6 +742,9 @@ const randomDeliveryTime = () => {
   return `${baseMinutes}-${baseMinutes + rangeMinutes} min`;
 };
 
+// Forward declaration to avoid "not defined" error
+let findNearbyGroceryStores;
+
 // This function is now replaced by findNearbyGroceryStores which uses Google Places API
 // Keeping for backward compatibility with existing code
 const findNearbyStores = async (lat, lng) => {
@@ -3839,7 +3842,7 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
   };
   
   // Function to find nearby grocery stores using actual Google Places API
-  const findNearbyGroceryStores = async (lat, lng) => {
+  findNearbyGroceryStores = async (lat, lng) => {
     try {
       console.log(`Searching for grocery stores near ${lat}, ${lng}`);
       
