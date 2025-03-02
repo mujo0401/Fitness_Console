@@ -477,57 +477,115 @@ const MusicTab = () => {
     };
   }, []);
   
+  // Define some mock songs for new artists
+  const additionalSongs = [
+    {
+      id: 'song-bb1',
+      title: 'The Diary of Jane',
+      artist: 'Breaking Benjamin',
+      album: 'Phobia',
+      thumbnail: 'https://i.ytimg.com/vi/DWaB4PXCwFU/mqdefault.jpg',
+      duration: 220,
+      videoId: 'DWaB4PXCwFU',
+      bpm: 132,
+      tags: ['Rock', 'Metal', 'Alternative'],
+      liked: false
+    },
+    {
+      id: 'song-bb2',
+      title: 'I Will Not Bow',
+      artist: 'Breaking Benjamin',
+      album: 'Dear Agony',
+      thumbnail: 'https://i.ytimg.com/vi/7qrRzNidzIc/mqdefault.jpg',
+      duration: 231,
+      videoId: '7qrRzNidzIc',
+      bpm: 128,
+      tags: ['Rock', 'Metal', 'Alternative'],
+      liked: false
+    },
+    {
+      id: 'song-bb3',
+      title: 'Breath',
+      artist: 'Breaking Benjamin',
+      album: 'Phobia',
+      thumbnail: 'https://i.ytimg.com/vi/mFK9t0iQU-M/mqdefault.jpg',
+      duration: 215,
+      videoId: 'mFK9t0iQU-M',
+      bpm: 120,
+      tags: ['Rock', 'Metal', 'Alternative'],
+      liked: false
+    },
+    {
+      id: 'song-lp1',
+      title: 'In The End',
+      artist: 'Linkin Park',
+      album: 'Hybrid Theory',
+      thumbnail: 'https://i.ytimg.com/vi/eVTXPUF4Oz4/mqdefault.jpg',
+      duration: 216,
+      videoId: 'eVTXPUF4Oz4',
+      bpm: 105,
+      tags: ['Rock', 'Alternative', 'Nu Metal'],
+      liked: false
+    }
+  ];
+
+  // Add additional songs to the mock data
+  const allSongs = [...mockSongs, ...additionalSongs];
+
   // Update filtered songs when search term changes
   useEffect(() => {
     if (searchTerm) {
       setLoading(true);
       // Simulate API request delay
       setTimeout(() => {
-        // First look for exact artist match in mock artists
+        const searchTermLower = searchTerm.toLowerCase().trim();
+        
+        // First prioritize exact artist matches
         const artistMatch = mockArtists.find(artist => 
-          artist.name.toLowerCase() === searchTerm.toLowerCase() ||
-          artist.name.toLowerCase().includes(searchTerm.toLowerCase())
+          artist.name.toLowerCase() === searchTermLower ||
+          artist.name.toLowerCase().includes(searchTermLower)
         );
         
         let filtered;
         if (artistMatch) {
-          console.log("Found artist match:", artistMatch);
-          // If artist found, show all songs by that artist
-          filtered = mockSongs.filter(song => 
+          console.log("Found artist match:", artistMatch.name);
+          
+          // Find all songs by this artist - check our extended song list
+          filtered = allSongs.filter(song => 
+            song.artist.toLowerCase() === artistMatch.name.toLowerCase() || 
             song.artist.toLowerCase().includes(artistMatch.name.toLowerCase())
           );
           
-          // If no songs found for exact artist, search by genre instead
+          console.log(`Found ${filtered.length} songs by ${artistMatch.name}`);
+          
+          // If no songs found for artist, try genre search as fallback
           if (filtered.length === 0) {
             console.log("No songs found for artist, searching by genre:", artistMatch.genre);
-            filtered = mockSongs.filter(song => 
+            filtered = allSongs.filter(song => 
               song.tags.some(tag => tag.toLowerCase() === artistMatch.genre.toLowerCase())
             );
           }
         } else {
-          // More flexible search - use partial matching for all fields
-          const searchTermLower = searchTerm.toLowerCase();
-          filtered = mockSongs.filter(song => {
+          // No exact artist match, do a more comprehensive search
+          filtered = allSongs.filter(song => {
+            // Search in all fields
             const titleMatch = song.title.toLowerCase().includes(searchTermLower);
             const artistMatch = song.artist.toLowerCase().includes(searchTermLower);
             const albumMatch = song.album.toLowerCase().includes(searchTermLower);
             const tagMatch = song.tags.some(tag => tag.toLowerCase().includes(searchTermLower));
             
-            // Log the search results for debugging
-            if (titleMatch || artistMatch || albumMatch || tagMatch) {
-              console.log("Match found:", song.title, "by", song.artist);
-              return true;
-            }
-            return false;
+            return titleMatch || artistMatch || albumMatch || tagMatch;
           });
         }
         
         console.log(`Search for "${searchTerm}" found ${filtered.length} results`);
         
+        // If still no results, try word-by-word fuzzy search
         if (filtered.length === 0) {
-          // If no exact matches, try a more fuzzy search
-          const searchWords = searchTerm.toLowerCase().split(' ');
-          filtered = mockSongs.filter(song => {
+          console.log("Trying fuzzy search...");
+          const searchWords = searchTermLower.split(' ').filter(word => word.length > 1);
+          
+          filtered = allSongs.filter(song => {
             return searchWords.some(word => 
               song.title.toLowerCase().includes(word) ||
               song.artist.toLowerCase().includes(word) ||
@@ -914,13 +972,44 @@ const MusicTab = () => {
     }
   };
   
-  // Update context for global access to player
+  // Persist player state when component unmounts
   useEffect(() => {
-    // Show mini player when navigating away but only if a song is playing
-    if (currentSong) {
-      setShowMiniPlayer(true);
+    // Create global reference to maintain player state across tab changes
+    if (!window.musicPlayerState) {
+      window.musicPlayerState = {
+        currentSong: null,
+        isPlaying: false,
+        currentTime: 0,
+        playerRef: null,
+        queue: []
+      };
     }
-  }, [currentSong]);
+    
+    // Restore state from global if available when component mounts
+    if (window.musicPlayerState.currentSong && !currentSong) {
+      setCurrentSong(window.musicPlayerState.currentSong);
+      setIsPlaying(window.musicPlayerState.isPlaying);
+      setCurrentTime(window.musicPlayerState.currentTime);
+      if (window.musicPlayerState.queue.length > 0) {
+        setQueue(window.musicPlayerState.queue);
+      }
+    }
+    
+    return () => {
+      // Save current state when component unmounts
+      if (currentSong) {
+        window.musicPlayerState = {
+          currentSong,
+          isPlaying,
+          currentTime,
+          playerRef: playerRef.current,
+          queue
+        };
+        // Always show mini player when navigating away but only if a song exists
+        setShowMiniPlayer(true);
+      }
+    };
+  }, [currentSong, isPlaying, currentTime, queue]);
 
   // Mini player component
   const MiniPlayer = () => {
