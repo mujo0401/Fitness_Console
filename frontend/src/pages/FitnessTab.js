@@ -172,17 +172,26 @@ const FitnessTab = () => {
             
             <Grid container spacing={3}>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Age"
-                  name="age"
-                  type="number"
-                  value={formData.age}
-                  onChange={handleInputChange}
-                  variant="outlined"
-                  required
-                  helperText="Your current age"
-                />
+                <FormControl fullWidth required>
+                  <Typography gutterBottom>Age</Typography>
+                  <Slider
+                    name="age"
+                    value={formData.age || 30}
+                    onChange={handleSliderChange('age')}
+                    valueLabelDisplay="on"
+                    step={1}
+                    marks={[
+                      { value: 15, label: '15' },
+                      { value: 30, label: '30' },
+                      { value: 45, label: '45' },
+                      { value: 60, label: '60' },
+                      { value: 75, label: '75' }
+                    ]}
+                    min={15}
+                    max={80}
+                    sx={{ color: theme.palette.primary.main }}
+                  />
+                </FormControl>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth required>
@@ -202,45 +211,70 @@ const FitnessTab = () => {
                 </FormControl>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <TextField
-                    fullWidth
-                    label="Height (ft)"
-                    name="heightFeet"
-                    type="number"
-                    value={formData.heightFeet}
-                    onChange={handleInputChange}
-                    variant="outlined"
-                    required
-                    inputProps={{ min: 0, max: 8 }}
-                    helperText="Feet"
-                  />
-                  <TextField
-                    fullWidth
-                    label="Height (in)"
-                    name="heightInches"
-                    type="number"
-                    value={formData.heightInches}
-                    onChange={handleInputChange}
-                    variant="outlined"
-                    required
-                    inputProps={{ min: 0, max: 11 }}
-                    helperText="Inches"
-                  />
-                </Box>
+                <FormControl fullWidth required>
+                  <Typography gutterBottom>Height</Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        Feet
+                      </Typography>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        {[4, 5, 6, 7].map((feet) => (
+                          <Button 
+                            key={feet}
+                            variant={formData.heightFeet == feet ? "contained" : "outlined"}
+                            color="primary"
+                            onClick={() => setFormData({...formData, heightFeet: feet})}
+                            sx={{ minWidth: '50px' }}
+                          >
+                            {feet}'
+                          </Button>
+                        ))}
+                      </Box>
+                    </Box>
+                    
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        Inches
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((inch) => (
+                          <Button 
+                            key={inch}
+                            variant={formData.heightInches == inch ? "contained" : "outlined"}
+                            color="primary"
+                            onClick={() => setFormData({...formData, heightInches: inch})}
+                            sx={{ minWidth: '36px', mb: 1 }}
+                            size="small"
+                          >
+                            {inch}"
+                          </Button>
+                        ))}
+                      </Box>
+                    </Box>
+                  </Box>
+                </FormControl>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Weight (lbs)"
-                  name="weight"
-                  type="number"
-                  value={formData.weight}
-                  onChange={handleInputChange}
-                  variant="outlined"
-                  required
-                  helperText="Your current weight in pounds"
-                />
+                <FormControl fullWidth required>
+                  <Typography gutterBottom>Weight (lbs)</Typography>
+                  <Slider
+                    name="weight"
+                    value={formData.weight || 150}
+                    onChange={handleSliderChange('weight')}
+                    valueLabelDisplay="on"
+                    step={5}
+                    marks={[
+                      { value: 100, label: '100' },
+                      { value: 150, label: '150' },
+                      { value: 200, label: '200' },
+                      { value: 250, label: '250' }
+                    ]}
+                    min={80}
+                    max={300}
+                    sx={{ color: theme.palette.primary.main }}
+                  />
+                </FormControl>
               </Grid>
               <Grid item xs={12}>
                 <FormControl component="fieldset" fullWidth>
@@ -306,17 +340,50 @@ const FitnessTab = () => {
                 </FormControl>
               </Grid>
               <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Exercise Experience"
-                  name="exerciseExperience"
-                  value={formData.exerciseExperience}
-                  onChange={handleInputChange}
-                  multiline
-                  rows={3}
-                  variant="outlined"
-                  helperText="Describe your exercise background and experience"
-                />
+                <FormControl fullWidth>
+                  <Typography gutterBottom>Exercise Experience</Typography>
+                  <Box sx={{ p: 2, border: '1px solid rgba(0, 0, 0, 0.23)', borderRadius: 1 }}>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Select all that apply:
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      {[
+                        { value: 'weightlifting', label: 'Weightlifting' },
+                        { value: 'running', label: 'Running' },
+                        { value: 'yoga', label: 'Yoga' },
+                        { value: 'cycling', label: 'Cycling' },
+                        { value: 'swimming', label: 'Swimming' },
+                        { value: 'sports', label: 'Team Sports' },
+                        { value: 'hiit', label: 'HIIT' },
+                        { value: 'pilates', label: 'Pilates' },
+                        { value: 'dance', label: 'Dance' },
+                        { value: 'martialarts', label: 'Martial Arts' },
+                        { value: 'calisthenics', label: 'Calisthenics' },
+                        { value: 'crossfit', label: 'CrossFit' }
+                      ].map((option) => {
+                        const isSelected = formData.exerciseExperience && formData.exerciseExperience.includes(option.value);
+                        return (
+                          <Chip
+                            key={option.value}
+                            label={option.label}
+                            color={isSelected ? "primary" : "default"}
+                            variant={isSelected ? "filled" : "outlined"}
+                            onClick={() => {
+                              let newExperience = formData.exerciseExperience || '';
+                              if (isSelected) {
+                                newExperience = newExperience.replace(new RegExp(`${option.value}(,|$)`, 'g'), '').replace(/,$/, '');
+                              } else {
+                                newExperience = newExperience ? `${newExperience},${option.value}` : option.value;
+                              }
+                              setFormData({...formData, exerciseExperience: newExperience});
+                            }}
+                            sx={{ m: 0.5 }}
+                          />
+                        );
+                      })}
+                    </Box>
+                  </Box>
+                </FormControl>
               </Grid>
             </Grid>
           </Box>
@@ -372,15 +439,67 @@ const FitnessTab = () => {
                 </FormControl>
               </Grid>
               <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Preferred Exercise Types"
-                  name="preferredExercises"
-                  value={formData.preferredExercises}
-                  onChange={handleInputChange}
-                  variant="outlined"
-                  helperText="E.g., running, weightlifting, yoga, swimming, etc."
-                />
+                <Box sx={{ mb: 2 }}>
+                  <Typography gutterBottom>How do you prefer to exercise?</Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: 'center' }}>
+                    {[
+                      { value: 'solo', label: 'Solo Workouts', icon: <DirectionsRunIcon /> },
+                      { value: 'group', label: 'Group Classes', icon: <SportsIcon /> },
+                      { value: 'outdoors', label: 'Outdoors', icon: <DirectionsRunIcon /> },
+                      { value: 'gym', label: 'At the Gym', icon: <FitnessCenterIcon /> },
+                      { value: 'home', label: 'At Home', icon: <FitnessCenterIcon /> },
+                      { value: 'social', label: 'With Friends', icon: <SportsIcon /> }
+                    ].map((option) => {
+                      const isSelected = formData.preferredExercises && formData.preferredExercises.includes(option.value);
+                      return (
+                        <Paper
+                          key={option.value}
+                          elevation={isSelected ? 4 : 1}
+                          onClick={() => {
+                            let newPreferences = formData.preferredExercises || '';
+                            if (isSelected) {
+                              newPreferences = newPreferences.replace(new RegExp(`${option.value}(,|$)`, 'g'), '').replace(/,$/, '');
+                            } else {
+                              newPreferences = newPreferences ? `${newPreferences},${option.value}` : option.value;
+                            }
+                            setFormData({...formData, preferredExercises: newPreferences});
+                          }}
+                          sx={{ 
+                            width: '120px', 
+                            height: '120px', 
+                            display: 'flex', 
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            bgcolor: isSelected ? alpha(theme.palette.primary.main, 0.1) : 'white',
+                            border: isSelected ? `2px solid ${theme.palette.primary.main}` : '1px solid #e0e0e0',
+                            borderRadius: 3,
+                            p: 2,
+                            transition: 'all 0.2s ease-in-out',
+                            '&:hover': {
+                              transform: 'translateY(-5px)',
+                              boxShadow: 3
+                            }
+                          }}
+                        >
+                          <Box sx={{ 
+                            p: 1.5, 
+                            borderRadius: '50%', 
+                            bgcolor: isSelected ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.1),
+                            color: isSelected ? 'white' : theme.palette.primary.main,
+                            mb: 1
+                          }}>
+                            {option.icon}
+                          </Box>
+                          <Typography variant="body2" align="center">
+                            {option.label}
+                          </Typography>
+                        </Paper>
+                      );
+                    })}
+                  </Box>
+                </Box>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth>
@@ -428,43 +547,168 @@ const FitnessTab = () => {
             
             <Grid container spacing={3}>
               <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Injuries or Physical Limitations"
-                  name="injuries"
-                  value={formData.injuries}
-                  onChange={handleInputChange}
-                  multiline
-                  rows={2}
-                  variant="outlined"
-                  helperText="Any injuries or physical conditions we should be aware of"
-                />
+                <Typography gutterBottom>Do you have any injuries or physical limitations?</Typography>
+                <Box sx={{ width: '100%', p: 2, border: '1px solid rgba(0, 0, 0, 0.23)', borderRadius: 1 }}>
+                  <Grid container spacing={2}>
+                    {[
+                      { value: 'none', label: 'None', color: '#4caf50' },
+                      { value: 'knees', label: 'Knee Issues', color: '#ff9800' },
+                      { value: 'back', label: 'Back Pain', color: '#f44336' },
+                      { value: 'shoulders', label: 'Shoulder Problems', color: '#ff9800' },
+                      { value: 'hips', label: 'Hip Pain', color: '#ff9800' },
+                      { value: 'ankles', label: 'Ankle Issues', color: '#ff9800' },
+                      { value: 'wrists', label: 'Wrist Problems', color: '#ff9800' },
+                      { value: 'neck', label: 'Neck Pain', color: '#f44336' }
+                    ].map((option) => {
+                      const isSelected = formData.injuries && formData.injuries.includes(option.value);
+                      return (
+                        <Grid item xs={6} sm={3} key={option.value}>
+                          <Paper
+                            onClick={() => {
+                              let newInjuries = '';
+                              
+                              // If selecting "none", clear all others
+                              if (option.value === 'none') {
+                                newInjuries = 'none';
+                              } else {
+                                // If we have "none" currently selected and selecting something else, clear "none"
+                                let currentInjuries = formData.injuries || '';
+                                if (currentInjuries === 'none') {
+                                  currentInjuries = '';
+                                }
+                                
+                                if (isSelected) {
+                                  newInjuries = currentInjuries.replace(new RegExp(`${option.value}(,|$)`, 'g'), '').replace(/,$/, '');
+                                } else {
+                                  newInjuries = currentInjuries ? `${currentInjuries},${option.value}` : option.value;
+                                }
+                              }
+                              
+                              setFormData({...formData, injuries: newInjuries});
+                            }}
+                            sx={{ 
+                              p: 1.5, 
+                              textAlign: 'center',
+                              cursor: 'pointer',
+                              bgcolor: isSelected ? alpha(option.color, 0.1) : 'white',
+                              border: isSelected ? `2px solid ${option.color}` : '1px solid #e0e0e0',
+                              height: '100%',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: 'center',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            <Typography variant="body2">
+                              {option.label}
+                            </Typography>
+                          </Paper>
+                        </Grid>
+                      );
+                    })}
+                  </Grid>
+                </Box>
               </Grid>
               <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Medical Conditions"
-                  name="medicalConditions"
-                  value={formData.medicalConditions}
-                  onChange={handleInputChange}
-                  multiline
-                  rows={2}
-                  variant="outlined"
-                  helperText="Any medical conditions that may affect your fitness plan"
-                />
+                <Typography gutterBottom>Do you have any medical conditions?</Typography>
+                <FormControl fullWidth>
+                  <Box sx={{ mb: 2 }}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={!!formData.medicalConditions && formData.medicalConditions !== "none"}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData({...formData, medicalConditions: formData.medicalConditions || "unspecified"});
+                            } else {
+                              setFormData({...formData, medicalConditions: "none"});
+                            }
+                          }}
+                          color="primary"
+                        />
+                      }
+                      label="I have medical conditions that may affect my workout"
+                    />
+                    
+                    {!!formData.medicalConditions && formData.medicalConditions !== "none" && (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
+                        {[
+                          { value: 'hypertension', label: 'Hypertension' },
+                          { value: 'diabetes', label: 'Diabetes' },
+                          { value: 'asthma', label: 'Asthma' },
+                          { value: 'arthritis', label: 'Arthritis' },
+                          { value: 'heart_disease', label: 'Heart Disease' },
+                          { value: 'osteoporosis', label: 'Osteoporosis' }
+                        ].map((option) => {
+                          const isSelected = formData.medicalConditions && formData.medicalConditions.includes(option.value);
+                          return (
+                            <Chip
+                              key={option.value}
+                              label={option.label}
+                              color={isSelected ? "error" : "default"}
+                              variant={isSelected ? "filled" : "outlined"}
+                              onClick={() => {
+                                let newConditions = formData.medicalConditions === "unspecified" ? "" : (formData.medicalConditions || '');
+                                if (isSelected) {
+                                  newConditions = newConditions.replace(new RegExp(`${option.value}(,|$)`, 'g'), '').replace(/,$/, '');
+                                } else {
+                                  newConditions = newConditions ? `${newConditions},${option.value}` : option.value;
+                                }
+                                setFormData({...formData, medicalConditions: newConditions || "unspecified"});
+                              }}
+                              sx={{ m: 0.5 }}
+                            />
+                          );
+                        })}
+                      </Box>
+                    )}
+                  </Box>
+                </FormControl>
               </Grid>
               <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Time Constraints"
-                  name="timeConstraints"
-                  value={formData.timeConstraints}
-                  onChange={handleInputChange}
-                  multiline
-                  rows={2}
-                  variant="outlined"
-                  helperText="Describe any limitations on your available time for exercise"
-                />
+                <Typography gutterBottom>What time of day do you prefer to exercise?</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: 'center' }}>
+                  {[
+                    { value: 'morning', label: 'Morning', icon: '🌅', color: '#ff9800' },
+                    { value: 'afternoon', label: 'Afternoon', icon: '☀️', color: '#ffc107' },
+                    { value: 'evening', label: 'Evening', icon: '🌆', color: '#3f51b5' },
+                    { value: 'night', label: 'Night', icon: '🌙', color: '#673ab7' },
+                    { value: 'flexible', label: 'Flexible', icon: '⏱️', color: '#4caf50' },
+                    { value: 'weekends', label: 'Weekends Only', icon: '📅', color: '#e91e63' }
+                  ].map((option) => {
+                    const isSelected = formData.timeConstraints && formData.timeConstraints.includes(option.value);
+                    return (
+                      <Paper
+                        key={option.value}
+                        elevation={isSelected ? 3 : 1}
+                        onClick={() => {
+                          setFormData({...formData, timeConstraints: option.value});
+                        }}
+                        sx={{ 
+                          p: 2,
+                          textAlign: 'center',
+                          cursor: 'pointer',
+                          width: '130px',
+                          borderRadius: 2,
+                          bgcolor: isSelected ? alpha(option.color, 0.1) : 'white',
+                          border: isSelected ? `2px solid ${option.color}` : '1px solid #e0e0e0',
+                          transition: 'all 0.2s ease-in-out',
+                          '&:hover': {
+                            transform: 'translateY(-3px)',
+                            boxShadow: 2
+                          }
+                        }}
+                      >
+                        <Typography variant="h5" sx={{ mb: 1 }}>
+                          {option.icon}
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: isSelected ? 'bold' : 'regular' }}>
+                          {option.label}
+                        </Typography>
+                      </Paper>
+                    );
+                  })}
+                </Box>
               </Grid>
               <Grid item xs={12}>
                 <FormControl fullWidth>
@@ -497,43 +741,178 @@ const FitnessTab = () => {
             
             <Grid container spacing={3}>
               <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Dietary Restrictions"
-                  name="dietaryRestrictions"
-                  value={formData.dietaryRestrictions}
-                  onChange={handleInputChange}
-                  multiline
-                  rows={2}
-                  variant="outlined"
-                  helperText="E.g., vegetarian, vegan, gluten-free, allergies, etc."
-                />
+                <Typography gutterBottom>Do you have any dietary restrictions?</Typography>
+                <Box sx={{ p: 2, border: '1px solid rgba(0, 0, 0, 0.23)', borderRadius: 1 }}>
+                  <Grid container spacing={1}>
+                    {[
+                      { value: 'none', label: 'No Restrictions' },
+                      { value: 'vegetarian', label: 'Vegetarian' },
+                      { value: 'vegan', label: 'Vegan' },
+                      { value: 'gluten_free', label: 'Gluten-Free' },
+                      { value: 'dairy_free', label: 'Dairy-Free' },
+                      { value: 'keto', label: 'Keto' },
+                      { value: 'paleo', label: 'Paleo' },
+                      { value: 'low_carb', label: 'Low-Carb' },
+                      { value: 'halal', label: 'Halal' },
+                      { value: 'kosher', label: 'Kosher' }
+                    ].map((option) => {
+                      const isSelected = formData.dietaryRestrictions && formData.dietaryRestrictions.includes(option.value);
+                      return (
+                        <Grid item xs={6} sm={4} md={3} key={option.value}>
+                          <FormControlLabel
+                            control={
+                              <Switch
+                                checked={isSelected}
+                                onChange={() => {
+                                  let newRestrictions = '';
+                                  
+                                  // Handle "none" specially
+                                  if (option.value === 'none') {
+                                    newRestrictions = isSelected ? '' : 'none';
+                                  } else {
+                                    // If we have "none" currently selected and selecting something else, clear "none"
+                                    let currentRestrictions = formData.dietaryRestrictions || '';
+                                    if (currentRestrictions === 'none') {
+                                      currentRestrictions = '';
+                                    }
+                                    
+                                    if (isSelected) {
+                                      newRestrictions = currentRestrictions.replace(new RegExp(`${option.value}(,|$)`, 'g'), '').replace(/,$/, '');
+                                    } else {
+                                      newRestrictions = currentRestrictions ? `${currentRestrictions},${option.value}` : option.value;
+                                    }
+                                  }
+                                  
+                                  setFormData({...formData, dietaryRestrictions: newRestrictions});
+                                }}
+                                color="primary"
+                              />
+                            }
+                            label={option.label}
+                            sx={{
+                              '& .MuiFormControlLabel-label': {
+                                fontSize: '0.875rem', 
+                              }
+                            }}
+                          />
+                        </Grid>
+                      );
+                    })}
+                  </Grid>
+                </Box>
               </Grid>
               <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Meal Preferences"
-                  name="mealPreferences"
-                  value={formData.mealPreferences}
-                  onChange={handleInputChange}
-                  multiline
-                  rows={2}
-                  variant="outlined"
-                  helperText="Foods you particularly enjoy or dislike"
-                />
+                <Typography gutterBottom>Food Preferences</Typography>
+                <Box sx={{ p: 2, mb: 2, border: '1px solid rgba(0, 0, 0, 0.23)', borderRadius: 1 }}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Drag the slider to indicate how much you like each food group:
+                  </Typography>
+                  
+                  {[
+                    { name: 'proteins', label: 'Proteins (Meat, Fish, Beans)', icon: '🥩', default: 50 },
+                    { name: 'vegetables', label: 'Vegetables', icon: '🥦', default: 50 },
+                    { name: 'fruits', label: 'Fruits', icon: '🍎', default: 50 },
+                    { name: 'grains', label: 'Whole Grains', icon: '🌾', default: 50 },
+                    { name: 'dairy', label: 'Dairy', icon: '🧀', default: 50 }
+                  ].map((food) => {
+                    // Parse preferences from string to object
+                    let preferences = {};
+                    try {
+                      preferences = formData.mealPreferences ? JSON.parse(formData.mealPreferences) : {};
+                    } catch (e) {
+                      preferences = {};
+                    }
+                    
+                    const value = preferences[food.name] !== undefined ? preferences[food.name] : food.default;
+                    
+                    return (
+                      <Box key={food.name} sx={{ mb: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                          <Typography sx={{ mr: 1 }}>{food.icon}</Typography>
+                          <Typography variant="body2">{food.label}</Typography>
+                        </Box>
+                        <Box sx={{ px: 1, display: 'flex', alignItems: 'center' }}>
+                          <Typography variant="caption" sx={{ mr: 1, minWidth: '45px' }}>
+                            Dislike
+                          </Typography>
+                          <Slider
+                            value={value}
+                            onChange={(e, newValue) => {
+                              const newPreferences = {
+                                ...preferences,
+                                [food.name]: newValue
+                              };
+                              setFormData({...formData, mealPreferences: JSON.stringify(newPreferences)});
+                            }}
+                            step={10}
+                            marks
+                            min={0}
+                            max={100}
+                            sx={{ 
+                              mx: 1,
+                              color: value < 30 ? '#f44336' : value > 70 ? '#4caf50' : '#ff9800',
+                              '& .MuiSlider-markLabel': {
+                                fontSize: '0.7rem',
+                              }
+                            }}
+                          />
+                          <Typography variant="caption" sx={{ ml: 1, minWidth: '45px' }}>
+                            Love it
+                          </Typography>
+                        </Box>
+                      </Box>
+                    );
+                  })}
+                </Box>
               </Grid>
               <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Current Diet Description"
-                  name="currentDiet"
-                  value={formData.currentDiet}
-                  onChange={handleInputChange}
-                  multiline
-                  rows={2}
-                  variant="outlined"
-                  helperText="Briefly describe your current eating habits"
-                />
+                <Typography gutterBottom>How would you describe your current eating habits?</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: 'center' }}>
+                  {[
+                    { value: 'healthy', label: 'Healthy & Balanced', icon: '🥗', color: '#4caf50' },
+                    { value: 'inconsistent', label: 'Inconsistent', icon: '🔄', color: '#ff9800' },
+                    { value: 'fastfood', label: 'Fast Food Often', icon: '🍔', color: '#f44336' },
+                    { value: 'snacking', label: 'Frequent Snacking', icon: '🍿', color: '#ff9800' },
+                    { value: 'mealprep', label: 'Meal Prepping', icon: '🍱', color: '#4caf50' },
+                    { value: 'dieting', label: 'Currently Dieting', icon: '📉', color: '#2196f3' }
+                  ].map((option) => {
+                    const isSelected = formData.currentDiet === option.value;
+                    return (
+                      <Paper
+                        key={option.value}
+                        elevation={isSelected ? 3 : 1}
+                        onClick={() => {
+                          setFormData({...formData, currentDiet: option.value});
+                        }}
+                        sx={{ 
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          p: 2,
+                          width: '140px',
+                          height: '110px',
+                          cursor: 'pointer',
+                          borderRadius: 3,
+                          bgcolor: isSelected ? alpha(option.color, 0.1) : 'white',
+                          border: isSelected ? `2px solid ${option.color}` : '1px solid #e0e0e0',
+                          transition: 'all 0.2s',
+                          '&:hover': {
+                            transform: 'translateY(-3px)',
+                            boxShadow: 2
+                          }
+                        }}
+                      >
+                        <Typography variant="h5" gutterBottom>
+                          {option.icon}
+                        </Typography>
+                        <Typography variant="body2" align="center" sx={{ fontWeight: isSelected ? 'bold' : 'regular' }}>
+                          {option.label}
+                        </Typography>
+                      </Paper>
+                    );
+                  })}
+                </Box>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth>
