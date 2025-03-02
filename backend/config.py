@@ -55,4 +55,5 @@ class Config:
         'activity',
         'workout',
         'vitalsigns'
-    ]
+    ]    # Google API configuration
+    GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY', '')
