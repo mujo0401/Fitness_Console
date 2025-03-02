@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense, lazy } from 'react';
 import {
   Alert,
   Box,
@@ -41,8 +41,12 @@ import {
   Avatar,
   Fade,
   Zoom,
+  Skeleton,
 } from '@mui/material';
 import { motion } from 'framer-motion';
+import { FixedSizeGrid } from 'react-window';
+import InfiniteLoader from 'react-window-infinite-loader';
+import AutoSizer from 'react-virtualized-auto-sizer';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
@@ -811,30 +815,67 @@ const mockRecipes = [
   }
 ];
 
-// Helper component for the grocery item card
-const GroceryItemCard = ({ item, onAdd, isAdded, cartQuantity = 0 }) => {
+// Optimized helper component for the grocery item card
+const GroceryItemCard = React.memo(({ item, onAdd, isAdded, cartQuantity = 0 }) => {
   const theme = useTheme();
   const [quantity, setQuantity] = useState(cartQuantity || 1);
   const [tooltipOpen, setTooltipOpen] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [showImage, setShowImage] = useState(false);
   
-  const handleAdd = () => {
+  // Use a ref to track if component is mounted
+  const isMounted = useRef(true);
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+  
+  // Lazy load images when they come into view
+  useEffect(() => {
+    // Only load images if specifically requested
+    if (showImage) {
+      const img = new Image();
+      img.src = item.image;
+      img.onload = () => {
+        if (isMounted.current) {
+          setImageLoaded(true);
+        }
+      };
+      img.onerror = () => {
+        if (isMounted.current) {
+          setImageLoaded(false);
+        }
+      };
+    }
+  }, [item.image, showImage]);
+  
+  // Memoize handlers to prevent unnecessary re-renders
+  const handleAdd = useCallback(() => {
     onAdd(item, quantity);
-  };
+  }, [item, quantity, onAdd]);
   
-  const incrementQuantity = () => {
+  const incrementQuantity = useCallback(() => {
     setQuantity(prev => prev + 1);
-  };
+  }, []);
   
-  const decrementQuantity = () => {
+  const decrementQuantity = useCallback(() => {
     if (quantity > 1) {
       setQuantity(prev => prev - 1);
     }
-  };
+  }, [quantity]);
   
-  const toggleFavorite = () => {
-    setIsFavorite(!isFavorite);
-  };
+  const toggleFavorite = useCallback(() => {
+    setIsFavorite(prev => !prev);
+  }, []);
+  
+  // Toggle image loading for performance
+  const handleCardMouseEnter = useCallback(() => {
+    setShowImage(true);
+  }, []);
   
   return (
     <Card 
@@ -844,28 +885,61 @@ const GroceryItemCard = ({ item, onAdd, isAdded, cartQuantity = 0 }) => {
         flexDirection: 'column',
         borderRadius: 2,
         overflow: 'hidden',
-        transition: 'all 0.3s ease',
+        transition: 'transform 0.3s ease',
         '&:hover': {
           boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
           transform: 'translateY(-4px)'
         }
       }}
+      onMouseEnter={handleCardMouseEnter}
     >
       <Box 
         sx={{ 
           position: 'relative', 
           paddingTop: '60%', 
-          backgroundImage: `url(${item.image})`,
+          backgroundColor: alpha(theme.palette.primary.main, 0.05),
+          backgroundImage: (showImage && imageLoaded) ? `url(${item.image})` : 'none',
           backgroundSize: 'cover',
-          backgroundPosition: 'center'
+          backgroundPosition: 'center',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}
       >
+        {/* Show item name as text placeholder instead of loading image for better performance */}
+        {(!showImage || !imageLoaded) && (
+          <Box 
+            sx={{ 
+              position: 'absolute', 
+              top: 0, 
+              left: 0, 
+              right: 0, 
+              bottom: 0, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              padding: 2,
+              textAlign: 'center'
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              {item.name}
+            </Typography>
+          </Box>
+        )}
+        
+        {/* Favorite button only shown on hover to improve performance */}
         <Box 
           sx={{ 
             position: 'absolute', 
             top: 0, 
             right: 0, 
-            m: 1 
+            m: 1,
+            opacity: 0,
+            transition: 'opacity 0.2s ease',
+            '.MuiCard-root:hover &': {
+              opacity: 1
+            }
           }}
         >
           <IconButton 
@@ -901,10 +975,10 @@ const GroceryItemCard = ({ item, onAdd, isAdded, cartQuantity = 0 }) => {
       
       <CardContent sx={{ flexGrow: 1, pt: 2 }}>
         <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <Typography variant="h6" component="h3" fontWeight="medium" gutterBottom>
+          <Typography variant="subtitle1" component="h3" fontWeight="medium">
             {item.name}
           </Typography>
-          <Typography variant="h6" component="span" fontWeight="bold" color="primary">
+          <Typography variant="subtitle1" component="span" fontWeight="bold" color="primary">
             ${item.price}
             <Typography variant="caption" component="span" color="text.secondary">
               /{item.unit}
@@ -912,17 +986,16 @@ const GroceryItemCard = ({ item, onAdd, isAdded, cartQuantity = 0 }) => {
           </Typography>
         </Box>
         
+        {/* Simplified diet types display for better performance */}
         <Box sx={{ mb: 1.5 }}>
           <Typography variant="body2" color="text.secondary" gutterBottom>
             <b>Category:</b> {item.category}
           </Typography>
           
-          <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
-              <b>Diet Types:</b>
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-              {item.dietTypes.map((diet, index) => (
+          {/* Only show the first 3 diet types for better performance */}
+          {item.dietTypes.length > 0 && (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+              {item.dietTypes.slice(0, 3).map((diet, index) => (
                 <Chip 
                   key={index} 
                   label={diet} 
@@ -935,36 +1008,16 @@ const GroceryItemCard = ({ item, onAdd, isAdded, cartQuantity = 0 }) => {
                   }} 
                 />
               ))}
+              {item.dietTypes.length > 3 && (
+                <Typography variant="caption" color="text.secondary">
+                  +{item.dietTypes.length - 3} more
+                </Typography>
+              )}
             </Box>
-          </Box>
+          )}
         </Box>
         
-        <Tooltip
-          title={
-            <Box sx={{ p: 1 }}>
-              <Typography variant="subtitle2" gutterBottom>Nutrition Facts (per serving)</Typography>
-              <Typography variant="body2">Calories: {item.nutrition.calories} kcal</Typography>
-              <Typography variant="body2">Protein: {item.nutrition.protein}g</Typography>
-              <Typography variant="body2">Carbs: {item.nutrition.carbs}g</Typography>
-              <Typography variant="body2">Fat: {item.nutrition.fat}g</Typography>
-              <Typography variant="body2">Fiber: {item.nutrition.fiber}g</Typography>
-            </Box>
-          }
-          open={tooltipOpen}
-          onClose={() => setTooltipOpen(false)}
-          onOpen={() => setTooltipOpen(true)}
-          arrow
-        >
-          <Button 
-            size="small" 
-            startIcon={<InfoOutlinedIcon />}
-            onClick={() => setTooltipOpen(!tooltipOpen)}
-            sx={{ mb: 1.5, textTransform: 'none' }}
-          >
-            Nutrition Info
-          </Button>
-        </Tooltip>
-        
+        {/* Simplified nutrition display for better performance */}
         <Box sx={{ mt: 'auto' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', border: 1, borderColor: 'divider', borderRadius: 1 }}>
@@ -994,7 +1047,7 @@ const GroceryItemCard = ({ item, onAdd, isAdded, cartQuantity = 0 }) => {
       </CardContent>
     </Card>
   );
-};
+});
 
 // Helper component for the shopping cart item
 const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
@@ -3448,32 +3501,50 @@ const generateDynamicGroceryItems = (searchQuery) => {
 
   // State for search loading indicators
   const [isSearching, setIsSearching] = useState(false);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
   
-  // Filter items based on search and category
+  // Add debounce to search term to avoid unnecessary API calls
   useEffect(() => {
+    // Set a timeout to update the debounced search term
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300); // 300ms debounce time
+    
+    // Cleanup function to clear the timeout if search term changes again within debounce time
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
+  
+  // Filter items based on search and category with debounced search
+  useEffect(() => {
+    // Create a flag to handle component unmounting during async operations
+    let isMounted = true;
+    
     const filterItems = async () => {
       let items = groceryItems;
       
-      // Filter by search
-      if (searchTerm) {
+      // Only start search if there's a valid search term
+      if (debouncedSearchTerm && debouncedSearchTerm.trim().length > 0) {
         // Show loading state
         setIsSearching(true);
         
         try {
           // This will search existing items AND generate new ones if nothing is found
-          const searchResults = await fetchRealGroceryData(searchTerm);
+          const searchResults = await fetchRealGroceryData(debouncedSearchTerm);
+          
+          // Check if component is still mounted before updating state
+          if (!isMounted) return;
           
           // Always use the search results (they'll either be existing items
           // or dynamically generated ones)
           if (searchResults && searchResults.length > 0) {
             items = searchResults;
           } else {
-            // Fallback if the search and generation failed
-            setIsSearching(false);
             console.error('Search returned no results, even after item generation attempt');
             
             // Just do a basic filter on the existing items as a last resort
-            const search = searchTerm.toLowerCase().trim();
+            const search = debouncedSearchTerm.toLowerCase().trim();
             
             // Split search into words to handle multiple search terms
             const searchTerms = search.split(/\s+/).filter(term => term.length > 0);
@@ -3489,23 +3560,39 @@ const generateDynamicGroceryItems = (searchQuery) => {
             }
           }
         } catch (error) {
-          console.error('Error in search:', error);
+          if (isMounted) {
+            console.error('Error in search:', error);
+          }
         } finally {
-          // Hide loading state
-          setIsSearching(false);
+          // Hide loading state if component is still mounted
+          if (isMounted) {
+            setIsSearching(false);
+          }
         }
       }
       
       // Filter by category
-      if (selectedCategory !== 'All') {
+      if (selectedCategory !== 'All' && isMounted) {
         items = items.filter(item => item.category === selectedCategory);
       }
       
-      setFilteredItems(items);
+      // Update filtered items if component is still mounted
+      if (isMounted) {
+        setFilteredItems(items);
+      }
     };
     
+    // Execute filter function
     filterItems();
-  }, [searchTerm, selectedCategory, groceryItems]);
+    
+    // Cleanup function to set mounted flag to false when component unmounts
+    return () => {
+      isMounted = false;
+    };
+  }, [debouncedSearchTerm, selectedCategory, groceryItems]);
+  
+  // Memorize filtered items to prevent unnecessary re-renders
+  const memoizedFilteredItems = useMemo(() => filteredItems, [filteredItems]);
   
   // Load meal plan ingredients if a meal plan is selected
   useEffect(() => {
@@ -4108,9 +4195,98 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
     setSelectedStore(store);
   };
   
-  // Handle checkout
-  const handleCheckout = () => {
-    setCheckoutDialogOpen(true);
+  // Handle checkout with Instacart integration
+  const handleCheckout = async () => {
+    if (!selectedStore) {
+      // If no store is selected, prompt user to select one
+      alert("Please select a store for delivery first.");
+      return;
+    }
+    
+    // Check if Instacart is available for the selected store
+    try {
+      setLocationLoading(true);
+      
+      // First check if Instacart is available for this store and location
+      const instacartAvailabilityResponse = await fetch(
+        `/api/places/instacart/check-availability?store_id=${selectedStore.id}&lat=${userLocation?.lat || '0'}&lng=${userLocation?.lng || '0'}&store_name=${encodeURIComponent(selectedStore.name)}`
+      );
+      
+      const instacartAvailability = await instacartAvailabilityResponse.json();
+      
+      // If Instacart is available, show checkout dialog
+      if (instacartAvailability.available) {
+        // Add Instacart information to selectedStore
+        setSelectedStore({
+          ...selectedStore,
+          instacart: instacartAvailability
+        });
+        
+        // Open the checkout dialog
+        setCheckoutDialogOpen(true);
+      } else {
+        // If Instacart is not available, show alternative checkout dialog
+        alert("Instacart delivery is not available for this store in your area. Please select another store or try again later.");
+      }
+    } catch (error) {
+      console.error("Error checking Instacart availability:", error);
+      // Fall back to regular checkout dialog
+      setCheckoutDialogOpen(true);
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+  
+  // Handle submitting an order through Instacart
+  const handleInstacartSubmit = async () => {
+    try {
+      // Prepare order data
+      const orderData = {
+        store_id: selectedStore.id,
+        delivery_address: userLocation ? "Current Location" : "123 Main St, New York, NY 10001",
+        items: cartItems.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          unit: item.unit
+        })),
+        delivery_instructions: "",
+        contact_info: {
+          name: "Demo User",
+          phone: "555-555-5555",
+          email: "demo@example.com"
+        }
+      };
+      
+      // Submit the order to Instacart API
+      const response = await fetch('/api/places/instacart/submit-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(orderData)
+      });
+      
+      const orderResult = await response.json();
+      
+      if (orderResult.success) {
+        // If order was successful, show confirmation
+        alert(`Your order #${orderResult.order_id} has been placed with Instacart! Expected delivery in ${orderResult.estimated_delivery.min_minutes}-${orderResult.estimated_delivery.max_minutes} minutes.`);
+        
+        // Clear the cart
+        setCartItems([]);
+        
+        // Close the checkout dialog
+        setCheckoutDialogOpen(false);
+      } else {
+        // If order failed, show error
+        alert("There was an error placing your order with Instacart. Please try again later.");
+      }
+    } catch (error) {
+      console.error("Error submitting Instacart order:", error);
+      alert("There was an error connecting to Instacart. Please try again later.");
+    }
   };
   
   // Allow access even if not authenticated
@@ -4312,18 +4488,99 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
                     </Box>
                   </Paper>
                 ) : (
-                  <Grid container spacing={3}>
-                    {filteredItems.map((item) => (
-                      <Grid item xs={12} sm={6} md={4} key={item.id}>
-                        <GroceryItemCard 
-                          item={item} 
-                          onAdd={handleAddToCart} 
-                          isAdded={isInCart(item.id)}
-                          cartQuantity={getCartQuantity(item.id)}
-                        />
-                      </Grid>
-                    ))}
-                  </Grid>
+                  <Box sx={{ height: 'calc(100vh - 300px)', minHeight: 500 }}>
+                    {isSearching ? (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                        <CircularProgress size={40} sx={{ mb: 2 }} />
+                        <Typography variant="body2" color="text.secondary">
+                          Searching for groceries...
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <AutoSizer>
+                        {({ height, width }) => {
+                          // Calculate number of columns based on width and desired minimum column width
+                          const columnCount = Math.floor(width / 300) || 1;
+                          const columnWidth = width / columnCount;
+                          const rowHeight = 420; // Adjust this based on your card height
+                          const rowCount = Math.ceil(memoizedFilteredItems.length / columnCount);
+                          
+                          // Memoize the item renderer to prevent unnecessary re-renders
+                          const ItemRenderer = useCallback(({ columnIndex, rowIndex, style }) => {
+                            const index = rowIndex * columnCount + columnIndex;
+                            
+                            if (index >= memoizedFilteredItems.length) {
+                              return null;
+                            }
+                            
+                            const item = memoizedFilteredItems[index];
+                            
+                            return (
+                              <div style={{
+                                ...style,
+                                padding: '12px',
+                                boxSizing: 'border-box'
+                              }}>
+                                <GroceryItemCard 
+                                  item={item} 
+                                  onAdd={handleAddToCart} 
+                                  isAdded={isInCart(item.id)}
+                                  cartQuantity={getCartQuantity(item.id)}
+                                />
+                              </div>
+                            );
+                          }, [memoizedFilteredItems, columnCount, handleAddToCart, isInCart, getCartQuantity]);
+                          
+                          // Memoize whether an item is loaded to prevent unnecessary renders
+                          const isItemLoaded = useCallback(index => index < memoizedFilteredItems.length, [memoizedFilteredItems.length]);
+                          
+                          // Use a memoized key to force grid refresh when filtered items change
+                          const gridKey = useMemo(() => `grocery-grid-${memoizedFilteredItems.length}`, [memoizedFilteredItems.length]);
+                          
+                          // Render virtualized grid
+                          return (
+                            <InfiniteLoader
+                              isItemLoaded={isItemLoaded}
+                              itemCount={memoizedFilteredItems.length}
+                              loadMoreItems={() => {}} // No-op since we're not paginating in this example
+                              threshold={5} // Preload 5 items ahead for smoother scrolling
+                            >
+                              {({ onItemsRendered, ref }) => {
+                                // Convert from Grid to List onItemsRendered format
+                                const onGridItemsRendered = useCallback(({ visibleRowStartIndex, visibleRowStopIndex, visibleColumnStartIndex, visibleColumnStopIndex }) => {
+                                  const startIndex = visibleRowStartIndex * columnCount + visibleColumnStartIndex;
+                                  const stopIndex = visibleRowStopIndex * columnCount + visibleColumnStopIndex;
+                                  
+                                  onItemsRendered({
+                                    visibleStartIndex: startIndex,
+                                    visibleStopIndex: stopIndex
+                                  });
+                                }, [columnCount, onItemsRendered]);
+                                
+                                return (
+                                  <FixedSizeGrid
+                                    key={gridKey}
+                                    ref={ref}
+                                    columnCount={columnCount}
+                                    columnWidth={columnWidth}
+                                    height={height}
+                                    rowCount={rowCount}
+                                    rowHeight={rowHeight}
+                                    width={width}
+                                    onItemsRendered={onGridItemsRendered}
+                                    overscanRowCount={2} // Overscanning for smoother scrolling
+                                    overscanColumnCount={1}
+                                  >
+                                    {ItemRenderer}
+                                  </FixedSizeGrid>
+                                );
+                              }}
+                            </InfiniteLoader>
+                          );
+                        }}
+                      </AutoSizer>
+                    )}
+                  </Box>
                 )}
               </Box>
             )}
@@ -4907,117 +5164,204 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
         fullWidth
       >
         <DialogTitle>
-          Complete Your Order
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="h6" component="span">Complete Your Order</Typography>
+            <img 
+              src="https://www.instacart.com/assets/icons/app-icon.svg" 
+              alt="Instacart Logo" 
+              style={{ height: 24, marginLeft: 'auto' }}
+            />
+            <Typography variant="body2" color="primary.main" fontWeight="medium">via Instacart</Typography>
+          </Box>
         </DialogTitle>
         <DialogContent>
-          <DialogContentText paragraph>
-            Your order from {selectedStore?.name} will be prepared for delivery.
-          </DialogContentText>
-          
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="body1">Items: {cartItems.length}</Typography>
-            <Typography variant="body1" fontWeight="bold">${(cartTotal + (cartItems.length > 0 ? 5.99 : 0) + (cartTotal * 0.0825)).toFixed(2)}</Typography>
-          </Box>
-          
-          {selectedStore && (
-            <Paper variant="outlined" sx={{ p: 0, borderRadius: 2, mb: 2, overflow: 'hidden' }}>
-              {/* This would be a real map in production using Google Maps or similar */}
-              <Box 
-                sx={{ 
-                  height: 150, 
-                  width: '100%', 
-                  bgcolor: '#e5e5f7',
-                  backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z\' fill=\'%2376a6ed\' fill-opacity=\'0.3\' fill-rule=\'evenodd\'/%3E%3C/svg%3E")',
-                  position: 'relative',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }} 
+          {locationLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <>
+              <Alert 
+                severity="info" 
+                sx={{ mb: 2 }}
+                icon={<img src="https://www.instacart.com/assets/icons/app-icon.svg" alt="Instacart" style={{ width: 20, height: 20 }} />}
               >
-                <Box 
-                  sx={{ 
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    zIndex: 2,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center'
-                  }}
-                >
-                  <LocationOnIcon color="error" sx={{ fontSize: 40, filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.2))' }} />
+                Your order will be fulfilled through Instacart's delivery network
+              </Alert>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="body1">Items: {cartItems.length}</Typography>
+                <Typography variant="body1" fontWeight="bold">${(cartTotal + (cartItems.length > 0 ? 5.99 : 0) + (cartTotal * 0.0825)).toFixed(2)}</Typography>
+              </Box>
+              
+              {selectedStore && (
+                <Paper variant="outlined" sx={{ p: 0, borderRadius: 2, mb: 2, overflow: 'hidden' }}>
+                  {/* This would be a real map in production using Google Maps or similar */}
                   <Box 
                     sx={{ 
-                      bgcolor: 'background.paper', 
-                      p: 0.5, 
-                      px: 1, 
-                      borderRadius: 1,
-                      fontSize: '0.75rem',
-                      fontWeight: 'bold',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                    }}
+                      height: 150, 
+                      width: '100%', 
+                      bgcolor: '#e5e5f7',
+                      backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z\' fill=\'%2376a6ed\' fill-opacity=\'0.3\' fill-rule=\'evenodd\'/%3E%3C/svg%3E")',
+                      position: 'relative',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }} 
                   >
-                    {selectedStore.name}
+                    <Box 
+                      sx={{ 
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        zIndex: 2,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <LocationOnIcon color="error" sx={{ fontSize: 40, filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.2))' }} />
+                      <Box 
+                        sx={{ 
+                          bgcolor: 'background.paper', 
+                          p: 0.5, 
+                          px: 1, 
+                          borderRadius: 1,
+                          fontSize: '0.75rem',
+                          fontWeight: 'bold',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                        }}
+                      >
+                        {selectedStore.name}
+                      </Box>
+                    </Box>
+                    <Typography variant="caption" sx={{ position: 'absolute', bottom: 5, right: 10, color: 'text.secondary' }}>
+                      {/* In a real implementation this would be an actual Google Maps or Mapbox map */}
+                      Map view - would use real maps API
+                    </Typography>
+                  </Box>
+                  <Box sx={{ p: 2 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      {selectedStore.name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      {selectedStore.address}
+                    </Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        {selectedStore.distance && `${selectedStore.distance.toFixed(1)} miles away`}
+                      </Typography>
+                      <Chip 
+                        label="Instacart Delivery" 
+                        size="small" 
+                        color="success" 
+                        variant="outlined" 
+                        sx={{ height: 20, fontSize: '0.7rem' }}
+                      />
+                    </Box>
+                  </Box>
+                </Paper>
+              )}
+              
+              {/* Cart summary with Instacart fees */}
+              <Paper 
+                variant="outlined" 
+                sx={{ 
+                  p: 2, 
+                  borderRadius: 2, 
+                  mb: 2, 
+                  border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`
+                }}
+              >
+                <Typography variant="subtitle2" gutterBottom>Order Summary</Typography>
+                
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="body2">Subtotal</Typography>
+                  <Typography variant="body2">${cartTotal.toFixed(2)}</Typography>
+                </Box>
+                
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="body2">Delivery Fee</Typography>
+                  <Typography variant="body2">$5.99</Typography>
+                </Box>
+                
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="body2">Service Fee</Typography>
+                  <Typography variant="body2">$3.99</Typography>
+                </Box>
+                
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="body2">Estimated Tax</Typography>
+                  <Typography variant="body2">${(cartTotal * 0.0825).toFixed(2)}</Typography>
+                </Box>
+                
+                <Divider sx={{ my: 1 }} />
+                
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="body1" fontWeight="bold">Total</Typography>
+                  <Typography variant="body1" fontWeight="bold">
+                    ${(cartTotal + 9.98 + (cartTotal * 0.0825)).toFixed(2)}
+                  </Typography>
+                </Box>
+              </Paper>
+              
+              <Box sx={{ bgcolor: alpha(theme.palette.success.main, 0.1), p: 2, borderRadius: 2, mb: 2 }}>
+                <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <LocationOnIcon color="success" fontSize="small" />
+                  Delivery to: {userLocation ? 'Your current location' : '123 Main St, Apt 4B, New York, NY 10001'}
+                </Typography>
+                <Typography variant="body2" color="success.main" fontWeight="medium" sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                  <LocalShippingIcon fontSize="small" />
+                  Estimated delivery: Today within {selectedStore?.instacart?.delivery_estimate?.min_minutes || 30}-{selectedStore?.instacart?.delivery_estimate?.max_minutes || 60} minutes
+                </Typography>
+              </Box>
+              
+              {/* Instacart shopper info */}
+              <Paper 
+                variant="outlined" 
+                sx={{ 
+                  p: 2, 
+                  borderRadius: 2, 
+                  mb: 2, 
+                  bgcolor: alpha(theme.palette.primary.main, 0.03),
+                  border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <img 
+                    src="https://www.instacart.com/assets/icons/app-icon.svg" 
+                    alt="Instacart" 
+                    style={{ width: 36, height: 36 }}
+                  />
+                  <Box>
+                    <Typography variant="subtitle2">Instacart Personal Shopper</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Your items will be carefully selected by a professional Instacart shopper
+                    </Typography>
                   </Box>
                 </Box>
-                <Typography variant="caption" sx={{ position: 'absolute', bottom: 5, right: 10, color: 'text.secondary' }}>
-                  {/* In a real implementation this would be an actual Google Maps or Mapbox map */}
-                  Map view - would use real maps API
-                </Typography>
-              </Box>
-              <Box sx={{ p: 2 }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  {selectedStore.name}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  {selectedStore.address}
-                </Typography>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    {selectedStore.distance && `${selectedStore.distance.toFixed(1)} miles away`}
-                  </Typography>
-                  <Chip 
-                    label="Delivery available" 
-                    size="small" 
-                    color="success" 
-                    variant="outlined" 
-                    sx={{ height: 20, fontSize: '0.7rem' }}
-                  />
-                </Box>
-              </Box>
-            </Paper>
+              </Paper>
+              
+              <Typography variant="caption" color="text.secondary">
+                By placing your order, you agree to Instacart's terms of service and privacy policy. 
+                Items may be subject to availability and prices may vary.
+              </Typography>
+            </>
           )}
-          
-          <Box sx={{ bgcolor: alpha(theme.palette.success.main, 0.1), p: 2, borderRadius: 2, mb: 2 }}>
-            <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <LocationOnIcon color="success" fontSize="small" />
-              Delivery to: {userLocation ? 'Your current location' : '123 Main St, Apt 4B, New York, NY 10001'}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-              Estimated delivery: {selectedStore?.deliveryAvailable ? 'Today within 30-45 minutes' : 'Not available for this location'}
-            </Typography>
-          </Box>
-          
-          <Typography variant="body2" paragraph>
-            This is a demo. In a real implementation, this would connect to Instacart, Kroger, or a similar service API to place your order with real-time location data.
-          </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCheckoutDialogOpen(false)} color="inherit">
             Cancel
           </Button>
           <Button 
-            onClick={() => {
-              setCheckoutDialogOpen(false);
-              // In a real app, this would submit the order
-              alert("Thank you for your order! Your groceries will be delivered soon.");
-              setCartItems([]);
-            }} 
+            onClick={handleInstacartSubmit} 
             variant="contained"
             color="primary"
+            disabled={locationLoading}
+            startIcon={<img src="https://www.instacart.com/assets/icons/app-icon.svg" alt="Instacart" style={{ width: 20, height: 20 }} />}
           >
-            Place Order
+            Place Order with Instacart
           </Button>
         </DialogActions>
       </Dialog>

@@ -7,11 +7,11 @@ class Config:
     SESSION_TYPE = 'filesystem'
     SESSION_PERMANENT = True
     SESSION_USE_SIGNER = True
-    SESSION_COOKIE_SECURE = True  # We're using HTTPS in production
+    SESSION_COOKIE_SECURE = True  
     SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = None  # Set to None to allow cross-site cookies for OAuth
+    SESSION_COOKIE_SAMESITE = None 
     PERMANENT_SESSION_LIFETIME = timedelta(days=30)
-    
+  
     # Fitbit API configuration
     FITBIT_CLIENT_ID = os.environ.get('FITBIT_CLIENT_ID', '')
     FITBIT_CLIENT_SECRET = os.environ.get('FITBIT_CLIENT_SECRET', '')
@@ -28,13 +28,13 @@ class Config:
     APPLE_FITNESS_PRIVATE_KEY_PATH = os.environ.get('APPLE_FITNESS_PRIVATE_KEY_PATH', '')
     APPLE_FITNESS_AUTH_URL = 'https://appleid.apple.com/auth/authorize'
     APPLE_FITNESS_TOKEN_URL = 'https://appleid.apple.com/auth/token'
-    APPLE_FITNESS_API_BASE_URL = 'https://api.apple-fitness.apple.com'
-    
+    APPLE_FITNESS_API_BASE_URL = 'https://api.apple-fitness.apple.com' 
+
     # For development, use localhost. For production, use your actual domain
     FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://fitness-console-gtxc.onrender.com')
     FITBIT_REDIRECT_URI = os.environ.get('FITBIT_REDIRECT_URI', 'http://localhost:5000/api/auth/callback')
     APPLE_FITNESS_REDIRECT_URI = os.environ.get('APPLE_FITNESS_REDIRECT_URI', 'http://localhost:5000/api/apple-fitness/callback')
-    
+
     # Requested scopes from Fitbit API
     FITBIT_SCOPES = [
         'activity',
@@ -45,8 +45,8 @@ class Config:
         'settings', 
         'sleep', 
         'weight'
-    ]
-    
+    ]   
+
     # Requested scopes from Apple Fitness API
     APPLE_FITNESS_SCOPES = [
         'name',
@@ -54,6 +54,11 @@ class Config:
         'fitness',
         'activity',
         'workout',
-        'vitalsigns'
+      'vitalsigns'
     ]    # Google API configuration
     GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY', '')
+    
+    # Instacart API configuration
+    INSTACART_API_KEY = os.environ.get('INSTACART_API_KEY', '')
+    INSTACART_API_BASE_URL = os.environ.get('INSTACART_API_BASE_URL', 'https://api.instacart.com')
+    INSTACART_MOCK_API_ENABLED = os.environ.get('INSTACART_MOCK_API_ENABLED', 'True') == 'True'
