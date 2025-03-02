@@ -250,47 +250,88 @@ const Dashboard = () => {
           transition={{ duration: 0.5 }}
         >
           <Paper 
-            elevation={3} 
+            elevation={8} 
             sx={{ 
-              borderRadius: 4, 
+              borderRadius: '20px', 
               mb: 4, 
-              background: 'linear-gradient(145deg, #ffffff, #f5f5f5)',
-              overflow: 'hidden',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
+              background: 'linear-gradient(135deg, #1a237e, #3f51b5, #2196f3)',
+              overflow: 'visible',
+              boxShadow: '0 10px 30px rgba(33, 150, 243, 0.4), 0 -5px 30px rgba(63, 81, 181, 0.2)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z\' fill=\'%23ffffff\' fill-opacity=\'0.05\' fill-rule=\'evenodd\'/%3E%3C/svg%3E")',
+                borderRadius: '20px'
+              }
             }}
           >
             <Tabs 
               value={currentTab} 
               onChange={handleTabChange} 
               aria-label="dashboard tabs"
-              variant="standard"
-              scrollButtons={false}
-              textColor="primary"
-              indicatorColor="primary"
-              centered
+              variant="scrollable"
+              allowScrollButtonsMobile
+              scrollButtons="auto"
+              TabScrollButtonProps={{
+                sx: {
+                  color: 'white',
+                  '&.Mui-disabled': {
+                    display: 'none'
+                  }
+                }
+              }}
               sx={{ 
                 px: { xs: 1, sm: 2 },
-                pt: 2,
-                pb: 0,
+                pt: 1.5,
+                pb: 1,
+                width: '100%',
+                maxWidth: '100%',
+                position: 'relative',
                 '& .MuiTabs-flexContainer': {
-                  justifyContent: 'space-between',
-                  gap: { xs: 2, sm: 3, md: 4 } // Increased gap between tabs
+                  gap: 0.5 // Reduced gap between tabs
+                },
+                '& .MuiTabs-scrollButtons': {
+                  backgroundColor: 'rgba(255,255,255,0.15)',
+                  borderRadius: '50%',
+                  width: 30,
+                  height: 30,
+                  m: 0.5,
+                  opacity: 0.8,
+                  '&:hover': {
+                    opacity: 1,
+                    backgroundColor: 'rgba(255,255,255,0.25)',
+                  }
                 },
                 '& .MuiTab-root': {
-                  px: { xs: 1.5, sm: 2 }, // Increased padding for tabs
-                  minWidth: { xs: 80, sm: 100, md: 120 }, // Wider tabs to fit text
-                  borderRadius: '10px 10px 0 0',
-                  transition: 'all 0.3s ease',
+                  color: 'rgba(255,255,255,0.85)',
+                  px: { xs: 1.2, sm: 1.5 }, 
+                  py: 1.5,
+                  minWidth: { xs: 'auto', sm: 'auto' }, 
+                  maxWidth: 180,
+                  minHeight: 48,
+                  margin: '0 4px',
+                  borderRadius: '12px',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  textTransform: 'none',
+                  fontSize: '0.9rem',
+                  fontWeight: 500,
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                  backdropFilter: 'blur(10px)',
                   '&:hover': {
-                    transform: 'translateY(-4px)',
-                    backgroundColor: 'rgba(0,0,0,0.03)'
+                    transform: 'translateY(-4px) scale(1.05)',
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
                   }
                 },
                 '& .MuiTabs-indicator': {
-                  height: 4,
-                  borderRadius: '4px 4px 0 0',
-                  background: 'linear-gradient(90deg, #3f51b5, #2196f3)',
-                  boxShadow: '0 0 8px rgba(33, 150, 243, 0.5)'
+                  height: 0, // Hide default indicator
                 }
               }}
             >
@@ -300,21 +341,16 @@ const Dashboard = () => {
                 label="Heart Rate"
                 disabled={!isAuthenticated}
                 sx={{
-                  minHeight: 60,
                   fontWeight: 600,
-                  transition: 'all 0.3s ease',
                   '&.Mui-selected': {
-                    color: '#f44336',
+                    color: 'white',
                     fontWeight: 700,
-                    backgroundColor: 'rgba(244, 67, 54, 0.05)',
-                    boxShadow: '0 4px 10px rgba(244, 67, 54, 0.15)'
-                  },
-                  '&:hover': {
-                    bgcolor: 'rgba(244, 67, 54, 0.04)',
-                    color: '#f44336'
+                    backgroundColor: 'rgba(244, 67, 54, 0.6)',
+                    border: '1px solid rgba(244, 67, 54, 0.8)',
+                    boxShadow: '0 4px 20px rgba(244, 67, 54, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.2)'
                   },
                   '&.Mui-disabled': {
-                    opacity: 0.6,
+                    opacity: 0.5,
                   }
                 }}
               />
@@ -323,21 +359,16 @@ const Dashboard = () => {
                 label="Activity"
                 disabled={!isAuthenticated}
                 sx={{
-                  minHeight: 60,
                   fontWeight: 600,
-                  transition: 'all 0.3s ease',
                   '&.Mui-selected': {
-                    color: '#009688',
+                    color: 'white',
                     fontWeight: 700,
-                    backgroundColor: 'rgba(0, 150, 136, 0.05)',
-                    boxShadow: '0 4px 10px rgba(0, 150, 136, 0.15)'
-                  },
-                  '&:hover': {
-                    bgcolor: 'rgba(0, 150, 136, 0.04)',
-                    color: '#009688'
+                    backgroundColor: 'rgba(0, 150, 136, 0.6)',
+                    border: '1px solid rgba(0, 150, 136, 0.8)',
+                    boxShadow: '0 4px 20px rgba(0, 150, 136, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.2)'
                   },
                   '&.Mui-disabled': {
-                    opacity: 0.6,
+                    opacity: 0.5,
                   }
                 }}
               />
@@ -346,21 +377,16 @@ const Dashboard = () => {
                 label="Sleep"
                 disabled={!isAuthenticated}
                 sx={{
-                  minHeight: 60,
                   fontWeight: 600,
-                  transition: 'all 0.3s ease',
                   '&.Mui-selected': {
-                    color: '#673ab7',
+                    color: 'white',
                     fontWeight: 700,
-                    backgroundColor: 'rgba(103, 58, 183, 0.05)',
-                    boxShadow: '0 4px 10px rgba(103, 58, 183, 0.15)'
-                  },
-                  '&:hover': {
-                    bgcolor: 'rgba(103, 58, 183, 0.04)',
-                    color: '#673ab7'
+                    backgroundColor: 'rgba(103, 58, 183, 0.6)',
+                    border: '1px solid rgba(103, 58, 183, 0.8)',
+                    boxShadow: '0 4px 20px rgba(103, 58, 183, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.2)'
                   },
                   '&.Mui-disabled': {
-                    opacity: 0.6,
+                    opacity: 0.5,
                   }
                 }}
               />
@@ -369,21 +395,16 @@ const Dashboard = () => {
                 label="ABM"
                 disabled={!isAuthenticated}
                 sx={{
-                  minHeight: 60,
                   fontWeight: 600,
-                  transition: 'all 0.3s ease',
                   '&.Mui-selected': {
-                    color: '#9c27b0',
+                    color: 'white',
                     fontWeight: 700,
-                    backgroundColor: 'rgba(156, 39, 176, 0.05)',
-                    boxShadow: '0 4px 10px rgba(156, 39, 176, 0.15)'
-                  },
-                  '&:hover': {
-                    bgcolor: 'rgba(156, 39, 176, 0.04)',
-                    color: '#9c27b0'
+                    backgroundColor: 'rgba(156, 39, 176, 0.6)',
+                    border: '1px solid rgba(156, 39, 176, 0.8)',
+                    boxShadow: '0 4px 20px rgba(156, 39, 176, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.2)'
                   },
                   '&.Mui-disabled': {
-                    opacity: 0.6,
+                    opacity: 0.5,
                   }
                 }}
               />

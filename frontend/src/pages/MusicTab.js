@@ -29,7 +29,15 @@ import {
   DialogContent,
   DialogActions,
   useTheme,
-  alpha
+  alpha,
+  InputAdornment,
+  Backdrop,
+  Autocomplete,
+  Menu,
+  MenuItem,
+  Badge,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -1346,16 +1354,53 @@ const MusicTab = () => {
                 mt: { xs: 1, sm: 0 },
                 width: { xs: '100%', sm: 'auto' }
               }}>
-                <TextField
-                  placeholder="Search music..."
-                  size="small"
+                <Autocomplete
+                  freeSolo
+                  options={[
+                    ...mockArtists.map(artist => artist.name),
+                    ...mockSongs.map(song => song.title),
+                    ...mockGenres,
+                    ...mockSongs.map(song => song.album)
+                  ].filter((v, i, a) => a.indexOf(v) === i)} // Remove duplicates
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  InputProps={{
-                    startAdornment: <SearchIcon color="action" sx={{ mr: 1 }} />,
+                  onInputChange={(event, newValue) => {
+                    setSearchTerm(newValue);
                   }}
-                  sx={{ 
-                    width: { xs: '100%', sm: 200 },
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Search artists, songs, genres..."
+                      size="small"
+                      InputProps={{
+                        ...params.InputProps,
+                        startAdornment: (
+                          <>
+                            <SearchIcon color="action" sx={{ mr: 1 }} />
+                            {params.InputProps.startAdornment}
+                          </>
+                        ),
+                      }}
+                      sx={{
+                        width: { xs: '100%', sm: 250 },
+                        '& .MuiOutlinedInput-root': {
+                          background: 'rgba(255,255,255,0.9)',
+                          backdropFilter: 'blur(5px)',
+                          borderRadius: 2,
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                        }
+                      }}
+                    />
+                  )}
+                  ListboxProps={{
+                    sx: { 
+                      maxHeight: 300,
+                      '& .MuiAutocomplete-option': {
+                        transition: 'all 0.15s ease',
+                        '&:hover': {
+                          backgroundColor: alpha(theme.palette.primary.main, 0.1)
+                        }
+                      }
+                    }
                   }}
                 />
                 <IconButton color="primary">
