@@ -4505,8 +4505,8 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
                           const rowHeight = 420; // Adjust this based on your card height
                           const rowCount = Math.ceil(memoizedFilteredItems.length / columnCount);
                           
-                          // Memoize the item renderer to prevent unnecessary re-renders
-                          const ItemRenderer = useCallback(({ columnIndex, rowIndex, style }) => {
+                          // Item renderer for the grid
+                          const ItemRenderer = ({ columnIndex, rowIndex, style }) => {
                             const index = rowIndex * columnCount + columnIndex;
                             
                             if (index >= memoizedFilteredItems.length) {
@@ -4529,13 +4529,13 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
                                 />
                               </div>
                             );
-                          }, [memoizedFilteredItems, columnCount, handleAddToCart, isInCart, getCartQuantity]);
+                          };
                           
-                          // Memoize whether an item is loaded to prevent unnecessary renders
-                          const isItemLoaded = useCallback(index => index < memoizedFilteredItems.length, [memoizedFilteredItems.length]);
+                          // Check if an item is loaded
+                          const isItemLoaded = (index) => index < memoizedFilteredItems.length;
                           
-                          // Use a memoized key to force grid refresh when filtered items change
-                          const gridKey = useMemo(() => `grocery-grid-${memoizedFilteredItems.length}`, [memoizedFilteredItems.length]);
+                          // Key for the grid
+                          const gridKey = `grocery-grid-${memoizedFilteredItems.length}`;
                           
                           // Render virtualized grid
                           return (
@@ -4547,7 +4547,7 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
                             >
                               {({ onItemsRendered, ref }) => {
                                 // Convert from Grid to List onItemsRendered format
-                                const onGridItemsRendered = useCallback(({ visibleRowStartIndex, visibleRowStopIndex, visibleColumnStartIndex, visibleColumnStopIndex }) => {
+                                const onGridItemsRendered = ({ visibleRowStartIndex, visibleRowStopIndex, visibleColumnStartIndex, visibleColumnStopIndex }) => {
                                   const startIndex = visibleRowStartIndex * columnCount + visibleColumnStartIndex;
                                   const stopIndex = visibleRowStopIndex * columnCount + visibleColumnStopIndex;
                                   
@@ -4555,7 +4555,7 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
                                     visibleStartIndex: startIndex,
                                     visibleStopIndex: stopIndex
                                   });
-                                }, [columnCount, onItemsRendered]);
+                                };
                                 
                                 return (
                                   <FixedSizeGrid
