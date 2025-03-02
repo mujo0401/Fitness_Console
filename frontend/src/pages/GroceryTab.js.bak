@@ -5746,7 +5746,7 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
     setSelectedStore(store);
   };
   
-  // Handle checkout with DoorDash integration
+  // Handle checkout with Instacart integration
   const handleCheckout = async () => {
     if (!selectedStore) {
       // If no store is selected, prompt user to select one
@@ -5754,33 +5754,33 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
       return;
     }
     
-    // Check if DoorDash is available for the selected store
+    // Check if Instacart is available for the selected store
     try {
       setLocationLoading(true);
       
-      // First check if DoorDash is available for this store and location
-      const doordashAvailabilityResponse = await fetch(
-        `/api/places/doordash/check-availability?store_id=${selectedStore.id}&lat=${userLocation?.lat || '0'}&lng=${userLocation?.lng || '0'}&store_name=${encodeURIComponent(selectedStore.name)}`
+      // First check if Instacart is available for this store and location
+      const instacartAvailabilityResponse = await fetch(
+        `/api/places/instacart/check-availability?store_id=${selectedStore.id}&lat=${userLocation?.lat || '0'}&lng=${userLocation?.lng || '0'}&store_name=${encodeURIComponent(selectedStore.name)}`
       );
       
-      const doordashAvailability = await doordashAvailabilityResponse.json();
+      const instacartAvailability = await instacartAvailabilityResponse.json();
       
-      // If DoorDash is available, show checkout dialog
-      if (doordashAvailability.available) {
-        // Add DoorDash information to selectedStore
+      // If Instacart is available, show checkout dialog
+      if (instacartAvailability.available) {
+        // Add Instacart information to selectedStore
         setSelectedStore({
           ...selectedStore,
-          doordash: doordashAvailability
+          instacart: instacartAvailability
         });
         
         // Open the checkout dialog
         setCheckoutDialogOpen(true);
       } else {
-        // If DoorDash is not available, show alternative checkout dialog
-        alert("DoorDash delivery is not available for this store in your area. Please select another store or try again later.");
+        // If Instacart is not available, show alternative checkout dialog
+        alert("Instacart delivery is not available for this store in your area. Please select another store or try again later.");
       }
     } catch (error) {
-      console.error("Error checking DoorDash availability:", error);
+      console.error("Error checking Instacart availability:", error);
       // Fall back to regular checkout dialog
       setCheckoutDialogOpen(true);
     } finally {
@@ -5788,8 +5788,8 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
     }
   };
   
-  // Handle submitting an order through DoorDash
-  const handleDoorDashSubmit = async () => {
+  // Handle submitting an order through Instacart
+  const handleInstacartSubmit = async () => {
     try {
       // Prepare order data
       const orderData = {
@@ -5810,8 +5810,8 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
         }
       };
       
-      // Submit the order to DoorDash API
-      const response = await fetch('/api/places/doordash/submit-order', {
+      // Submit the order to Instacart API
+      const response = await fetch('/api/places/instacart/submit-order', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -5823,7 +5823,7 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
       
       if (orderResult.success) {
         // If order was successful, show confirmation
-        alert(`Your order #${orderResult.order_id} has been placed with DoorDash! Expected delivery in ${orderResult.estimated_delivery.min_minutes}-${orderResult.estimated_delivery.max_minutes} minutes.`);
+        alert(`Your order #${orderResult.order_id} has been placed with Instacart! Expected delivery in ${orderResult.estimated_delivery.min_minutes}-${orderResult.estimated_delivery.max_minutes} minutes.`);
         
         // Clear the cart
         setCartItems([]);
@@ -5832,11 +5832,11 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
         setCheckoutDialogOpen(false);
       } else {
         // If order failed, show error
-        alert("There was an error placing your order with DoorDash. Please try again later.");
+        alert("There was an error placing your order with Instacart. Please try again later.");
       }
     } catch (error) {
-      console.error("Error submitting DoorDash order:", error);
-      alert("There was an error connecting to DoorDash. Please try again later.");
+      console.error("Error submitting Instacart order:", error);
+      alert("There was an error connecting to Instacart. Please try again later.");
     }
   };
   
@@ -6051,7 +6051,7 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
                       <Box component="ul" sx={{ textAlign: 'left', pl: 2 }}>
                         <Box component="li">
                           <Typography variant="body2" color="text.secondary">
-                            Real-time grocery data APIs (DoorDash, Kroger, etc.)
+                            Real-time grocery data APIs (Instacart, Kroger, etc.)
                           </Typography>
                         </Box>
                         <Box component="li">
@@ -6790,11 +6790,11 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="h6" component="span">Complete Your Order</Typography>
             <img 
-              src="https://www.doordash.com/assets/icons/app-icon.svg" 
-              alt="DoorDash Logo" 
+              src="https://www.instacart.com/assets/icons/app-icon.svg" 
+              alt="Instacart Logo" 
               style={{ height: 24, marginLeft: 'auto' }}
             />
-            <Typography variant="body2" color="primary.main" fontWeight="medium">via DoorDash</Typography>
+            <Typography variant="body2" color="primary.main" fontWeight="medium">via Instacart</Typography>
           </Box>
         </DialogTitle>
         <DialogContent>
@@ -6807,9 +6807,9 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
               <Alert 
                 severity="info" 
                 sx={{ mb: 2 }}
-                icon={<img src="https://www.doordash.com/assets/icons/app-icon.svg" alt="DoorDash" style={{ width: 20, height: 20 }} />}
+                icon={<img src="https://www.instacart.com/assets/icons/app-icon.svg" alt="Instacart" style={{ width: 20, height: 20 }} />}
               >
-                Your order will be fulfilled through DoorDash's delivery network
+                Your order will be fulfilled through Instacart's delivery network
               </Alert>
               
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
@@ -6876,7 +6876,7 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
                         {selectedStore.distance && `${selectedStore.distance.toFixed(1)} miles away`}
                       </Typography>
                       <Chip 
-                        label="DoorDash Delivery" 
+                        label="Instacart Delivery" 
                         size="small" 
                         color="success" 
                         variant="outlined" 
@@ -6887,7 +6887,7 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
                 </Paper>
               )}
               
-              {/* Cart summary with DoorDash fees */}
+              {/* Cart summary with Instacart fees */}
               <Paper 
                 variant="outlined" 
                 sx={{ 
@@ -6936,11 +6936,11 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
                 </Typography>
                 <Typography variant="body2" color="success.main" fontWeight="medium" sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
                   <LocalShippingIcon fontSize="small" />
-                  Estimated delivery: Today within {selectedStore?.doordash?.delivery_estimate?.min_minutes || 30}-{selectedStore?.doordash?.delivery_estimate?.max_minutes || 60} minutes
+                  Estimated delivery: Today within {selectedStore?.instacart?.delivery_estimate?.min_minutes || 30}-{selectedStore?.instacart?.delivery_estimate?.max_minutes || 60} minutes
                 </Typography>
               </Box>
               
-              {/* DoorDash shopper info */}
+              {/* Instacart shopper info */}
               <Paper 
                 variant="outlined" 
                 sx={{ 
@@ -6953,21 +6953,21 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <img 
-                    src="https://www.doordash.com/assets/icons/app-icon.svg" 
-                    alt="DoorDash" 
+                    src="https://www.instacart.com/assets/icons/app-icon.svg" 
+                    alt="Instacart" 
                     style={{ width: 36, height: 36 }}
                   />
                   <Box>
-                    <Typography variant="subtitle2">DoorDash Personal Shopper</Typography>
+                    <Typography variant="subtitle2">Instacart Personal Shopper</Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Your items will be carefully selected by a professional DoorDash shopper
+                      Your items will be carefully selected by a professional Instacart shopper
                     </Typography>
                   </Box>
                 </Box>
               </Paper>
               
               <Typography variant="caption" color="text.secondary">
-                By placing your order, you agree to DoorDash's terms of service and privacy policy. 
+                By placing your order, you agree to Instacart's terms of service and privacy policy. 
                 Items may be subject to availability and prices may vary.
               </Typography>
             </>
@@ -6978,20 +6978,18 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
             Cancel
           </Button>
           <Button 
-            onClick={handleDoorDashSubmit} 
+            onClick={handleInstacartSubmit} 
             variant="contained"
             color="primary"
             disabled={locationLoading}
-            startIcon={<img src="https://www.doordash.com/assets/icons/app-icon.svg" alt="DoorDash" style={{ width: 20, height: 20 }} />}
+            startIcon={<img src="https://www.instacart.com/assets/icons/app-icon.svg" alt="Instacart" style={{ width: 20, height: 20 }} />}
           >
-            Place Order with DoorDash
+            Place Order with Instacart
           </Button>
         </DialogActions>
       </Dialog>
     </Box>
   );
-};
-
 };
 
 export default GroceryTab;
