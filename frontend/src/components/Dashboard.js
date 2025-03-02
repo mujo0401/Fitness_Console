@@ -32,6 +32,7 @@ import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import HeadsetMicIcon from '@mui/icons-material/HeadsetMic';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import InfoIcon from '@mui/icons-material/Info';
+import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
 import { useAuth } from '../context/AuthContext';
 import ApiTester from './ApiTester'; 
 import HeartTab from '../pages/HeartTab'; 
@@ -40,6 +41,7 @@ import ActivityTab from '../pages/ActivityTab';
 import FitnessTab from '../pages/FitnessTab';
 import TrendsTab from '../pages/TrendsTab';
 import GroceryTab from '../pages/GroceryTab';
+import RecipePlannerTab from '../pages/RecipePlannerTab';
 import HealthAssistantTab from '../pages/HealthAssistantTab';
 import ABMTab from '../pages/ABMTab';
 import ExerciseCoach from './ExerciseCoach';
@@ -57,11 +59,11 @@ const Dashboard = () => {
   const [alertMessage, setAlertMessage] = useState('');
   const [alertSeverity, setAlertSeverity] = useState('info');
   const [showDebugTools, setShowDebugTools] = useState(true); // Set to false in production
-  const [currentTab, setCurrentTab] = useState(10); // Use 10 for Info tab (now the last tab)
+  const [currentTab, setCurrentTab] = useState(11); // Use 11 for Info tab (now the last tab)
   const [manualAuthCheck, setManualAuthCheck] = useState(false);
   
-  // Simplified tab mapping with Information tab at the end (index 10)
-  // This aligns with the visual order in the UI and avoids negative indices
+  // Tab mapping with Recipe Planner tab added after Grocery Shop
+  // Information tab remains at the end
   const tabComponentsMap = {
     '0': HeartTab,           // Heart Rate (index 0)
     '1': ActivityTab,        // Activity (index 1)
@@ -71,14 +73,15 @@ const Dashboard = () => {
     '5': ExerciseCoach,      // Exercise Coach (index 5)
     '6': MusicTab,           // Music (index 6)
     '7': GroceryTab,         // Grocery Shop (index 7)
-    '8': TrendsTab,          // Trends (index 8)
-    '9': HealthAssistantTab, // Assistant (index 9)
-    '10': InfoTab            // Information (index 10) - now last tab
+    '8': RecipePlannerTab,   // Recipe Planner (index 8) - NEW
+    '9': TrendsTab,          // Trends (index 9)
+    '10': HealthAssistantTab, // Assistant (index 10)
+    '11': InfoTab            // Information (index 11) - now last tab
   };
   
   // Auto-redirect to Fitness Plan tab if not authenticated and on a protected tab
   useEffect(() => {
-    if (!isAuthenticated && [0, 1, 2, 3, 8].includes(currentTab)) {
+    if (!isAuthenticated && [0, 1, 2, 3, 9].includes(currentTab)) {
       // Redirect to Fitness Plan tab (index 4) if user tries to access protected tabs
       setCurrentTab(4);
     }
@@ -86,9 +89,9 @@ const Dashboard = () => {
 
   // Set default tab to Info when app loads
   useEffect(() => {
-    if (currentTab === 10) {
+    if (currentTab === 11) {
       // Default to Info tab as landing page
-      console.log('Setting default tab to Info tab (index 10)');
+      console.log('Setting default tab to Info tab (index 11)');
     }
     
     // Simple debug log
@@ -185,7 +188,7 @@ const Dashboard = () => {
     console.log(`Tab clicked: Index ${newValue}`);
     
     // Only allow changing to protected tabs if authenticated
-    if (!isAuthenticated && [0, 1, 2, 3, 8].includes(newValue)) {
+    if (!isAuthenticated && [0, 1, 2, 3, 9].includes(newValue)) {
       // If not authenticated and trying to access protected tab, redirect to Fitness Plan tab
       console.log('Protected tab requested, redirecting to Fitness Plan (4)');
       setCurrentTab(4);
@@ -532,6 +535,25 @@ const Dashboard = () => {
                   '&:hover': {
                     bgcolor: 'rgba(67, 160, 71, 0.04)',
                     color: '#43a047'
+                  }
+                }}
+              />
+              <Tab 
+                icon={<RestaurantMenuIcon />}
+                label="Recipe Planner"
+                sx={{
+                  minHeight: 60,
+                  fontWeight: 600,
+                  transition: 'all 0.3s ease',
+                  '&.Mui-selected': {
+                    color: '#e91e63',
+                    fontWeight: 700,
+                    backgroundColor: 'rgba(233, 30, 99, 0.05)',
+                    boxShadow: '0 4px 10px rgba(233, 30, 99, 0.15)'
+                  },
+                  '&:hover': {
+                    bgcolor: 'rgba(233, 30, 99, 0.04)',
+                    color: '#e91e63'
                   }
                 }}
               />
