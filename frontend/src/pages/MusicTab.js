@@ -446,6 +446,9 @@ const MusicTab = () => {
   const [targetBpm, setTargetBpm] = useState(140);
   const [showMiniPlayer, setShowMiniPlayer] = useState(false);
   const [miniPlayerExpanded, setMiniPlayerExpanded] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertSeverity, setAlertSeverity] = useState('info');
   
   const audioRef = useRef(null);
   const progressInterval = useRef(null);
@@ -1268,6 +1271,22 @@ const MusicTab = () => {
       togglePlay, playNextSong, playPreviousSong
     }}>
       <Box sx={{ p: 2 }}>
+        {/* Alert for errors and notifications */}
+        <Snackbar
+          open={alertOpen}
+          autoHideDuration={6000}
+          onClose={() => setAlertOpen(false)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+          <Alert 
+            onClose={() => setAlertOpen(false)} 
+            severity={alertSeverity}
+            sx={{ width: '100%' }}
+          >
+            {alertMessage}
+          </Alert>
+        </Snackbar>
+        
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1733,9 +1752,9 @@ const MusicTab = () => {
                 <Autocomplete
                   freeSolo
                   options={[
-                    ...mockArtists.map(artist => artist.name),
                     ...mockSongs.map(song => song.title),
-                    ...mockGenres,
+                    ...mockSongs.map(song => song.artist),
+                    ...musicGenres,
                     ...mockSongs.map(song => song.album)
                   ].filter((v, i, a) => a.indexOf(v) === i)} // Remove duplicates
                   value={searchTerm}
@@ -1787,7 +1806,7 @@ const MusicTab = () => {
             
             {/* Genre filters */}
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
-              {mockGenres.map(genre => (
+              {musicGenres.map(genre => (
                 <Chip
                   key={genre}
                   label={genre}
