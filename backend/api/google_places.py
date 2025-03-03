@@ -11,13 +11,7 @@ from config import Config
 # Create blueprint
 google_places_bp = Blueprint('google_places', __name__)
 
-# API configuration from Config class
-GOOGLE_API_KEY = Config.GOOGLE_API_KEY
-DOORDASH_API_KEY = Config.DOORDASH_API_KEY
-DOORDASH_CLIENT_ID = Config.DOORDASH_CLIENT_ID
-DOORDASH_CLIENT_SECRET = Config.DOORDASH_CLIENT_SECRET
-DOORDASH_API_BASE_URL = Config.DOORDASH_API_BASE_URL
-DOORDASH_MOCK_API_ENABLED = Config.DOORDASH_MOCK_API_ENABLED
+# We'll get these configurations from Config when the app context is available in the routes
 
 @google_places_bp.route('/nearby', methods=['GET'])
 def nearby_places():
@@ -38,9 +32,12 @@ def nearby_places():
                 'error': 'Missing required parameters: lat and lng are required'
             }), 400
             
+        # Get API key from Config
+        google_api_key = Config.GOOGLE_API_KEY
+        
         # Construct Google Places API URL
         base_url = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json'
-        url = f'{base_url}?location={lat},{lng}&radius={radius}&type={place_type}&key={GOOGLE_API_KEY}'
+        url = f'{base_url}?location={lat},{lng}&radius={radius}&type={place_type}&key={google_api_key}'
         
         # Make request to Google Places API
         response = requests.get(url)
@@ -76,9 +73,12 @@ def place_details():
                 'error': 'Missing required parameter: place_id'
             }), 400
             
+        # Get API key from Config
+        google_api_key = Config.GOOGLE_API_KEY
+        
         # Construct Google Places API URL
         base_url = 'https://maps.googleapis.com/maps/api/place/details/json'
-        url = f'{base_url}?place_id={place_id}&fields=name,rating,formatted_address,formatted_phone_number,opening_hours,website,price_level,photos&key={GOOGLE_API_KEY}'
+        url = f'{base_url}?place_id={place_id}&fields=name,rating,formatted_address,formatted_phone_number,opening_hours,website,price_level,photos&key={google_api_key}'
         
         # Make request to Google Places API
         response = requests.get(url)
@@ -115,9 +115,12 @@ def place_photo():
                 'error': 'Missing required parameter: photoreference'
             }), 400
             
+        # Get API key from Config
+        google_api_key = Config.GOOGLE_API_KEY
+        
         # Construct Google Places API URL
         base_url = 'https://maps.googleapis.com/maps/api/place/photo'
-        url = f'{base_url}?photoreference={photo_reference}&key={GOOGLE_API_KEY}&maxwidth={max_width}'
+        url = f'{base_url}?photoreference={photo_reference}&key={google_api_key}&maxwidth={max_width}'
         
         if max_height:
             url += f'&maxheight={max_height}'
@@ -162,8 +165,11 @@ def check_doordash_availability():
                 'error': 'Missing required parameters: store_id, lat, and lng are required'
             }), 400
         
+        # Get DoorDash config from Config
+        doordash_mock_api_enabled = Config.DOORDASH_MOCK_API_ENABLED
+        
         # Check if using mock API or real API
-        if DOORDASH_MOCK_API_ENABLED:
+        if doordash_mock_api_enabled:
             # For demo purposes, we'll return mock data
             response_data = {
                 'available': True,
@@ -186,19 +192,24 @@ def check_doordash_availability():
             }
         else:
             # In real implementation, make API call to DoorDash
-            if not DOORDASH_API_KEY:
+            doordash_api_key = Config.DOORDASH_API_KEY
+            doordash_client_id = Config.DOORDASH_CLIENT_ID
+            doordash_client_secret = Config.DOORDASH_CLIENT_SECRET
+            doordash_api_base_url = Config.DOORDASH_API_BASE_URL
+            
+            if not doordash_api_key:
                 return jsonify({
                     'error': 'DoorDash API key is not configured. Check your .env file or environment variables.'
                 }), 500
                 
             # Construct DoorDash API URL
-            url = f"{DOORDASH_API_BASE_URL}/v2/availability/check"
+            url = f"{doordash_api_base_url}/v2/availability/check"
             
             # Headers for DoorDash API
             headers = {
                 'Content-Type': 'application/json',
-                'Authorization': f'Bearer {DOORDASH_API_KEY}',
-                'DoorDash-Client-Id': DOORDASH_CLIENT_ID
+                'Authorization': f'Bearer {doordash_api_key}',
+                'DoorDash-Client-Id': doordash_client_id
             }
             
             # Payload for DoorDash API
@@ -257,8 +268,11 @@ def submit_doordash_order():
         tax = round(subtotal * 0.0825, 2)
         total = round(subtotal + tax + 9.98, 2)  # Adding delivery fee + service fee
                 
+        # Get DoorDash config from Config
+        doordash_mock_api_enabled = Config.DOORDASH_MOCK_API_ENABLED
+        
         # Check if using mock API or real API
-        if DOORDASH_MOCK_API_ENABLED:
+        if doordash_mock_api_enabled:
             # Get current timestamp for order ID
             import time
             timestamp = int(time.time())
@@ -284,19 +298,24 @@ def submit_doordash_order():
             }
         else:
             # In real implementation, make API call to DoorDash
-            if not DOORDASH_API_KEY:
+            doordash_api_key = Config.DOORDASH_API_KEY
+            doordash_client_id = Config.DOORDASH_CLIENT_ID
+            doordash_client_secret = Config.DOORDASH_CLIENT_SECRET
+            doordash_api_base_url = Config.DOORDASH_API_BASE_URL
+            
+            if not doordash_api_key:
                 return jsonify({
                     'error': 'DoorDash API key is not configured. Check your .env file or environment variables.'
                 }), 500
                 
             # Construct DoorDash API URL
-            url = f"{DOORDASH_API_BASE_URL}/v2/orders"
+            url = f"{doordash_api_base_url}/v2/orders"
             
             # Headers for DoorDash API
             headers = {
                 'Content-Type': 'application/json',
-                'Authorization': f'Bearer {DOORDASH_API_KEY}',
-                'DoorDash-Client-Id': DOORDASH_CLIENT_ID
+                'Authorization': f'Bearer {doordash_api_key}',
+                'DoorDash-Client-Id': doordash_client_id
             }
             
             # Format the order data for DoorDash API
@@ -421,8 +440,11 @@ def get_doordash_stores():
             }
         ]
         
+        # Get DoorDash config from Config
+        doordash_mock_api_enabled = Config.DOORDASH_MOCK_API_ENABLED
+        
         # Check if using mock API or real API
-        if DOORDASH_MOCK_API_ENABLED:
+        if doordash_mock_api_enabled:
             # For demo purposes, we'll return the mock stores
             # Sort by distance
             mock_stores.sort(key=lambda x: x['distance'])
@@ -430,19 +452,24 @@ def get_doordash_stores():
             stores = mock_stores
         else:
             # In real implementation, make API call to DoorDash
-            if not DOORDASH_API_KEY:
+            doordash_api_key = Config.DOORDASH_API_KEY
+            doordash_client_id = Config.DOORDASH_CLIENT_ID
+            doordash_client_secret = Config.DOORDASH_CLIENT_SECRET
+            doordash_api_base_url = Config.DOORDASH_API_BASE_URL
+            
+            if not doordash_api_key:
                 return jsonify({
                     'error': 'DoorDash API key is not configured. Check your .env file or environment variables.'
                 }), 500
                 
             # Construct DoorDash API URL
-            url = f"{DOORDASH_API_BASE_URL}/v2/stores/nearby"
+            url = f"{doordash_api_base_url}/v2/stores/nearby"
             
             # Headers for DoorDash API
             headers = {
                 'Content-Type': 'application/json',
-                'Authorization': f'Bearer {DOORDASH_API_KEY}',
-                'DoorDash-Client-Id': DOORDASH_CLIENT_ID
+                'Authorization': f'Bearer {doordash_api_key}',
+                'DoorDash-Client-Id': doordash_client_id
             }
             
             # Query parameters for DoorDash API
@@ -529,25 +556,33 @@ def search_doordash_products():
                     'reviews_count': 15 + (i * 8)
                 })
         
+        # Get DoorDash config from Config
+        doordash_mock_api_enabled = Config.DOORDASH_MOCK_API_ENABLED
+        
         # Check if using mock API or real API
-        if DOORDASH_MOCK_API_ENABLED:
+        if doordash_mock_api_enabled:
             # For demo purposes, we'll return mock products
             products = mock_products
         else:
             # In real implementation, make API call to DoorDash
-            if not DOORDASH_API_KEY:
+            doordash_api_key = Config.DOORDASH_API_KEY
+            doordash_client_id = Config.DOORDASH_CLIENT_ID
+            doordash_client_secret = Config.DOORDASH_CLIENT_SECRET
+            doordash_api_base_url = Config.DOORDASH_API_BASE_URL
+            
+            if not doordash_api_key:
                 return jsonify({
                     'error': 'DoorDash API key is not configured. Check your .env file or environment variables.'
                 }), 500
                 
             # Construct DoorDash API URL
-            url = f"{DOORDASH_API_BASE_URL}/v2/stores/{store_id}/products/search"
+            url = f"{doordash_api_base_url}/v2/stores/{store_id}/products/search"
             
             # Headers for DoorDash API
             headers = {
                 'Content-Type': 'application/json',
-                'Authorization': f'Bearer {DOORDASH_API_KEY}',
-                'DoorDash-Client-Id': DOORDASH_CLIENT_ID
+                'Authorization': f'Bearer {doordash_api_key}',
+                'DoorDash-Client-Id': doordash_client_id
             }
             
             # Query parameters for DoorDash API
