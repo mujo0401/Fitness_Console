@@ -42,7 +42,7 @@ import FitnessTab from '../pages/FitnessTab';
 import TrendsTab from '../pages/TrendsTab';
 // Import both the original GroceryTab and the fallback
 import GroceryTab from '../pages/GroceryTab';
-import GroceryTabFallback from './GroceryTabFallback';
+import MinimalGroceryTab from '../pages/MinimalGroceryTab';
 import HealthAssistantTab from '../pages/HealthAssistantTab';
 import ABMTab from '../pages/ABMTab';
 import ExerciseCoach from './ExerciseCoach';
@@ -107,7 +107,7 @@ const Dashboard = () => {
     '4': FitnessTab,         // Fitness Plan (index 4)
     '5': ExerciseCoach,      // Exercise Coach (index 5)
     '6': MusicTab,           // Music (index 6)
-    '7': GroceryTab,         // Grocery Shop (index 7) - with Recipe Planner integrated
+    '7': MinimalGroceryTab,  // Grocery Shop (index 7) - minimal version to ensure it works
     '8': TrendsTab,          // Trends (index 8)
     '9': HealthAssistantTab, // Assistant (index 9)
     '10': InfoTab            // Information (index 10) - now last tab
@@ -665,7 +665,7 @@ const Dashboard = () => {
             if (currentTab === 7) { // GroceryTab index
               return (
                 <Suspense fallback={<CircularProgress />}>
-                  <ErrorBoundary fallback={<GroceryTabFallback />}>
+                  <ErrorBoundary fallback={<MinimalGroceryTab />}>
                     <TabComponent />
                   </ErrorBoundary>
                 </Suspense>
