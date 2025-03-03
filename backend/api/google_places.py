@@ -13,9 +13,11 @@ google_places_bp = Blueprint('google_places', __name__)
 
 # API configuration from Config class
 GOOGLE_API_KEY = Config.GOOGLE_API_KEY
-INSTACART_API_KEY = Config.INSTACART_API_KEY
-INSTACART_API_BASE_URL = Config.INSTACART_API_BASE_URL
-INSTACART_MOCK_API_ENABLED = Config.INSTACART_MOCK_API_ENABLED
+DOORDASH_API_KEY = Config.DOORDASH_API_KEY
+DOORDASH_CLIENT_ID = Config.DOORDASH_CLIENT_ID
+DOORDASH_CLIENT_SECRET = Config.DOORDASH_CLIENT_SECRET
+DOORDASH_API_BASE_URL = Config.DOORDASH_API_BASE_URL
+DOORDASH_MOCK_API_ENABLED = Config.DOORDASH_MOCK_API_ENABLED
 
 @google_places_bp.route('/nearby', methods=['GET'])
 def nearby_places():
@@ -142,11 +144,11 @@ def place_photo():
             'error': str(e)
         }), 500
 
-# Instacart integration endpoints
-@google_places_bp.route('/instacart/check-availability', methods=['GET'])
-def check_instacart_availability():
+# DoorDash integration endpoints
+@google_places_bp.route('/doordash/check-availability', methods=['GET'])
+def check_doordash_availability():
     """
-    Check if Instacart delivery is available for a given store and location
+    Check if DoorDash delivery is available for a given store and location
     """
     try:
         # Get parameters from request
@@ -161,7 +163,7 @@ def check_instacart_availability():
             }), 400
         
         # Check if using mock API or real API
-        if INSTACART_MOCK_API_ENABLED:
+        if DOORDASH_MOCK_API_ENABLED:
             # For demo purposes, we'll return mock data
             response_data = {
                 'available': True,
@@ -176,29 +178,30 @@ def check_instacart_availability():
                 'minimum_order': 10.00,
                 'store': {
                     'id': store_id,
-                    'instacart_id': f'ic_{store_id}',
+                    'doordash_id': f'dd_{store_id}',
                     'name': request.args.get('store_name', 'Unknown Store'),
                     'delivery_available': True,
                     'pickup_available': True
                 }
             }
         else:
-            # In real implementation, make API call to Instacart
-            if not INSTACART_API_KEY:
+            # In real implementation, make API call to DoorDash
+            if not DOORDASH_API_KEY:
                 return jsonify({
-                    'error': 'Instacart API key is not configured. Check your .env file or environment variables.'
+                    'error': 'DoorDash API key is not configured. Check your .env file or environment variables.'
                 }), 500
                 
-            # Construct Instacart API URL
-            url = f"{INSTACART_API_BASE_URL}/v1/availability/check"
+            # Construct DoorDash API URL
+            url = f"{DOORDASH_API_BASE_URL}/v2/availability/check"
             
-            # Headers for Instacart API
+            # Headers for DoorDash API
             headers = {
                 'Content-Type': 'application/json',
-                'Authorization': f'Bearer {INSTACART_API_KEY}'
+                'Authorization': f'Bearer {DOORDASH_API_KEY}',
+                'DoorDash-Client-Id': DOORDASH_CLIENT_ID
             }
             
-            # Payload for Instacart API
+            # Payload for DoorDash API
             payload = {
                 'store_id': store_id,
                 'location': {
@@ -207,17 +210,17 @@ def check_instacart_availability():
                 }
             }
             
-            # Make request to Instacart API
+            # Make request to DoorDash API
             response = requests.post(url, headers=headers, json=payload)
             
             # Check if request was successful
             if response.status_code != 200:
                 return jsonify({
-                    'error': f'Instacart API returned status code: {response.status_code}',
+                    'error': f'DoorDash API returned status code: {response.status_code}',
                     'message': response.text
                 }), response.status_code
                 
-            # Return Instacart API response
+            # Return DoorDash API response
             response_data = response.json()
         
         return jsonify(response_data)
@@ -227,10 +230,10 @@ def check_instacart_availability():
             'error': str(e)
         }), 500
 
-@google_places_bp.route('/instacart/submit-order', methods=['POST'])
-def submit_instacart_order():
+@google_places_bp.route('/doordash/submit-order', methods=['POST'])
+def submit_doordash_order():
     """
-    Submit an order to Instacart
+    Submit an order to DoorDash
     """
     try:
         # Get the order data from the request body
@@ -255,7 +258,7 @@ def submit_instacart_order():
         total = round(subtotal + tax + 9.98, 2)  # Adding delivery fee + service fee
                 
         # Check if using mock API or real API
-        if INSTACART_MOCK_API_ENABLED:
+        if DOORDASH_MOCK_API_ENABLED:
             # Get current timestamp for order ID
             import time
             timestamp = int(time.time())
@@ -276,27 +279,28 @@ def submit_instacart_order():
                     'tax': tax,
                     'total': total
                 },
-                'tracking_url': 'https://www.instacart.com/orders/tracking?id=mock_tracking_id',
+                'tracking_url': 'https://www.doordash.com/orders/tracking?id=mock_tracking_id',
                 'status': 'processing'
             }
         else:
-            # In real implementation, make API call to Instacart
-            if not INSTACART_API_KEY:
+            # In real implementation, make API call to DoorDash
+            if not DOORDASH_API_KEY:
                 return jsonify({
-                    'error': 'Instacart API key is not configured. Check your .env file or environment variables.'
+                    'error': 'DoorDash API key is not configured. Check your .env file or environment variables.'
                 }), 500
                 
-            # Construct Instacart API URL
-            url = f"{INSTACART_API_BASE_URL}/v1/orders"
+            # Construct DoorDash API URL
+            url = f"{DOORDASH_API_BASE_URL}/v2/orders"
             
-            # Headers for Instacart API
+            # Headers for DoorDash API
             headers = {
                 'Content-Type': 'application/json',
-                'Authorization': f'Bearer {INSTACART_API_KEY}'
+                'Authorization': f'Bearer {DOORDASH_API_KEY}',
+                'DoorDash-Client-Id': DOORDASH_CLIENT_ID
             }
             
-            # Format the order data for Instacart API
-            instacart_payload = {
+            # Format the order data for DoorDash API
+            doordash_payload = {
                 'store_id': order_data['store_id'],
                 'delivery_address': order_data['delivery_address'],
                 'items': [
@@ -317,17 +321,17 @@ def submit_instacart_order():
                 })
             }
             
-            # Make request to Instacart API
-            response = requests.post(url, headers=headers, json=instacart_payload)
+            # Make request to DoorDash API
+            response = requests.post(url, headers=headers, json=doordash_payload)
             
             # Check if request was successful
             if response.status_code != 200 and response.status_code != 201:
                 return jsonify({
-                    'error': f'Instacart API returned status code: {response.status_code}',
+                    'error': f'DoorDash API returned status code: {response.status_code}',
                     'message': response.text
                 }), response.status_code
                 
-            # Return Instacart API response
+            # Return DoorDash API response
             response_data = response.json()
         
         return jsonify(response_data)
@@ -337,10 +341,10 @@ def submit_instacart_order():
             'error': str(e)
         }), 500
 
-@google_places_bp.route('/instacart/stores', methods=['GET'])
-def get_instacart_stores():
+@google_places_bp.route('/doordash/stores', methods=['GET'])
+def get_doordash_stores():
     """
-    Get a list of stores available through Instacart in a given area
+    Get a list of stores available through DoorDash in a given area
     """
     try:
         # Get parameters from request
@@ -353,12 +357,12 @@ def get_instacart_stores():
                 'error': 'Missing required parameters: lat and lng are required'
             }), 400
         
-        # These are the mock stores that would be available through Instacart
+        # These are the mock stores that would be available through DoorDash
         mock_stores = [
             {
-                'id': 'instacart_101',
+                'id': 'doordash_101',
                 'name': 'Whole Foods Market',
-                'logo_url': 'https://www.instacart.com/assets/retailers/whole_foods.png',
+                'logo_url': 'https://cdn.doordash.com/media/restaurant/cover/WholeFoods.png',
                 'delivery_fee': 3.99,
                 'min_order': 10.00,
                 'delivery_time': '35-50 min',
@@ -366,9 +370,9 @@ def get_instacart_stores():
                 'distance': 2.3
             },
             {
-                'id': 'instacart_102',
+                'id': 'doordash_102',
                 'name': 'Kroger',
-                'logo_url': 'https://www.instacart.com/assets/retailers/kroger.png',
+                'logo_url': 'https://cdn.doordash.com/media/restaurant/cover/Kroger.png',
                 'delivery_fee': 3.99,
                 'min_order': 10.00,
                 'delivery_time': '30-45 min',
@@ -376,9 +380,9 @@ def get_instacart_stores():
                 'distance': 1.8
             },
             {
-                'id': 'instacart_103',
+                'id': 'doordash_103',
                 'name': 'Costco',
-                'logo_url': 'https://www.instacart.com/assets/retailers/costco.png',
+                'logo_url': 'https://cdn.doordash.com/media/restaurant/cover/Costco.png',
                 'delivery_fee': 5.99,
                 'min_order': 35.00,
                 'delivery_time': '45-60 min',
@@ -386,9 +390,9 @@ def get_instacart_stores():
                 'distance': 3.5
             },
             {
-                'id': 'instacart_104',
+                'id': 'doordash_104',
                 'name': 'Target',
-                'logo_url': 'https://www.instacart.com/assets/retailers/target.png',
+                'logo_url': 'https://cdn.doordash.com/media/restaurant/cover/Target.png',
                 'delivery_fee': 3.99,
                 'min_order': 10.00,
                 'delivery_time': '30-45 min',
@@ -396,9 +400,9 @@ def get_instacart_stores():
                 'distance': 2.1
             },
             {
-                'id': 'instacart_105',
+                'id': 'doordash_105',
                 'name': 'Albertsons',
-                'logo_url': 'https://www.instacart.com/assets/retailers/albertsons.png',
+                'logo_url': 'https://cdn.doordash.com/media/restaurant/cover/Albertsons.png',
                 'delivery_fee': 3.99,
                 'min_order': 10.00,
                 'delivery_time': '35-50 min',
@@ -406,9 +410,9 @@ def get_instacart_stores():
                 'distance': 2.7
             },
             {
-                'id': 'instacart_106',
+                'id': 'doordash_106',
                 'name': 'Sprouts Farmers Market',
-                'logo_url': 'https://www.instacart.com/assets/retailers/sprouts.png',
+                'logo_url': 'https://cdn.doordash.com/media/restaurant/cover/Sprouts.png',
                 'delivery_fee': 3.99,
                 'min_order': 10.00,
                 'delivery_time': '40-55 min',
@@ -418,29 +422,30 @@ def get_instacart_stores():
         ]
         
         # Check if using mock API or real API
-        if INSTACART_MOCK_API_ENABLED:
+        if DOORDASH_MOCK_API_ENABLED:
             # For demo purposes, we'll return the mock stores
             # Sort by distance
             mock_stores.sort(key=lambda x: x['distance'])
             
             stores = mock_stores
         else:
-            # In real implementation, make API call to Instacart
-            if not INSTACART_API_KEY:
+            # In real implementation, make API call to DoorDash
+            if not DOORDASH_API_KEY:
                 return jsonify({
-                    'error': 'Instacart API key is not configured. Check your .env file or environment variables.'
+                    'error': 'DoorDash API key is not configured. Check your .env file or environment variables.'
                 }), 500
                 
-            # Construct Instacart API URL
-            url = f"{INSTACART_API_BASE_URL}/v1/stores/nearby"
+            # Construct DoorDash API URL
+            url = f"{DOORDASH_API_BASE_URL}/v2/stores/nearby"
             
-            # Headers for Instacart API
+            # Headers for DoorDash API
             headers = {
                 'Content-Type': 'application/json',
-                'Authorization': f'Bearer {INSTACART_API_KEY}'
+                'Authorization': f'Bearer {DOORDASH_API_KEY}',
+                'DoorDash-Client-Id': DOORDASH_CLIENT_ID
             }
             
-            # Query parameters for Instacart API
+            # Query parameters for DoorDash API
             params = {
                 'latitude': lat,
                 'longitude': lng,
@@ -448,17 +453,17 @@ def get_instacart_stores():
                 'limit': 20    # Up to 20 stores
             }
             
-            # Make request to Instacart API
+            # Make request to DoorDash API
             response = requests.get(url, headers=headers, params=params)
             
             # Check if request was successful
             if response.status_code != 200:
                 return jsonify({
-                    'error': f'Instacart API returned status code: {response.status_code}',
+                    'error': f'DoorDash API returned status code: {response.status_code}',
                     'message': response.text
                 }), response.status_code
                 
-            # Return Instacart API response
+            # Return DoorDash API response
             stores = response.json().get('stores', [])
         
         return jsonify({
@@ -470,10 +475,10 @@ def get_instacart_stores():
             'error': str(e)
         }), 500
 
-@google_places_bp.route('/instacart/products', methods=['GET'])
-def search_instacart_products():
+@google_places_bp.route('/doordash/products', methods=['GET'])
+def search_doordash_products():
     """
-    Search for products available through Instacart
+    Search for products available through DoorDash
     """
     try:
         # Get parameters from request
@@ -525,42 +530,43 @@ def search_instacart_products():
                 })
         
         # Check if using mock API or real API
-        if INSTACART_MOCK_API_ENABLED:
+        if DOORDASH_MOCK_API_ENABLED:
             # For demo purposes, we'll return mock products
             products = mock_products
         else:
-            # In real implementation, make API call to Instacart
-            if not INSTACART_API_KEY:
+            # In real implementation, make API call to DoorDash
+            if not DOORDASH_API_KEY:
                 return jsonify({
-                    'error': 'Instacart API key is not configured. Check your .env file or environment variables.'
+                    'error': 'DoorDash API key is not configured. Check your .env file or environment variables.'
                 }), 500
                 
-            # Construct Instacart API URL
-            url = f"{INSTACART_API_BASE_URL}/v1/stores/{store_id}/products/search"
+            # Construct DoorDash API URL
+            url = f"{DOORDASH_API_BASE_URL}/v2/stores/{store_id}/products/search"
             
-            # Headers for Instacart API
+            # Headers for DoorDash API
             headers = {
                 'Content-Type': 'application/json',
-                'Authorization': f'Bearer {INSTACART_API_KEY}'
+                'Authorization': f'Bearer {DOORDASH_API_KEY}',
+                'DoorDash-Client-Id': DOORDASH_CLIENT_ID
             }
             
-            # Query parameters for Instacart API
+            # Query parameters for DoorDash API
             params = {
                 'q': query,
                 'limit': 20    # Up to 20 products
             }
             
-            # Make request to Instacart API
+            # Make request to DoorDash API
             response = requests.get(url, headers=headers, params=params)
             
             # Check if request was successful
             if response.status_code != 200:
                 return jsonify({
-                    'error': f'Instacart API returned status code: {response.status_code}',
+                    'error': f'DoorDash API returned status code: {response.status_code}',
                     'message': response.text
                 }), response.status_code
                 
-            # Return Instacart API response
+            # Return DoorDash API response
             products = response.json().get('products', [])
         
         return jsonify({
