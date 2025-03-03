@@ -2,16 +2,12 @@ import os
 import requests
 import sys
 import json
-from flask import Blueprint, jsonify, request
-
-# Add the parent directory to sys.path to allow absolute imports
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import Config
+from flask import Blueprint, jsonify, request, current_app
 
 # Create blueprint
 google_places_bp = Blueprint('google_places', __name__)
 
-# We'll get these configurations from Config when the app context is available in the routes
+# We'll get these configurations from current_app.config when the app context is available in the routes
 
 @google_places_bp.route('/nearby', methods=['GET'])
 def nearby_places():
@@ -32,8 +28,8 @@ def nearby_places():
                 'error': 'Missing required parameters: lat and lng are required'
             }), 400
             
-        # Get API key from Config
-        google_api_key = Config.GOOGLE_API_KEY
+        # Get API key from current_app.config
+        google_api_key = current_app.config.get('GOOGLE_API_KEY')
         
         # Construct Google Places API URL
         base_url = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json'
@@ -73,8 +69,8 @@ def place_details():
                 'error': 'Missing required parameter: place_id'
             }), 400
             
-        # Get API key from Config
-        google_api_key = Config.GOOGLE_API_KEY
+        # Get API key from current_app.config
+        google_api_key = current_app.config.get('GOOGLE_API_KEY')
         
         # Construct Google Places API URL
         base_url = 'https://maps.googleapis.com/maps/api/place/details/json'
@@ -115,8 +111,8 @@ def place_photo():
                 'error': 'Missing required parameter: photoreference'
             }), 400
             
-        # Get API key from Config
-        google_api_key = Config.GOOGLE_API_KEY
+        # Get API key from current_app.config
+        google_api_key = current_app.config.get('GOOGLE_API_KEY')
         
         # Construct Google Places API URL
         base_url = 'https://maps.googleapis.com/maps/api/place/photo'
@@ -165,8 +161,8 @@ def check_doordash_availability():
                 'error': 'Missing required parameters: store_id, lat, and lng are required'
             }), 400
         
-        # Get DoorDash config from Config
-        doordash_mock_api_enabled = Config.DOORDASH_MOCK_API_ENABLED
+        # Get DoorDash config from current_app.config
+        doordash_mock_api_enabled = current_app.config.get('DOORDASH_MOCK_API_ENABLED')
         
         # Check if using mock API or real API
         if doordash_mock_api_enabled:
@@ -192,10 +188,10 @@ def check_doordash_availability():
             }
         else:
             # In real implementation, make API call to DoorDash
-            doordash_api_key = Config.DOORDASH_API_KEY
-            doordash_client_id = Config.DOORDASH_CLIENT_ID
-            doordash_client_secret = Config.DOORDASH_CLIENT_SECRET
-            doordash_api_base_url = Config.DOORDASH_API_BASE_URL
+            doordash_api_key = current_app.config.get('DOORDASH_API_KEY')
+            doordash_client_id = current_app.config.get('DOORDASH_CLIENT_ID')
+            doordash_client_secret = current_app.config.get('DOORDASH_CLIENT_SECRET')
+            doordash_api_base_url = current_app.config.get('DOORDASH_API_BASE_URL')
             
             if not doordash_api_key:
                 return jsonify({
@@ -268,8 +264,8 @@ def submit_doordash_order():
         tax = round(subtotal * 0.0825, 2)
         total = round(subtotal + tax + 9.98, 2)  # Adding delivery fee + service fee
                 
-        # Get DoorDash config from Config
-        doordash_mock_api_enabled = Config.DOORDASH_MOCK_API_ENABLED
+        # Get DoorDash config from current_app.config
+        doordash_mock_api_enabled = current_app.config.get('DOORDASH_MOCK_API_ENABLED')
         
         # Check if using mock API or real API
         if doordash_mock_api_enabled:
@@ -298,10 +294,10 @@ def submit_doordash_order():
             }
         else:
             # In real implementation, make API call to DoorDash
-            doordash_api_key = Config.DOORDASH_API_KEY
-            doordash_client_id = Config.DOORDASH_CLIENT_ID
-            doordash_client_secret = Config.DOORDASH_CLIENT_SECRET
-            doordash_api_base_url = Config.DOORDASH_API_BASE_URL
+            doordash_api_key = current_app.config.get('DOORDASH_API_KEY')
+            doordash_client_id = current_app.config.get('DOORDASH_CLIENT_ID')
+            doordash_client_secret = current_app.config.get('DOORDASH_CLIENT_SECRET')
+            doordash_api_base_url = current_app.config.get('DOORDASH_API_BASE_URL')
             
             if not doordash_api_key:
                 return jsonify({
@@ -440,8 +436,8 @@ def get_doordash_stores():
             }
         ]
         
-        # Get DoorDash config from Config
-        doordash_mock_api_enabled = Config.DOORDASH_MOCK_API_ENABLED
+        # Get DoorDash config from current_app.config
+        doordash_mock_api_enabled = current_app.config.get('DOORDASH_MOCK_API_ENABLED')
         
         # Check if using mock API or real API
         if doordash_mock_api_enabled:
@@ -452,10 +448,10 @@ def get_doordash_stores():
             stores = mock_stores
         else:
             # In real implementation, make API call to DoorDash
-            doordash_api_key = Config.DOORDASH_API_KEY
-            doordash_client_id = Config.DOORDASH_CLIENT_ID
-            doordash_client_secret = Config.DOORDASH_CLIENT_SECRET
-            doordash_api_base_url = Config.DOORDASH_API_BASE_URL
+            doordash_api_key = current_app.config.get('DOORDASH_API_KEY')
+            doordash_client_id = current_app.config.get('DOORDASH_CLIENT_ID')
+            doordash_client_secret = current_app.config.get('DOORDASH_CLIENT_SECRET')
+            doordash_api_base_url = current_app.config.get('DOORDASH_API_BASE_URL')
             
             if not doordash_api_key:
                 return jsonify({
@@ -556,8 +552,8 @@ def search_doordash_products():
                     'reviews_count': 15 + (i * 8)
                 })
         
-        # Get DoorDash config from Config
-        doordash_mock_api_enabled = Config.DOORDASH_MOCK_API_ENABLED
+        # Get DoorDash config from current_app.config
+        doordash_mock_api_enabled = current_app.config.get('DOORDASH_MOCK_API_ENABLED')
         
         # Check if using mock API or real API
         if doordash_mock_api_enabled:
@@ -565,10 +561,10 @@ def search_doordash_products():
             products = mock_products
         else:
             # In real implementation, make API call to DoorDash
-            doordash_api_key = Config.DOORDASH_API_KEY
-            doordash_client_id = Config.DOORDASH_CLIENT_ID
-            doordash_client_secret = Config.DOORDASH_CLIENT_SECRET
-            doordash_api_base_url = Config.DOORDASH_API_BASE_URL
+            doordash_api_key = current_app.config.get('DOORDASH_API_KEY')
+            doordash_client_id = current_app.config.get('DOORDASH_CLIENT_ID')
+            doordash_client_secret = current_app.config.get('DOORDASH_CLIENT_SECRET')
+            doordash_api_base_url = current_app.config.get('DOORDASH_API_BASE_URL')
             
             if not doordash_api_key:
                 return jsonify({
