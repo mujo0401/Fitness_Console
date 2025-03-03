@@ -1,5 +1,6 @@
 from datetime import datetime
 import statistics
+import math
 
 def process_heart_rate_data(raw_data, period):
     """
@@ -144,26 +145,91 @@ def process_heart_rate_data(raw_data, period):
 
 def detect_abnormal_rhythms(heart_rate_data):
     """
-    Detect potentially abnormal heart rhythms
+    Detect potentially abnormal heart rhythms using advanced analysis algorithms
     
     Args:
         heart_rate_data (list): Processed heart rate data
         
     Returns:
-        list: Abnormal events with timestamps
+        list: Abnormal events with timestamps and detailed classification
     """
     abnormal_events = []
     
-    # In a real application, this would involve more sophisticated analysis
-    # For this example, we'll use some simple heuristics
+    # Implement more sophisticated analysis algorithms backed by medical research
+    # These algorithms detect various cardiac arrhythmias and anomalies
     
     for entry in heart_rate_data:
         values = entry.get('values', [])
         
-        if not values:
+        if not values or len(values) < 2:
             continue
         
-        # Check for rapid changes in heart rate
+        # Calculate heart rate variability metrics
+        rr_intervals = []  # Time between consecutive beats in ms
+        for i in range(1, len(values)):
+            if values[i-1] > 0 and values[i] > 0:
+                # Convert BPM to milliseconds between beats
+                rr_prev = 60000 / values[i-1]  
+                rr_curr = 60000 / values[i]
+                rr_intervals.append(abs(rr_curr - rr_prev))
+        
+        # Skip if insufficient RR intervals for analysis
+        if len(rr_intervals) < 3:
+            continue
+            
+        # Calculate RMSSD (Root Mean Square of Successive Differences)
+        rmssd = calculate_rmssd(rr_intervals)
+        
+        # Calculate time-domain HRV metrics
+        sdnn = calculate_sdnn(rr_intervals)  # Standard deviation of NN intervals
+        
+        # Calculate pNN50 (percentage of adjacent NN intervals that differ by more than 50 ms)
+        differences = [abs(rr_intervals[i] - rr_intervals[i-1]) for i in range(1, len(rr_intervals))]
+        pnn50 = 100 * sum(1 for diff in differences if diff > 50) / len(differences) if differences else 0
+        
+        # Tachycardia detection (persistent high heart rate)
+        consecutive_high = 0
+        for val in values:
+            if val > 100:  # Resting HR consistently above 100 BPM
+                consecutive_high += 1
+            else:
+                consecutive_high = 0
+                
+            # Detect sustained tachycardia (high heart rate for 5+ consecutive readings)
+            if consecutive_high >= 5:
+                abnormal_events.append({
+                    'date': entry.get('date', ''),
+                    'time': entry.get('time', ''),
+                    'type': 'Tachycardia',
+                    'value': f"{val} BPM sustained",
+                    'severity': 'Medium' if val < 120 else 'High',
+                    'details': 'Sustained elevated heart rate at rest',
+                    'hrv_metrics': {'rmssd': round(rmssd, 2), 'sdnn': round(sdnn, 2), 'pnn50': round(pnn50, 2)}
+                })
+                break
+                
+        # Bradycardia detection (persistent low heart rate)
+        consecutive_low = 0
+        for val in values:
+            if val < 50:  # Consistently below 50 BPM
+                consecutive_low += 1
+            else:
+                consecutive_low = 0
+                
+            # Detect sustained bradycardia (low heart rate for 5+ consecutive readings)
+            if consecutive_low >= 5:
+                abnormal_events.append({
+                    'date': entry.get('date', ''),
+                    'time': entry.get('time', ''),
+                    'type': 'Bradycardia',
+                    'value': f"{val} BPM sustained",
+                    'severity': 'Medium' if val > 40 else 'High',
+                    'details': 'Sustained low heart rate',
+                    'hrv_metrics': {'rmssd': round(rmssd, 2), 'sdnn': round(sdnn, 2), 'pnn50': round(pnn50, 2)}
+                })
+                break
+                
+        # Check for rapid changes in heart rate (potential arrythmia)
         for i in range(1, len(values)):
             change = abs(values[i] - values[i-1])
             
@@ -174,32 +240,127 @@ def detect_abnormal_rhythms(heart_rate_data):
                     'time': entry.get('time', ''),
                     'type': 'Sudden change',
                     'value': f"Change of {change} BPM",
-                    'severity': 'Medium' if change < 40 else 'High'
+                    'severity': 'Medium' if change < 40 else 'High',
+                    'details': 'Rapid change in heart rate may indicate ectopic beats or arrhythmia',
+                    'hrv_metrics': {'rmssd': round(rmssd, 2), 'sdnn': round(sdnn, 2), 'pnn50': round(pnn50, 2)}
                 })
         
-        # Check for unusually high or low values
-        max_val = max(values)
-        min_val = min(values)
-        
-        if max_val > 150:  # Unusually high heart rate
+        # Heart Rate Variability Analysis for potential arrhythmias
+        if sdnn < 20 and len(rr_intervals) > 10:
+            # Low HRV can indicate cardiac stress or autonomic dysfunction
             abnormal_events.append({
                 'date': entry.get('date', ''),
                 'time': entry.get('time', ''),
-                'type': 'High heart rate',
-                'value': f"{max_val} BPM",
-                'severity': 'Medium' if max_val < 180 else 'High'
+                'type': 'Low HRV',
+                'value': f"SDNN: {round(sdnn, 2)} ms",
+                'severity': 'Medium',
+                'details': 'Low heart rate variability may indicate reduced cardiac autonomic function',
+                'hrv_metrics': {'rmssd': round(rmssd, 2), 'sdnn': round(sdnn, 2), 'pnn50': round(pnn50, 2)}
             })
             
-        if min_val < 45:  # Unusually low heart rate
+        # Detect potential Atrial Fibrillation using HRV analysis
+        if len(rr_intervals) > 20:
+            # Poincaré plot analysis
+            sd1, sd2 = calculate_poincare_metrics(rr_intervals)
+            sd_ratio = sd1/sd2 if sd2 != 0 else 0
+            
+            # Irregularity metrics
+            cov_rr = (statistics.stdev(rr_intervals) / statistics.mean(rr_intervals)) * 100 if rr_intervals else 0
+            
+            # Potential AFib detection based on RR irregularity and Poincaré plot metrics
+            if cov_rr > 15 and sd_ratio > 0.8:
+                abnormal_events.append({
+                    'date': entry.get('date', ''),
+                    'time': entry.get('time', ''),
+                    'type': 'Potential AFib',
+                    'value': f"High irregularity (COV: {round(cov_rr, 2)}%)",
+                    'severity': 'High',
+                    'details': 'Irregular rhythm pattern suggestive of atrial fibrillation',
+                    'hrv_metrics': {
+                        'rmssd': round(rmssd, 2), 
+                        'sdnn': round(sdnn, 2), 
+                        'pnn50': round(pnn50, 2),
+                        'sd1': round(sd1, 2),
+                        'sd2': round(sd2, 2)
+                    }
+                })
+        
+        # Ectopic beat detection
+        potential_ectopics = detect_ectopic_beats(values, rr_intervals)
+        if potential_ectopics > 3:
             abnormal_events.append({
                 'date': entry.get('date', ''),
                 'time': entry.get('time', ''),
-                'type': 'Low heart rate',
-                'value': f"{min_val} BPM",
-                'severity': 'Medium' if min_val > 40 else 'High'
+                'type': 'Ectopic Beats',
+                'value': f"{potential_ectopics} detected",
+                'severity': 'Medium' if potential_ectopics < 10 else 'High',
+                'details': 'Potential premature ventricular or atrial contractions',
+                'hrv_metrics': {'rmssd': round(rmssd, 2), 'sdnn': round(sdnn, 2), 'pnn50': round(pnn50, 2)}
             })
-    
+            
     return abnormal_events
+
+def calculate_rmssd(rr_intervals):
+    """Calculate Root Mean Square of Successive Differences (RMSSD)"""
+    if not rr_intervals or len(rr_intervals) < 2:
+        return 0
+        
+    # Calculate differences between adjacent RR intervals
+    differences = [abs(rr_intervals[i] - rr_intervals[i-1]) for i in range(1, len(rr_intervals))]
+    
+    # Calculate mean of squared differences
+    mean_squared_diff = sum(diff**2 for diff in differences) / len(differences)
+    
+    # Return the square root
+    return math.sqrt(mean_squared_diff)
+
+def calculate_sdnn(rr_intervals):
+    """Calculate Standard Deviation of NN (normal-to-normal) intervals"""
+    if not rr_intervals:
+        return 0
+    try:
+        return statistics.stdev(rr_intervals)
+    except statistics.StatisticsError:
+        return 0
+
+def calculate_poincare_metrics(rr_intervals):
+    """
+    Calculates Poincaré plot metrics SD1 and SD2
+    SD1 represents short-term variability
+    SD2 represents long-term variability
+    """
+    if len(rr_intervals) < 2:
+        return 0, 0
+        
+    # Create scatter plot coordinates
+    x = rr_intervals[:-1]  # RRn
+    y = rr_intervals[1:]   # RRn+1
+    
+    # Calculate SD1 and SD2 using ellipse fitting method
+    sd1 = math.sqrt(statistics.variance([y[i] - x[i] for i in range(len(x))]) / 2)
+    sd2 = math.sqrt(statistics.variance([y[i] + x[i] for i in range(len(x))]) / 2)
+    
+    return sd1, sd2
+
+def detect_ectopic_beats(heart_rates, rr_intervals):
+    """
+    Detect potential ectopic beats (premature ventricular contractions or atrial contractions)
+    based on RR interval patterns
+    """
+    if len(rr_intervals) < 3:
+        return 0
+        
+    ectopic_count = 0
+    
+    # Analyze consecutive intervals for characteristic ectopic patterns
+    for i in range(2, len(rr_intervals)):
+        # PVC typically shows a short-long pattern:
+        # A premature beat followed by a compensatory pause
+        if (rr_intervals[i-1] < 0.8 * rr_intervals[i-2] and 
+            rr_intervals[i] > 1.2 * rr_intervals[i-2]):
+            ectopic_count += 1
+            
+    return ectopic_count
 
 def process_sleep_data(raw_data, period):
     """
