@@ -664,7 +664,7 @@ const Dashboard = () => {
             if (currentTab === 7) { // GroceryTab index
               return (
                 <Suspense fallback={<CircularProgress />}>
-                  <ErrorBoundary fallback={<MinimalGroceryTab />}>
+                  <ErrorBoundary fallback={<Typography variant="h6" sx={{ p: 3 }}>Unable to load Grocery Shop</Typography>}>
                     <TabComponent />
                   </ErrorBoundary>
                 </Suspense>
