@@ -153,6 +153,19 @@ export function BodySVG({
     const calfBottomY = kneeY + 110;
     
     return {
+      // Export coordinates for other functions to use
+      shoulderY,
+      chestY,
+      waistY,
+      hipY,
+      shoulderLeftX,
+      shoulderRightX,
+      chestLeftX,
+      chestRightX,
+      waistLeftX,
+      waistRightX,
+      hipLeftX,
+      hipRightX,
       // Head path
       head: `M ${width/2 - headWidth/2} ${headCY} a ${headWidth/2} ${headWidth/2} 0 1 0 ${headWidth} 0 a ${headWidth/2} ${headWidth/2} 0 1 0 ${-headWidth} 0`,
       
@@ -302,6 +315,22 @@ export function BodySVG({
     const calfBottomY = kneeY + 110;
     
     return {
+      // Export coordinates for other functions to use
+      shoulderY,
+      upperBackY,
+      midBackY,
+      waistY,
+      hipY,
+      shoulderLeftX,
+      shoulderRightX,
+      upperBackLeftX,
+      upperBackRightX,
+      midBackLeftX,
+      midBackRightX,
+      waistLeftX,
+      waistRightX,
+      hipLeftX,
+      hipRightX,
       // Head path
       head: `M ${width/2 - headWidth/2} ${headCY} a ${headWidth/2} ${headWidth/2} 0 1 0 ${headWidth} 0 a ${headWidth/2} ${headWidth/2} 0 1 0 ${-headWidth} 0`,
       
@@ -696,47 +725,73 @@ export function BodySVG({
           {/* Muscle group highlight overlays */}
           <g className="muscle-highlights">
             {/* Shoulders highlight */}
-            <path 
-              d={`M ${width/2 - shoulderWidth/2 - 5} ${shoulderY - 5}
-                 L ${width/2 + shoulderWidth/2 + 5} ${shoulderY - 5}
-                 L ${width/2 + shoulderWidth/2 + 10} ${shoulderY + 20}
-                 C ${width/2 + chestWidth/2 + 5} ${shoulderY + 30}, ${width/2 + chestWidth/2} ${shoulderY + 30}, ${width/2 + chestWidth/2 - 5} ${shoulderY + 40}
-                 L ${width/2 - chestWidth/2 + 5} ${shoulderY + 40}
-                 C ${width/2 - chestWidth/2} ${shoulderY + 30}, ${width/2 - chestWidth/2 - 5} ${shoulderY + 30}, ${width/2 - shoulderWidth/2 - 10} ${shoulderY + 20}
-                 Z`} 
-              fill={getMuscleHighlightColor('shoulders')}
-              stroke="none"
-            />
-            
-            {/* Chest highlight - front view only */}
-            {frontView && (
-              <path 
-                d={`M ${width/2 - chestWidth/2 + 5} ${shoulderY + 40}
-                   L ${width/2 + chestWidth/2 - 5} ${shoulderY + 40}
-                   C ${width/2 + chestWidth/2 - 15} ${shoulderY + 80}, ${width/2 + waistWidth/2 - 10} ${waistY - 20}, ${width/2 + waistWidth/2 - 15} ${waistY - 10}
-                   L ${width/2 - waistWidth/2 + 15} ${waistY - 10}
-                   C ${width/2 - waistWidth/2 + 10} ${waistY - 20}, ${width/2 - chestWidth/2 + 15} ${shoulderY + 80}, ${width/2 - chestWidth/2 + 5} ${shoulderY + 40}
-                   Z`} 
-                fill={getMuscleHighlightColor('chest')}
-                stroke="none"
-              />
-            )}
-            
-            {/* Back highlight - back view only */}
-            {!frontView && (
-              <path 
-                d={`M ${width/2 - chestWidth/2 + 5} ${shoulderY + 40}
-                   L ${width/2 + chestWidth/2 - 5} ${shoulderY + 40}
-                   C ${width/2 + chestWidth/2} ${shoulderY + 60}, ${width/2 + chestWidth/2 + 5} ${shoulderY + 80}, ${width/2 + waistWidth/2} ${waistY - 30}
-                   C ${width/2 + waistWidth/2 - 5} ${waistY - 15}, ${width/2 + waistWidth/2 - 10} ${waistY - 10}, ${width/2 + waistWidth/2 - 15} ${waistY - 5}
-                   L ${width/2 - waistWidth/2 + 15} ${waistY - 5}
-                   C ${width/2 - waistWidth/2 + 10} ${waistY - 10}, ${width/2 - waistWidth/2 + 5} ${waistY - 15}, ${width/2 - waistWidth/2} ${waistY - 30}
-                   C ${width/2 - chestWidth/2 - 5} ${shoulderY + 80}, ${width/2 - chestWidth/2} ${shoulderY + 60}, ${width/2 - chestWidth/2 + 5} ${shoulderY + 40}
-                   Z`} 
-                fill={getMuscleHighlightColor('back')}
-                stroke="none"
-              />
-            )}
+            {(() => {
+              // Get coordinates from current view's body paths
+              const paths = frontView ? getFrontBodyPaths() : getBackBodyPaths();
+              const shoulderY = paths.shoulderY || 70; // Default if undefined
+              const chestY = paths.chestY || 105; // Default if undefined
+              const waistY = paths.waistY || 165; // Default if undefined
+              const hipY = paths.hipY || 185; // Default if undefined
+              
+              return (
+                <>
+                  {/* Shoulders highlight */}
+                  <path 
+                    d={`M ${width/2 - shoulderWidth/2 - 5} ${shoulderY - 5}
+                      L ${width/2 + shoulderWidth/2 + 5} ${shoulderY - 5}
+                      L ${width/2 + shoulderWidth/2 + 10} ${shoulderY + 20}
+                      C ${width/2 + chestWidth/2 + 5} ${shoulderY + 30}, ${width/2 + chestWidth/2} ${shoulderY + 30}, ${width/2 + chestWidth/2 - 5} ${shoulderY + 40}
+                      L ${width/2 - chestWidth/2 + 5} ${shoulderY + 40}
+                      C ${width/2 - chestWidth/2} ${shoulderY + 30}, ${width/2 - chestWidth/2 - 5} ${shoulderY + 30}, ${width/2 - shoulderWidth/2 - 10} ${shoulderY + 20}
+                      Z`} 
+                    fill={getMuscleHighlightColor('shoulders')}
+                    stroke="none"
+                  />
+                  
+                  {/* Chest highlight - front view only */}
+                  {frontView && (
+                    <path 
+                      d={`M ${width/2 - chestWidth/2 + 5} ${shoulderY + 40}
+                        L ${width/2 + chestWidth/2 - 5} ${shoulderY + 40}
+                        C ${width/2 + chestWidth/2 - 15} ${shoulderY + 80}, ${width/2 + waistWidth/2 - 10} ${waistY - 20}, ${width/2 + waistWidth/2 - 15} ${waistY - 10}
+                        L ${width/2 - waistWidth/2 + 15} ${waistY - 10}
+                        C ${width/2 - waistWidth/2 + 10} ${waistY - 20}, ${width/2 - chestWidth/2 + 15} ${shoulderY + 80}, ${width/2 - chestWidth/2 + 5} ${shoulderY + 40}
+                        Z`} 
+                      fill={getMuscleHighlightColor('chest')}
+                      stroke="none"
+                    />
+                  )}
+                  
+                  {/* Back highlight - back view only */}
+                  {!frontView && (
+                    <path 
+                      d={`M ${width/2 - chestWidth/2 + 5} ${shoulderY + 40}
+                        L ${width/2 + chestWidth/2 - 5} ${shoulderY + 40}
+                        C ${width/2 + chestWidth/2} ${shoulderY + 60}, ${width/2 + chestWidth/2 + 5} ${shoulderY + 80}, ${width/2 + waistWidth/2} ${waistY - 30}
+                        C ${width/2 + waistWidth/2 - 5} ${waistY - 15}, ${width/2 + waistWidth/2 - 10} ${waistY - 10}, ${width/2 + waistWidth/2 - 15} ${waistY - 5}
+                        L ${width/2 - waistWidth/2 + 15} ${waistY - 5}
+                        C ${width/2 - waistWidth/2 + 10} ${waistY - 10}, ${width/2 - waistWidth/2 + 5} ${waistY - 15}, ${width/2 - waistWidth/2} ${waistY - 30}
+                        C ${width/2 - chestWidth/2 - 5} ${shoulderY + 80}, ${width/2 - chestWidth/2} ${shoulderY + 60}, ${width/2 - chestWidth/2 + 5} ${shoulderY + 40}
+                        Z`} 
+                      fill={getMuscleHighlightColor('back')}
+                      stroke="none"
+                    />
+                  )}
+                  
+                  {/* Core highlight */}
+                  <path 
+                    d={`M ${width/2 - waistWidth/2 + 10} ${waistY - 10}
+                      L ${width/2 + waistWidth/2 - 10} ${waistY - 10}
+                      C ${width/2 + waistWidth/2 - 5} ${waistY}, ${width/2 + hipWidth/2 - 5} ${hipY - 5}, ${width/2 + hipWidth/2 - 10} ${hipY}
+                      L ${width/2 - hipWidth/2 + 10} ${hipY}
+                      C ${width/2 - hipWidth/2 + 5} ${hipY - 5}, ${width/2 - waistWidth/2 + 5} ${waistY}, ${width/2 - waistWidth/2 + 10} ${waistY - 10}
+                      Z`} 
+                    fill={getMuscleHighlightColor('core')}
+                    stroke="none"
+                  />
+                </>
+              );
+            })()}
             
             {/* Arms highlight */}
             <path 
@@ -747,18 +802,6 @@ export function BodySVG({
             <path 
               d={bodyPaths.rightArm} 
               fill={getMuscleHighlightColor('arms')}
-              stroke="none"
-            />
-            
-            {/* Core highlight */}
-            <path 
-              d={`M ${width/2 - waistWidth/2 + 10} ${waistY - 10}
-                 L ${width/2 + waistWidth/2 - 10} ${waistY - 10}
-                 C ${width/2 + waistWidth/2 - 5} ${waistY}, ${width/2 + hipWidth/2 - 5} ${hipY - 5}, ${width/2 + hipWidth/2 - 10} ${hipY}
-                 L ${width/2 - hipWidth/2 + 10} ${hipY}
-                 C ${width/2 - hipWidth/2 + 5} ${hipY - 5}, ${width/2 - waistWidth/2 + 5} ${waistY}, ${width/2 - waistWidth/2 + 10} ${waistY - 10}
-                 Z`} 
-              fill={getMuscleHighlightColor('core')}
               stroke="none"
             />
             
