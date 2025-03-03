@@ -37,6 +37,7 @@ import SyncIcon from '@mui/icons-material/Sync';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
+import SpeedIcon from '@mui/icons-material/Speed';
 import { heartRateService, authService, fitbitService } from '../services/api';
 import HeartRateChart from '../components/charts/HeartRateChart';
 import { useAuth } from '../context/AuthContext';
