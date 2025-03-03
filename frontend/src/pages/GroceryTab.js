@@ -3720,7 +3720,7 @@ const RecipeSuggestions = ({ cartItems, recipes }) => {
   );
 };
 
-// Main Grocery Tab component - Fixed version
+// Main Grocery Tab component
 const GroceryTab = () => {
   const theme = useTheme();
   const { isAuthenticated } = useAuth();
@@ -7112,58 +7112,5 @@ const SimpleGroceryTab = () => {
   );
 };
 
-// Error boundary component that will catch rendering errors
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError(error) {
-    // Update state so the next render will show the fallback UI
-    return { hasError: true };
-  }
-
-  componentDidCatch(error, errorInfo) {
-    // Log the error to console
-    console.error("Error in GroceryTab:", error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      // Render fallback UI
-      return (
-        <Box sx={{ p: 3, textAlign: 'center' }}>
-          <Typography variant="h5" color="error" gutterBottom>
-            Something went wrong
-          </Typography>
-          <Typography variant="body1" paragraph>
-            There was an error loading the Grocery Shop tab. Please try refreshing the page.
-          </Typography>
-          <Button 
-            variant="contained" 
-            color="primary" 
-            onClick={() => window.location.reload()}
-          >
-            Refresh Page
-          </Button>
-        </Box>
-      );
-    }
-
-    // If no error, render children normally
-    return this.props.children;
-  }
-}
-
-// Wrap the GroceryTab with our error boundary
-const SafeGroceryTab = () => {
-  return (
-    <ErrorBoundary>
-      <GroceryTab />
-    </ErrorBoundary>
-  );
-};
-
-// Export the wrapped component
-export default SafeGroceryTab;
+// Export the original GroceryTab component
+export default GroceryTab;

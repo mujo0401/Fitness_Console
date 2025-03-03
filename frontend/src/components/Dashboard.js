@@ -1,6 +1,6 @@
 // frontend/src/components/Dashboard.js
 
-import React, { useState, useEffect, Suspense, useRef } from 'react';
+import React, { useState, useEffect, Suspense, useRef, Component } from 'react';
 import { 
   Box, 
   Container, 
@@ -40,7 +40,9 @@ import SleepTab from '../pages/SleepTab';
 import ActivityTab from '../pages/ActivityTab'; 
 import FitnessTab from '../pages/FitnessTab';
 import TrendsTab from '../pages/TrendsTab';
+// Import both the original GroceryTab and the fallback
 import GroceryTab from '../pages/GroceryTab';
+import GroceryTabFallback from './GroceryTabFallback';
 import HealthAssistantTab from '../pages/HealthAssistantTab';
 import ABMTab from '../pages/ABMTab';
 import ExerciseCoach from './ExerciseCoach';
@@ -48,6 +50,40 @@ import MusicTab from '../pages/MusicTab';
 import InfoTab from '../pages/InfoTab';
 
 import '../styles/Dashboard.css';
+
+// Error boundary component for handling rendering errors
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    // Update state so the next render will show the fallback UI
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    // Log the error to console
+    console.error("Error in component:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // Render fallback UI
+      return this.props.fallback || (
+        <Box sx={{ p: 3, textAlign: 'center' }}>
+          <Typography color="error">
+            Something went wrong. Please refresh the page.
+          </Typography>
+        </Box>
+      );
+    }
+
+    // If no error, render children normally
+    return this.props.children;
+  }
+}
 
 const Dashboard = () => {
   const theme = useTheme();
@@ -625,7 +661,18 @@ const Dashboard = () => {
               return <Typography color="error">Tab content not found</Typography>;
             }
             
-            // Render the component
+            // Handle the case where GroceryTab might be broken
+            if (currentTab === 7) { // GroceryTab index
+              return (
+                <Suspense fallback={<CircularProgress />}>
+                  <ErrorBoundary fallback={<GroceryTabFallback />}>
+                    <TabComponent />
+                  </ErrorBoundary>
+                </Suspense>
+              );
+            }
+            
+            // Render other components normally
             return (
               <Suspense fallback={<CircularProgress />}>
                 <TabComponent />
