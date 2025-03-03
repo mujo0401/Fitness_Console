@@ -3722,7 +3722,6 @@ const RecipeSuggestions = ({ cartItems, recipes }) => {
 
 // Main Grocery Tab component - Fixed version
 const GroceryTab = () => {
-  try {
   const theme = useTheme();
   const { isAuthenticated } = useAuth();
   const { saveFitnessProfile, fitnessProfile, dietaryPreferences, recommendedGroceries } = useWorkoutPlan();
@@ -7071,26 +7070,6 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
       </Dialog>
     </Box>
   );
-  } catch (error) {
-    console.error("Error rendering GroceryTab:", error);
-    return (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography variant="h5" color="error" gutterBottom>
-          Something went wrong
-        </Typography>
-        <Typography variant="body1" paragraph>
-          There was an error loading the Grocery Shop tab. Please try refreshing the page.
-        </Typography>
-        <Button 
-          variant="contained" 
-          color="primary" 
-          onClick={() => window.location.reload()}
-        >
-          Refresh Page
-        </Button>
-      </Box>
-    );
-  }
 };
 
 // Fallback simple component in case the main one doesn't work
@@ -7133,5 +7112,58 @@ const SimpleGroceryTab = () => {
   );
 };
 
-// Just use the main component, we've added error handling inside it already
-export default GroceryTab;
+// Error boundary component that will catch rendering errors
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    // Update state so the next render will show the fallback UI
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    // Log the error to console
+    console.error("Error in GroceryTab:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // Render fallback UI
+      return (
+        <Box sx={{ p: 3, textAlign: 'center' }}>
+          <Typography variant="h5" color="error" gutterBottom>
+            Something went wrong
+          </Typography>
+          <Typography variant="body1" paragraph>
+            There was an error loading the Grocery Shop tab. Please try refreshing the page.
+          </Typography>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            onClick={() => window.location.reload()}
+          >
+            Refresh Page
+          </Button>
+        </Box>
+      );
+    }
+
+    // If no error, render children normally
+    return this.props.children;
+  }
+}
+
+// Wrap the GroceryTab with our error boundary
+const SafeGroceryTab = () => {
+  return (
+    <ErrorBoundary>
+      <GroceryTab />
+    </ErrorBoundary>
+  );
+};
+
+// Export the wrapped component
+export default SafeGroceryTab;
