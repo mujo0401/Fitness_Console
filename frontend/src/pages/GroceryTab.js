@@ -878,8 +878,54 @@ const randomDeliveryTime = () => {
   return `${baseMinutes}-${baseMinutes + rangeMinutes} min`;
 };
 
-// Forward declaration to avoid "not defined" error
-let findNearbyGroceryStores;
+// Google Places API integration for finding grocery stores
+const findNearbyGroceryStores = async (lat, lng) => {
+  try {
+    console.log(`Finding nearby grocery stores for coordinates: ${lat}, ${lng}`);
+    const response = await fetch(`/api/google_places/nearby?lat=${lat}&lng=${lng}&type=grocery_or_supermarket`);
+    
+    if (!response.ok) {
+      throw new Error(`Google Places API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    // Transform the Google Places API data to match our app's format
+    return data.results.map(place => ({
+      id: place.place_id,
+      name: place.name,
+      address: place.vicinity,
+      distance: place.distance || calculateDistance(lat, lng, place.geometry.location.lat, place.geometry.location.lng),
+      coordinates: {
+        lat: place.geometry.location.lat,
+        lng: place.geometry.location.lng
+      },
+      deliveryAvailable: true, // Assume delivery is available
+      rating: place.rating || 4.0,
+      logo: place.photos && place.photos.length > 0 
+        ? `/api/google_places/photo?photoreference=${place.photos[0].photo_reference}&maxwidth=100`
+        : "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80"
+    }));
+  } catch (error) {
+    console.error('Error finding nearby grocery stores:', error);
+    return generateFallbackStores(); // Return fallback stores
+  }
+};
+
+// Utility function to calculate distance between coordinates
+const calculateDistance = (lat1, lng1, lat2, lng2) => {
+  // Simple distance calculation (could be replaced with a more accurate method)
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const distance = R * c;
+  return (distance * 0.621371).toFixed(1); // Convert to miles and round to 1 decimal place
+};
 
 // This function is now replaced by findNearbyGroceryStores which uses Google Places API
 // Keeping for backward compatibility with existing code
@@ -5504,14 +5550,15 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
     );
   };
   
-  // Function to find nearby grocery stores using actual Google Places API
-  findNearbyGroceryStores = async (lat, lng) => {
+  // This implementation will be ignored, as we already defined findNearbyGroceryStores above
+  // We're commenting it out to fix the "unreachable code" warning
+  /*findNearbyGroceryStores = async (lat, lng) => {
     try {
       console.log(`Searching for grocery stores near ${lat}, ${lng}`);
       
       // Make backend API call to our server which will call Google Places API
       // This protects our API key by not exposing it in frontend code
-      const backendUrl = `/api/places/nearby?lat=${lat}&lng=${lng}&type=grocery_or_supermarket&radius=5000`;
+      const backendUrl = `/api/google_places/nearby?lat=${lat}&lng=${lng}&type=grocery_or_supermarket&radius=5000`;
       
       console.log(`Calling backend API: ${backendUrl}`);
       const response = await fetch(backendUrl);
@@ -5562,7 +5609,7 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
         
         // Get photos if available
         const photoUrl = place.photos && place.photos.length > 0
-          ? `/api/places/photo?photoreference=${place.photos[0].photo_reference}&maxwidth=400`
+          ? `/api/google_places/photo?photoreference=${place.photos[0].photo_reference}&maxwidth=400`
           : "https://images.unsplash.com/photo-1580857626078-289a0276981a?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80";
         
         return {
@@ -5673,7 +5720,7 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
       // Sort by distance
       return stores.sort((a, b) => a.distance - b.distance);
     }
-  };
+  };*/
   
   // Helper function to get location name from coordinates (would use Google Geocoding API)
   const getLocationName = async (lat, lng) => {
@@ -5785,7 +5832,7 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
       
       // First check if DoorDash is available for this store and location
       const doordashAvailabilityResponse = await fetch(
-        `/api/places/doordash/check-availability?store_id=${selectedStore.id}&lat=${userLocation?.lat || '0'}&lng=${userLocation?.lng || '0'}&store_name=${encodeURIComponent(selectedStore.name)}`
+        `/api/google_places/doordash/check-availability?store_id=${selectedStore.id}&lat=${userLocation?.lat || '0'}&lng=${userLocation?.lng || '0'}&store_name=${encodeURIComponent(selectedStore.name)}`
       );
       
       const doordashAvailability = await doordashAvailabilityResponse.json();
@@ -5836,7 +5883,7 @@ const refreshMealPlanIngredients = async (ingredients, dietType) => {
       };
       
       // Submit the order to DoorDash API
-      const response = await fetch('/api/places/doordash/submit-order', {
+      const response = await fetch('/api/google_places/doordash/submit-order', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
