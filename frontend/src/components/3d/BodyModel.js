@@ -6,7 +6,8 @@ import * as THREE from 'three';
 export function BodyModel({ 
   state = { weight: 0.5, muscle: 0.5 }, 
   showSkeleton = false,
-  gender = 'male' // Default to male if gender not specified
+  gender = 'male', // Default to male if gender not specified
+  use3D = true // Option to toggle between 3D and 2D visualization
 }) {
   const group = useRef();
   
@@ -42,23 +43,23 @@ export function BodyModel({
   
   // Create a breathing animation
   useFrame(({ clock }) => {
-    if (group.current) {
-      const t = clock.getElapsedTime();
-      
-      // Subtle breathing motion
-      group.current.position.y = Math.sin(t * 0.5) * 0.02;
-      
-      if (torso.current) {
-        // Chest expansion/contraction with breathing
-        torso.current.scale.x = 1 + Math.sin(t * 0.8) * 0.01;
-        torso.current.scale.z = 1 + Math.sin(t * 0.8) * 0.02;
-      }
-      
-      // Very subtle arm swaying
-      if (leftArm.current && rightArm.current) {
-        leftArm.current.rotation.x = Math.sin(t * 0.3) * 0.05;
-        rightArm.current.rotation.x = Math.sin(t * 0.3 + 0.4) * 0.05;
-      }
+    if (!group.current) return;
+    
+    const t = clock.getElapsedTime();
+    
+    // Subtle breathing motion
+    group.current.position.y = Math.sin(t * 0.5) * 0.02;
+    
+    if (torso.current) {
+      // Chest expansion/contraction with breathing
+      torso.current.scale.x = 1 + Math.sin(t * 0.8) * 0.01;
+      torso.current.scale.z = 1 + Math.sin(t * 0.8) * 0.02;
+    }
+    
+    // Very subtle arm swaying
+    if (leftArm.current && rightArm.current) {
+      leftArm.current.rotation.x = Math.sin(t * 0.3) * 0.05;
+      rightArm.current.rotation.x = Math.sin(t * 0.3 + 0.4) * 0.05;
     }
   });
   
@@ -89,10 +90,15 @@ export function BodyModel({
       const baseWidth = 0.75 + w * 0.5;
       const muscleEffect = m * 0.3;
       
+      // Apply specific muscle group adjustments
+      const chestEffect = state.chest ? state.chest * 0.4 : 0;
+      const backEffect = state.back ? state.back * 0.3 : 0;
+      const coreEffect = state.core ? state.core * 0.2 : 0;
+      
       // Gender specific adjustments
-      torso.current.scale.x = baseWidth * shoulderRatio * (1 + muscleEffect * 0.6);
-      torso.current.scale.y = torsoHeightRatio;
-      torso.current.scale.z = (0.7 + w * 0.4) * (isFemale ? 1.15 : 1.0); // Females more chest depth
+      torso.current.scale.x = baseWidth * shoulderRatio * (1 + muscleEffect * 0.6 + chestEffect);
+      torso.current.scale.y = torsoHeightRatio * (1 + coreEffect * 0.1);
+      torso.current.scale.z = (0.7 + w * 0.4) * (isFemale ? 1.15 : 1.0) * (1 + backEffect + chestEffect * 0.7); 
       
       // Position adjust to keep feet on ground
       torso.current.position.y = 1.0 * torsoHeightRatio;
@@ -101,13 +107,18 @@ export function BodyModel({
     // Shoulders - wider for males, especially with muscle
     if (shoulders.current) {
       const shoulderWidth = shoulderRatio * (1 + m * 0.4);
-      shoulders.current.scale.x = shoulderWidth * (0.9 + w * 0.2);
+      const shoulderEffect = state.shoulders ? state.shoulders * 0.6 : 0;
+      shoulders.current.scale.x = shoulderWidth * (0.9 + w * 0.2 + shoulderEffect);
+      shoulders.current.scale.z = 1 + shoulderEffect * 0.5;
+      shoulders.current.scale.y = 1 + shoulderEffect * 0.3;
     }
     
     // Hips - wider for females
     if (hips.current) {
       const hipWidth = hipRatio * (0.9 + w * 0.3);
+      const coreEffect = state.core ? state.core * 0.2 : 0;
       hips.current.scale.x = hipWidth;
+      hips.current.scale.y = 1 + coreEffect * 0.2;
     }
     
     // Arms based on weight, muscle and gender
@@ -115,7 +126,7 @@ export function BodyModel({
       const mArm = state.arms || m;
       // Males have thicker arms with muscle
       const armMuscleFactor = isFemale ? 0.75 : 1.2;
-      const armWidth = genderBaseRatio * (0.25 + w * 0.1 + mArm * 0.25 * armMuscleFactor);
+      const armWidth = genderBaseRatio * (0.25 + w * 0.1 + mArm * 0.35 * armMuscleFactor);
       
       leftArm.current.scale.x = armWidth;
       leftArm.current.scale.z = armWidth;
@@ -130,7 +141,7 @@ export function BodyModel({
     // Forearms
     if (leftForearm.current && rightForearm.current) {
       const mArm = state.arms || m;
-      const forearmWidth = genderBaseRatio * (0.2 + w * 0.08 + mArm * 0.2);
+      const forearmWidth = genderBaseRatio * (0.2 + w * 0.08 + mArm * 0.25);
       
       leftForearm.current.scale.x = forearmWidth;
       leftForearm.current.scale.z = forearmWidth;
@@ -147,7 +158,7 @@ export function BodyModel({
       const mLeg = state.legs || m;
       // Females typically have proportionally thicker thighs
       const legFactor = isFemale ? 1.1 : 1.0;
-      const legWidth = genderBaseRatio * (0.25 + w * 0.15 + mLeg * 0.15) * legFactor;
+      const legWidth = genderBaseRatio * (0.25 + w * 0.15 + mLeg * 0.3) * legFactor;
       
       leftLeg.current.scale.x = legWidth;
       leftLeg.current.scale.z = legWidth;
@@ -162,7 +173,7 @@ export function BodyModel({
     // Calves
     if (leftCalf.current && rightCalf.current) {
       const mLeg = state.legs || m;
-      const calfWidth = genderBaseRatio * (0.2 + w * 0.1 + mLeg * 0.2);
+      const calfWidth = genderBaseRatio * (0.2 + w * 0.1 + mLeg * 0.35);
       
       leftCalf.current.scale.x = calfWidth;
       leftCalf.current.scale.z = calfWidth;
