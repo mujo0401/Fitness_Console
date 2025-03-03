@@ -38,7 +38,20 @@ import {
   Autocomplete,
   Alert,
   Stack,
-  Avatar
+  Avatar,
+  Radio,
+  RadioGroup,
+  FormLabel,
+  FormControl,
+  Select,
+  LinearProgress,
+  ToggleButton,
+  ToggleButtonGroup,
+  Container,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Switch
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { FixedSizeList as VirtualizedList } from 'react-window';
@@ -63,9 +76,35 @@ import LocalGroceryStoreIcon from '@mui/icons-material/LocalGroceryStore';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import SettingsIcon from '@mui/icons-material/Settings';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
+import CalculateIcon from '@mui/icons-material/Calculate';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import QuizIcon from '@mui/icons-material/Quiz';
+import FastfoodIcon from '@mui/icons-material/Fastfood';
+import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import FiberNewIcon from '@mui/icons-material/FiberNew';
+import SpaIcon from '@mui/icons-material/Spa';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import PieChartIcon from '@mui/icons-material/PieChart';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import { useWorkoutPlan } from '../context/WorkoutPlanContext';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, Tooltip as RechartsTooltip, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 
-// Enhanced implementation of GroceryTab with advanced features and Instacart integration
+// Enhanced implementation of GroceryTab with advanced features, AI analysis, and nutrition tools
 const GroceryTab = () => {
+  // Get workout and diet context
+  const { 
+    fitnessProfile, 
+    dietaryPreferences: userDietaryPreferences, 
+    getDietRecommendations, 
+    recommendedGroceries,
+    generateGroceryList,
+    dietTypes
+  } = useWorkoutPlan();
+  
   // Core UI state
   const [activeTab, setActiveTab] = useState(0);
   const [location, setLocation] = useState(null);
@@ -115,6 +154,42 @@ const GroceryTab = () => {
     organic: false,
     lowCarb: false
   });
+  
+  // AI Analysis and nutrition state
+  const [analysisDialogOpen, setAnalysisDialogOpen] = useState(false);
+  const [nutritionDialogOpen, setNutritionDialogOpen] = useState(false);
+  const [cartNutrition, setCartNutrition] = useState(null);
+  const [nutritionGoals, setNutritionGoals] = useState({
+    calories: 2000,
+    protein: 120,
+    carbs: 225,
+    fat: 65,
+    fiber: 30,
+    sugar: 50
+  });
+  const [aiRecommendations, setAiRecommendations] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState([]);
+  
+  // Meal planner state
+  const [mealPlannerOpen, setMealPlannerOpen] = useState(false);
+  const [mealPlanWizardStep, setMealPlanWizardStep] = useState(0);
+  const [mealPlanProfile, setMealPlanProfile] = useState({
+    dietType: userDietaryPreferences?.primaryDiet || 'balanced',
+    goal: 'weight_management',
+    mealsPerDay: 3,
+    calories: 2000,
+    restrictions: [],
+    preferences: [],
+    cookingTime: 'moderate',
+    budgetLevel: 'moderate',
+    skillLevel: 'intermediate'
+  });
+  const [generatedMealPlan, setGeneratedMealPlan] = useState(null);
+  
+  // Smart recipe suggestions
+  const [smartRecipes, setSmartRecipes] = useState([]);
+  const [trendsData, setTrendsData] = useState(null);
 
   // Handle tab change
   const handleTabChange = (event, newValue) => {
@@ -125,7 +200,62 @@ const GroceryTab = () => {
       handleGetLocation();
     } else if (newValue === 2 && recipes.length === 0) {
       fetchRecipes();
+    } else if (newValue === 3 && smartRecipes.length === 0) {
+      fetchSmartRecipes();
+      analyzeNutrition();
+    } else if (newValue === 4 && !generatedMealPlan) {
+      // Pre-initialize the meal plan data based on profile
+      initializeMealPlannerData();
     }
+  };
+  
+  // Initialize meal planner with data from fitness profile
+  const initializeMealPlannerData = () => {
+    if (fitnessProfile) {
+      setMealPlanProfile(prevState => ({
+        ...prevState,
+        dietType: userDietaryPreferences?.primaryDiet || 'balanced',
+        goal: fitnessProfile.primaryGoal || 'weight_management',
+        restrictions: userDietaryPreferences?.restrictions || [],
+        calories: fitnessProfile.targetCalories || 2000
+      }));
+    }
+    
+    // Set up demo meal plans data
+    const demoMealPlans = [
+      {
+        id: 1,
+        name: "Mediterranean Week",
+        dietType: "mediterranean",
+        days: 7,
+        mealsPerDay: 3,
+        totalCalories: 12600,
+        avgCaloriesPerDay: 1800,
+        image: "https://images.unsplash.com/photo-1455619452474-d2be8b1e70cd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80"
+      },
+      {
+        id: 2,
+        name: "High Protein Plan",
+        dietType: "muscle_gain",
+        days: 7,
+        mealsPerDay: 4,
+        totalCalories: 14700,
+        avgCaloriesPerDay: 2100,
+        image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80"
+      },
+      {
+        id: 3,
+        name: "Vegetarian Essentials",
+        dietType: "vegan",
+        days: 7,
+        mealsPerDay: 3,
+        totalCalories: 11900,
+        avgCaloriesPerDay: 1700,
+        image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80"
+      }
+    ];
+    
+    setMealPlans(demoMealPlans);
   };
 
   // Show notification alert
@@ -1088,6 +1218,532 @@ const GroceryTab = () => {
       total
     };
   }, [cartItems, selectedDeliveryOption]);
+  
+  // Calculate nutrition for cart items
+  const analyzeNutrition = useCallback(() => {
+    if (cartItems.length === 0) {
+      setCartNutrition(null);
+      return;
+    }
+    
+    // Mock nutrition calculation based on cart items
+    const mockNutritionData = {
+      calories: 0,
+      protein: 0,
+      carbs: 0,
+      fat: 0,
+      fiber: 0,
+      sugar: 0,
+      vitamins: {
+        a: 0,
+        c: 0,
+        d: 0,
+        calcium: 0,
+        iron: 0
+      },
+      categories: {
+        produce: 0,
+        protein: 0,
+        grains: 0,
+        dairy: 0,
+        other: 0
+      }
+    };
+    
+    // Calculate based on item categories and properties
+    cartItems.forEach(item => {
+      // Basic calorie and macronutrient estimates based on category
+      switch(item.category) {
+        case 'produce':
+          mockNutritionData.calories += 60 * item.quantity;
+          mockNutritionData.protein += 2 * item.quantity;
+          mockNutritionData.carbs += 10 * item.quantity;
+          mockNutritionData.fat += 0.5 * item.quantity;
+          mockNutritionData.fiber += 3 * item.quantity;
+          mockNutritionData.sugar += 5 * item.quantity;
+          mockNutritionData.vitamins.a += 10 * item.quantity;
+          mockNutritionData.vitamins.c += 15 * item.quantity;
+          mockNutritionData.categories.produce += item.quantity;
+          break;
+        case 'meat':
+          mockNutritionData.calories += 200 * item.quantity;
+          mockNutritionData.protein += 25 * item.quantity;
+          mockNutritionData.carbs += 0 * item.quantity;
+          mockNutritionData.fat += 12 * item.quantity;
+          mockNutritionData.vitamins.iron += 10 * item.quantity;
+          mockNutritionData.categories.protein += item.quantity;
+          break;
+        case 'dairy':
+          mockNutritionData.calories += 120 * item.quantity;
+          mockNutritionData.protein += 8 * item.quantity;
+          mockNutritionData.carbs += 5 * item.quantity;
+          mockNutritionData.fat += 9 * item.quantity;
+          mockNutritionData.vitamins.calcium += 20 * item.quantity;
+          mockNutritionData.vitamins.d += 10 * item.quantity;
+          mockNutritionData.categories.dairy += item.quantity;
+          break;
+        case 'bakery':
+          mockNutritionData.calories += 150 * item.quantity;
+          mockNutritionData.protein += 4 * item.quantity;
+          mockNutritionData.carbs += 30 * item.quantity;
+          mockNutritionData.fat += 2 * item.quantity;
+          mockNutritionData.fiber += 2 * item.quantity;
+          mockNutritionData.categories.grains += item.quantity;
+          break;
+        case 'pantry':
+          mockNutritionData.calories += 160 * item.quantity;
+          mockNutritionData.protein += 3 * item.quantity;
+          mockNutritionData.carbs += 25 * item.quantity;
+          mockNutritionData.fat += 4 * item.quantity;
+          mockNutritionData.categories.other += item.quantity;
+          break;
+        default:
+          mockNutritionData.calories += 120 * item.quantity;
+          mockNutritionData.protein += 4 * item.quantity;
+          mockNutritionData.carbs += 15 * item.quantity;
+          mockNutritionData.fat += 5 * item.quantity;
+          mockNutritionData.categories.other += item.quantity;
+      }
+      
+      // Further adjust for organic items
+      if (item.organic) {
+        mockNutritionData.vitamins.a += 2 * item.quantity;
+        mockNutritionData.vitamins.c += 3 * item.quantity;
+        mockNutritionData.fiber += 0.5 * item.quantity;
+      }
+    });
+    
+    // Calculate % of daily recommended values
+    const dailyValues = {
+      calories: nutritionGoals.calories,
+      protein: nutritionGoals.protein,
+      carbs: nutritionGoals.carbs,
+      fat: nutritionGoals.fat,
+      fiber: nutritionGoals.fiber,
+      sugar: nutritionGoals.sugar,
+      vitamins: {
+        a: 900, // mcg
+        c: 90, // mg
+        d: 20, // mcg
+        calcium: 1300, // mg
+        iron: 18 // mg
+      }
+    };
+    
+    const percentages = {
+      calories: (mockNutritionData.calories / dailyValues.calories) * 100,
+      protein: (mockNutritionData.protein / dailyValues.protein) * 100,
+      carbs: (mockNutritionData.carbs / dailyValues.carbs) * 100,
+      fat: (mockNutritionData.fat / dailyValues.fat) * 100,
+      fiber: (mockNutritionData.fiber / dailyValues.fiber) * 100,
+      sugar: (mockNutritionData.sugar / dailyValues.sugar) * 100,
+      vitamins: {
+        a: (mockNutritionData.vitamins.a / dailyValues.vitamins.a) * 100,
+        c: (mockNutritionData.vitamins.c / dailyValues.vitamins.c) * 100,
+        d: (mockNutritionData.vitamins.d / dailyValues.vitamins.d) * 100,
+        calcium: (mockNutritionData.vitamins.calcium / dailyValues.vitamins.calcium) * 100,
+        iron: (mockNutritionData.vitamins.iron / dailyValues.vitamins.iron) * 100
+      }
+    };
+    
+    setCartNutrition({
+      ...mockNutritionData,
+      percentages
+    });
+    
+    // Create diet analysis & recommendations based on the cart items
+    generateAiRecommendations(mockNutritionData);
+    
+  }, [cartItems, nutritionGoals]);
+
+  // Simulate AI analysis and recommendations
+  const generateAiRecommendations = useCallback((nutritionData) => {
+    setAiLoading(true);
+    
+    // Simulate AI processing delay
+    setTimeout(() => {
+      // Get user's dietary preferences and goals
+      const userDiet = userDietaryPreferences?.primaryDiet || 'balanced';
+      const userGoal = fitnessProfile?.primaryGoal || 'weight_management';
+      
+      // Generate diet-type specific recommendations
+      let recommendations = {
+        score: Math.floor(Math.random() * 30) + 70, // 70-100 score
+        analysis: "Based on your current cart items:",
+        strengths: [],
+        weaknesses: [],
+        suggestions: [],
+        missingNutrients: [],
+        balanceData: {}
+      };
+      
+      // Analyze cart composition
+      const totalItems = Object.values(nutritionData.categories).reduce((sum, val) => sum + val, 0);
+      const producePercentage = (nutritionData.categories.produce / totalItems) * 100 || 0;
+      const proteinPercentage = (nutritionData.categories.protein / totalItems) * 100 || 0;
+      const grainsPercentage = (nutritionData.categories.grains / totalItems) * 100 || 0;
+      const dairyPercentage = (nutritionData.categories.dairy / totalItems) * 100 || 0;
+      
+      // Balance data for visualization
+      recommendations.balanceData = {
+        produce: producePercentage,
+        protein: proteinPercentage,
+        grains: grainsPercentage,
+        dairy: dairyPercentage,
+        other: 100 - (producePercentage + proteinPercentage + grainsPercentage + dairyPercentage)
+      };
+      
+      // Identify strengths
+      if (producePercentage >= 30) {
+        recommendations.strengths.push("Good proportion of fruits and vegetables");
+      }
+      
+      if (proteinPercentage >= 20) {
+        recommendations.strengths.push("Adequate protein sources");
+      }
+      
+      if (nutritionData.fiber >= 20) {
+        recommendations.strengths.push("Good amount of dietary fiber");
+      }
+      
+      // Identify weaknesses
+      if (producePercentage < 30) {
+        recommendations.weaknesses.push("Low proportion of fruits and vegetables");
+      }
+      
+      if (proteinPercentage < 15) {
+        recommendations.weaknesses.push("Could add more protein sources");
+      }
+      
+      if (nutritionData.fiber < 15) {
+        recommendations.weaknesses.push("Low in dietary fiber");
+      }
+      
+      // Generate diet-specific recommendations
+      switch(userDiet) {
+        case 'mediterranean':
+          if (grainsPercentage < 20) {
+            recommendations.suggestions.push("Add more whole grains like quinoa or bulgur");
+          }
+          if (proteinPercentage < 15) {
+            recommendations.suggestions.push("Consider adding healthy proteins like fish or legumes");
+          }
+          break;
+        case 'keto':
+          if (nutritionData.carbs > 50) {
+            recommendations.suggestions.push("Your cart contains high-carb items. Consider lower-carb alternatives");
+          }
+          break;
+        case 'vegan':
+          if (proteinPercentage < 20) {
+            recommendations.suggestions.push("Add more plant-based proteins like tofu, tempeh, or legumes");
+          }
+          recommendations.suggestions.push("Ensure you're getting vitamin B12 from fortified foods");
+          break;
+        case 'paleo':
+          if (grainsPercentage > 5) {
+            recommendations.suggestions.push("Your cart contains grain products that aren't typically part of a paleo diet");
+          }
+          break;
+        case 'weight_loss':
+          if (nutritionData.calories > 1800) {
+            recommendations.suggestions.push("Consider lower-calorie alternatives to some items");
+          }
+          break;
+        default: // balanced
+          if (producePercentage < 30) {
+            recommendations.suggestions.push("Add more fruits and vegetables for a balanced diet");
+          }
+      }
+      
+      // Generate general suggestions based on missing nutrients
+      if (nutritionData.vitamins.c < 45) {
+        recommendations.missingNutrients.push("Vitamin C");
+        recommendations.suggestions.push("Add citrus fruits or bell peppers for vitamin C");
+      }
+      
+      if (nutritionData.vitamins.calcium < 500) {
+        recommendations.missingNutrients.push("Calcium");
+        if (userDiet === 'vegan') {
+          recommendations.suggestions.push("Add calcium-fortified plant milks or leafy greens");
+        } else {
+          recommendations.suggestions.push("Add dairy products or calcium-rich foods");
+        }
+      }
+      
+      if (nutritionData.fiber < 15) {
+        recommendations.suggestions.push("Add more high-fiber foods like beans, lentils, or whole grains");
+      }
+      
+      // Generate smart recipe suggestions based on cart contents
+      const suggestionTypes = [
+        "Recipes using your cart items",
+        "Complementary items for your cart",
+        "Nutrition-boosting additions"
+      ];
+      
+      const suggestionType = suggestionTypes[Math.floor(Math.random() * suggestionTypes.length)];
+      
+      // Create 2-3 AI-powered recipe or product suggestions
+      const numSuggestions = Math.floor(Math.random() * 2) + 2; // 2-3 suggestions
+      const suggestions = [];
+      
+      for (let i = 0; i < numSuggestions; i++) {
+        suggestions.push({
+          id: `sugg-${i}`,
+          type: suggestionType,
+          title: getRandomRecipeTitle(),
+          ingredients: getRandomIngredients(3),
+          confidence: Math.floor(Math.random() * 15) + 85, // 85-100% confidence
+          alreadyInCart: Math.random() > 0.7, // 30% chance item is already in cart
+          missingIngredients: getRandomIngredients(2)
+        });
+      }
+      
+      setAiSuggestions(suggestions);
+      setAiRecommendations(recommendations);
+      setAiLoading(false);
+    }, 1500); // Simulated delay
+  }, [fitnessProfile, userDietaryPreferences]);
+  
+  // Helper function for AI suggestion recipe titles
+  const getRandomRecipeTitle = () => {
+    const recipes = [
+      "Mediterranean Veggie Bowl",
+      "High-Protein Chicken Stir Fry",
+      "Omega-3 Rich Salmon Salad",
+      "Hearty Vegetable Soup",
+      "Quinoa Power Bowl",
+      "Antioxidant Berry Smoothie",
+      "Low-Carb Cauliflower Rice",
+      "Plant-Based Lentil Curry",
+      "Whole Grain Pasta Primavera",
+      "Vitamin-Packed Green Smoothie"
+    ];
+    
+    return recipes[Math.floor(Math.random() * recipes.length)];
+  };
+  
+  // Helper function for random ingredient lists
+  const getRandomIngredients = (count) => {
+    const allIngredients = [
+      "spinach", "kale", "bell peppers", "quinoa", "sweet potatoes",
+      "chickpeas", "lentils", "brown rice", "salmon", "chicken breast",
+      "tofu", "tempeh", "chia seeds", "flax seeds", "almonds", "walnuts",
+      "olive oil", "avocado", "berries", "bananas", "garlic", "onion",
+      "turmeric", "ginger", "cinnamon", "greek yogurt", "almond milk"
+    ];
+    
+    const result = [];
+    for (let i = 0; i < count; i++) {
+      const randomIndex = Math.floor(Math.random() * allIngredients.length);
+      result.push(allIngredients[randomIndex]);
+    }
+    
+    return result;
+  };
+  
+  // Fetch smart recipe suggestions
+  const fetchSmartRecipes = useCallback(() => {
+    setLoading(true);
+    
+    // Simulate API call delay
+    setTimeout(() => {
+      // Generate nutritional trend data
+      const trendData = [
+        { name: 'Mon', calories: 1950, protein: 95, carbs: 210, fat: 60 },
+        { name: 'Tue', calories: 2100, protein: 110, carbs: 225, fat: 65 },
+        { name: 'Wed', calories: 1850, protein: 100, carbs: 190, fat: 58 },
+        { name: 'Thu', calories: 2050, protein: 115, carbs: 215, fat: 62 },
+        { name: 'Fri', calories: 2200, protein: 120, carbs: 235, fat: 68 },
+        { name: 'Sat', calories: 1900, protein: 90, carbs: 200, fat: 65 },
+        { name: 'Sun', calories: 1800, protein: 85, carbs: 185, fat: 60 }
+      ];
+      
+      setTrendsData(trendData);
+      
+      // Mock smart recipes based on user profile
+      const mockSmartRecipes = [
+        {
+          id: 101,
+          title: "One-Pot Mediterranean Quinoa",
+          dietMatch: 96, // percentage match to user's dietary preferences
+          nutritionMatch: 92, // percentage match to nutritional needs
+          ingredients: ["Quinoa", "Cherry Tomatoes", "Cucumber", "Red Onion", "Feta Cheese", "Kalamata Olives", "Fresh Herbs", "Lemon Juice", "Olive Oil"],
+          nutrients: { calories: 320, protein: 12, carbs: 45, fat: 14, fiber: 8 },
+          prepTime: 15,
+          cookTime: 20,
+          aiRecommendedReason: "Aligned with Mediterranean diet preferences, high in fiber and plant proteins",
+          image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80"
+        },
+        {
+          id: 102,
+          title: "High-Protein Green Smoothie Bowl",
+          dietMatch: 94,
+          nutritionMatch: 90,
+          ingredients: ["Spinach", "Banana", "Greek Yogurt", "Almond Milk", "Protein Powder", "Chia Seeds", "Blueberries", "Granola"],
+          nutrients: { calories: 380, protein: 28, carbs: 50, fat: 8, fiber: 10 },
+          prepTime: 10,
+          cookTime: 0,
+          aiRecommendedReason: "Nutrient-dense breakfast option with an excellent protein profile for muscle recovery",
+          image: "https://images.unsplash.com/photo-1511690656952-34342bb7c2f2?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80"
+        },
+        {
+          id: 103,
+          title: "Herb-Roasted Salmon with Vegetables",
+          dietMatch: 92,
+          nutritionMatch: 95,
+          ingredients: ["Salmon Fillet", "Asparagus", "Cherry Tomatoes", "Garlic", "Lemon", "Fresh Herbs", "Olive Oil", "Black Pepper"],
+          nutrients: { calories: 420, protein: 38, carbs: 12, fat: 24, fiber: 4 },
+          prepTime: 15,
+          cookTime: 25,
+          aiRecommendedReason: "Rich in omega-3 fatty acids and lean protein, aligned with your protein needs",
+          image: "https://images.unsplash.com/photo-1467003909585-2f8a72700288?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80"
+        },
+        {
+          id: 104,
+          title: "Energy-Boosting Oatmeal Bowl",
+          dietMatch: 90,
+          nutritionMatch: 88,
+          ingredients: ["Rolled Oats", "Banana", "Almond Butter", "Honey", "Berries", "Cinnamon", "Flaxseed", "Almond Milk"],
+          nutrients: { calories: 390, protein: 14, carbs: 62, fat: 12, fiber: 12 },
+          prepTime: 5,
+          cookTime: 10,
+          aiRecommendedReason: "Perfect pre-workout meal with sustained energy release from complex carbs",
+          image: "https://images.unsplash.com/photo-1517093702855-01ce066c9a14?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80"
+        },
+        {
+          id: 105,
+          title: "Lentil & Vegetable Soup",
+          dietMatch: 88,
+          nutritionMatch: 91,
+          ingredients: ["Red Lentils", "Carrots", "Celery", "Onion", "Garlic", "Vegetable Broth", "Spinach", "Tomatoes", "Cumin", "Paprika"],
+          nutrients: { calories: 310, protein: 18, carbs: 52, fat: 4, fiber: 16 },
+          prepTime: 15,
+          cookTime: 30,
+          aiRecommendedReason: "Fiber-rich plant-based protein source, excellent for gut health",
+          image: "https://images.unsplash.com/photo-1547592166-23ac45744acd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80"
+        }
+      ];
+      
+      setSmartRecipes(mockSmartRecipes);
+      setLoading(false);
+    }, 1200);
+  }, []);
+  
+  // Create advanced meal plan
+  const generateMealPlan = () => {
+    setAiLoading(true);
+    
+    // Simulate API call to generate meal plan
+    setTimeout(() => {
+      // Structure based on meal plan profile
+      const mealPlanData = {
+        id: Date.now(),
+        name: `Custom ${dietTypes[mealPlanProfile.dietType]?.name || 'Balanced'} Plan`,
+        dietType: mealPlanProfile.dietType,
+        goal: mealPlanProfile.goal,
+        days: 7,
+        mealsPerDay: mealPlanProfile.mealsPerDay,
+        totalCalories: mealPlanProfile.calories * 7,
+        avgCaloriesPerDay: mealPlanProfile.calories,
+        preferences: mealPlanProfile.preferences,
+        restrictions: mealPlanProfile.restrictions,
+        days: [
+          {
+            day: "Monday",
+            meals: []
+          },
+          {
+            day: "Tuesday",
+            meals: []
+          },
+          {
+            day: "Wednesday",
+            meals: []
+          },
+          {
+            day: "Thursday",
+            meals: []
+          },
+          {
+            day: "Friday",
+            meals: []
+          },
+          {
+            day: "Saturday",
+            meals: []
+          },
+          {
+            day: "Sunday",
+            meals: []
+          }
+        ]
+      };
+      
+      // Generate meals for each day based on meals per day
+      const mealTypes = ["Breakfast", "Lunch", "Dinner", "Snack", "Pre-workout", "Post-workout"];
+      
+      for (let i = 0; i < mealPlanData.days.length; i++) {
+        const dayMeals = [];
+        
+        for (let j = 0; j < mealPlanProfile.mealsPerDay; j++) {
+          const mealType = j < 3 ? mealTypes[j] : mealTypes[3 + (j-3) % 3];
+          
+          dayMeals.push({
+            id: `meal-${i}-${j}`,
+            type: mealType,
+            title: getRandomRecipeTitle(),
+            calories: Math.floor(mealPlanProfile.calories / mealPlanProfile.mealsPerDay),
+            prepTime: Math.floor(Math.random() * 15) + 10,
+            ingredients: getRandomIngredients(Math.floor(Math.random() * 4) + 5),
+            macros: {
+              protein: Math.floor(Math.random() * 10) + 15,
+              carbs: Math.floor(Math.random() * 20) + 30,
+              fat: Math.floor(Math.random() * 10) + 10,
+              fiber: Math.floor(Math.random() * 5) + 3
+            },
+            inCart: false
+          });
+        }
+        
+        mealPlanData.days[i].meals = dayMeals;
+      }
+      
+      setGeneratedMealPlan(mealPlanData);
+      setAiLoading(false);
+      setMealPlanWizardStep(5); // Move to review step
+      
+      showAlert("Meal plan generated successfully!", "success");
+    }, 2500);
+  };
+  
+  // Add all ingredients from meal plan to cart
+  const addMealPlanToCart = (mealPlan) => {
+    // Extract all ingredients from the meal plan
+    const allIngredients = [];
+    
+    mealPlan.days.forEach(day => {
+      day.meals.forEach(meal => {
+        meal.ingredients.forEach(ingredient => {
+          allIngredients.push({
+            id: `mp-${Math.random().toString(36).substring(2, 10)}`,
+            name: ingredient,
+            price: parseFloat((Math.random() * 5 + 1).toFixed(2)),
+            category: determineCategory(ingredient),
+            quantity: 1,
+            image: `https://source.unsplash.com/100x100/?${encodeURIComponent(ingredient)}`,
+            fromMealPlan: mealPlan.name
+          });
+        });
+      });
+    });
+    
+    // Add all ingredients to cart
+    setCartItems(prev => [...prev, ...allIngredients]);
+    setMealPlannerOpen(false);
+    showAlert(`Added all ingredients from ${mealPlan.name} to your cart!`, "success");
+  };
 
   // Custom styled components
   const ProductCard = styled(Card)(({ theme, featured }) => ({
@@ -1284,7 +1940,9 @@ const GroceryTab = () => {
         >
           <Tab icon={<LocationOnIcon />} label="Find Stores" iconPosition="start" />
           <Tab icon={<ShoppingCartIcon />} label="Shop & Cart" iconPosition="start" />
-          <Tab icon={<RestaurantIcon />} label="Recipes & Meal Plans" iconPosition="start" />
+          <Tab icon={<RestaurantIcon />} label="Recipes" iconPosition="start" />
+          <Tab icon={<SmartToyIcon />} label="Smart Analysis" iconPosition="start" />
+          <Tab icon={<MenuBookIcon />} label="Meal Planner" iconPosition="start" />
         </Tabs>
         
         {/* Alert for notifications */}
@@ -2006,11 +2664,11 @@ const GroceryTab = () => {
                 pb: 2
               }}>
                 <RestaurantIcon sx={{ mr: 1 }} />
-                Recipes & Meal Planning
+                Recipes Browser
               </Typography>
               
               <Typography variant="body1" paragraph>
-                Browse recipes, create meal plans, and instantly add ingredients to your cart.
+                Browse recipes and instantly add ingredients to your cart.
               </Typography>
               
               {/* Search recipes */}
@@ -2193,6 +2851,1012 @@ const GroceryTab = () => {
               </Grid>
             </Box>
           )}
+          
+          {/* Smart Analysis Tab */}
+          {activeTab === 3 && (
+            <Box>
+              <Typography variant="h5" gutterBottom sx={{ 
+                mb: 3, 
+                display: 'flex', 
+                alignItems: 'center',
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+                pb: 2
+              }}>
+                <SmartToyIcon sx={{ mr: 1 }} />
+                AI Nutrition Analysis & Recommendations
+              </Typography>
+              
+              <Grid container spacing={3}>
+                {/* Left column - Nutrition Dashboard */}
+                <Grid item xs={12} md={7}>
+                  <Card sx={{ 
+                    mb: 3, 
+                    borderRadius: 2, 
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                    overflow: 'hidden'
+                  }}>
+                    <Box sx={{ 
+                      p: 2, 
+                      bgcolor: 'primary.main', 
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <CalculateIcon sx={{ mr: 1 }} />
+                        <Typography variant="h6">Nutrition Calculator</Typography>
+                      </Box>
+                      <Button 
+                        variant="contained" 
+                        color="secondary"
+                        startIcon={<PieChartIcon />}
+                        onClick={() => setNutritionDialogOpen(true)}
+                        size="small"
+                      >
+                        Set Goals
+                      </Button>
+                    </Box>
+                    
+                    <CardContent>
+                      {cartItems.length === 0 ? (
+                        <Box sx={{ textAlign: 'center', py: 4 }}>
+                          <Typography variant="body1" sx={{ mb: 2 }}>
+                            Add items to your cart to see nutrition analysis
+                          </Typography>
+                          <Button 
+                            variant="outlined" 
+                            onClick={() => setActiveTab(1)}
+                            startIcon={<ShoppingCartIcon />}
+                          >
+                            Go to Shop & Cart
+                          </Button>
+                        </Box>
+                      ) : cartNutrition ? (
+                        <Box>
+                          {/* Macronutrient distribution */}
+                          <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold' }}>
+                            Macronutrient Distribution
+                          </Typography>
+                          <Box sx={{ height: 250, mb: 3 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie
+                                  data={[
+                                    { name: 'Protein', value: cartNutrition.protein * 4 },
+                                    { name: 'Carbs', value: cartNutrition.carbs * 4 },
+                                    { name: 'Fat', value: cartNutrition.fat * 9 }
+                                  ]}
+                                  cx="50%"
+                                  cy="50%"
+                                  labelLine={false}
+                                  outerRadius={80}
+                                  fill="#8884d8"
+                                  dataKey="value"
+                                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                                >
+                                  <Cell fill="#4caf50" />
+                                  <Cell fill="#2196f3" />
+                                  <Cell fill="#ff9800" />
+                                </Pie>
+                                <Legend />
+                                <RechartsTooltip formatter={(value) => (`${value} calories`)} />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          </Box>
+                          
+                          {/* Nutrient percentages of daily values */}
+                          <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold' }}>
+                            Percentage of Daily Targets
+                          </Typography>
+                          <Grid container spacing={1} sx={{ mb: 3 }}>
+                            <Grid item xs={6} md={4}>
+                              <Box sx={{ mb: 2 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                  <Typography variant="body2">Calories</Typography>
+                                  <Typography variant="body2">{cartNutrition.percentages.calories.toFixed(0)}%</Typography>
+                                </Box>
+                                <LinearProgress 
+                                  variant="determinate" 
+                                  value={Math.min(cartNutrition.percentages.calories, 100)} 
+                                  color={cartNutrition.percentages.calories > 110 ? "error" : "primary"}
+                                  sx={{ height: 8, borderRadius: 4 }}
+                                />
+                              </Box>
+                            </Grid>
+                            <Grid item xs={6} md={4}>
+                              <Box sx={{ mb: 2 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                  <Typography variant="body2">Protein</Typography>
+                                  <Typography variant="body2">{cartNutrition.percentages.protein.toFixed(0)}%</Typography>
+                                </Box>
+                                <LinearProgress 
+                                  variant="determinate" 
+                                  value={Math.min(cartNutrition.percentages.protein, 100)} 
+                                  color="success"
+                                  sx={{ height: 8, borderRadius: 4 }}
+                                />
+                              </Box>
+                            </Grid>
+                            <Grid item xs={6} md={4}>
+                              <Box sx={{ mb: 2 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                  <Typography variant="body2">Carbs</Typography>
+                                  <Typography variant="body2">{cartNutrition.percentages.carbs.toFixed(0)}%</Typography>
+                                </Box>
+                                <LinearProgress 
+                                  variant="determinate" 
+                                  value={Math.min(cartNutrition.percentages.carbs, 100)} 
+                                  color="primary" 
+                                  sx={{ height: 8, borderRadius: 4 }}
+                                />
+                              </Box>
+                            </Grid>
+                            <Grid item xs={6} md={4}>
+                              <Box sx={{ mb: 2 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                  <Typography variant="body2">Fat</Typography>
+                                  <Typography variant="body2">{cartNutrition.percentages.fat.toFixed(0)}%</Typography>
+                                </Box>
+                                <LinearProgress 
+                                  variant="determinate" 
+                                  value={Math.min(cartNutrition.percentages.fat, 100)} 
+                                  color="warning"
+                                  sx={{ height: 8, borderRadius: 4 }}
+                                />
+                              </Box>
+                            </Grid>
+                            <Grid item xs={6} md={4}>
+                              <Box sx={{ mb: 2 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                  <Typography variant="body2">Fiber</Typography>
+                                  <Typography variant="body2">{cartNutrition.percentages.fiber.toFixed(0)}%</Typography>
+                                </Box>
+                                <LinearProgress 
+                                  variant="determinate" 
+                                  value={Math.min(cartNutrition.percentages.fiber, 100)} 
+                                  color="success"
+                                  sx={{ height: 8, borderRadius: 4 }}
+                                />
+                              </Box>
+                            </Grid>
+                            <Grid item xs={6} md={4}>
+                              <Box sx={{ mb: 2 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                  <Typography variant="body2">Sugar</Typography>
+                                  <Typography variant="body2">{cartNutrition.percentages.sugar.toFixed(0)}%</Typography>
+                                </Box>
+                                <LinearProgress 
+                                  variant="determinate" 
+                                  value={Math.min(cartNutrition.percentages.sugar, 100)} 
+                                  color={cartNutrition.percentages.sugar > 100 ? "error" : "warning"}
+                                  sx={{ height: 8, borderRadius: 4 }}
+                                />
+                              </Box>
+                            </Grid>
+                          </Grid>
+                          
+                          {/* Micronutrients */}
+                          <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold' }}>
+                            Micronutrients
+                          </Typography>
+                          <Box sx={{ height: 250 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <RadarChart outerRadius={90} data={[
+                                { 
+                                  subject: 'Vit A', 
+                                  A: cartNutrition.percentages.vitamins.a,
+                                  fullMark: 100 
+                                },
+                                { 
+                                  subject: 'Vit C', 
+                                  A: cartNutrition.percentages.vitamins.c,
+                                  fullMark: 100 
+                                },
+                                { 
+                                  subject: 'Vit D', 
+                                  A: cartNutrition.percentages.vitamins.d,
+                                  fullMark: 100 
+                                },
+                                { 
+                                  subject: 'Calcium', 
+                                  A: cartNutrition.percentages.vitamins.calcium,
+                                  fullMark: 100 
+                                },
+                                { 
+                                  subject: 'Iron', 
+                                  A: cartNutrition.percentages.vitamins.iron,
+                                  fullMark: 100 
+                                }
+                              ]}>
+                                <PolarGrid />
+                                <PolarAngleAxis dataKey="subject" />
+                                <PolarRadiusAxis angle={30} domain={[0, 100]} />
+                                <Radar name="% of Daily Value" dataKey="A" stroke="#4caf50" fill="#4caf50" fillOpacity={0.6} />
+                                <Legend />
+                              </RadarChart>
+                            </ResponsiveContainer>
+                          </Box>
+                        </Box>
+                      ) : (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                          <CircularProgress />
+                        </Box>
+                      )}
+                      
+                      <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+                        <Button 
+                          variant="contained" 
+                          color="primary"
+                          onClick={analyzeNutrition}
+                          startIcon={<BarChartIcon />}
+                          disabled={cartItems.length === 0}
+                        >
+                          Analyze My Cart
+                        </Button>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                  
+                  {/* Nutrition trends */}
+                  <Card sx={{ 
+                    mb: 3, 
+                    borderRadius: 2, 
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
+                  }}>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                        <TrendingUpIcon sx={{ mr: 1 }} />
+                        Weekly Nutrition Trends
+                      </Typography>
+                      
+                      {trendsData ? (
+                        <Box sx={{ height: 300 }}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={trendsData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" />
+                              <YAxis />
+                              <RechartsTooltip />
+                              <Legend />
+                              <Bar dataKey="protein" fill="#4caf50" name="Protein (g)" />
+                              <Bar dataKey="carbs" fill="#2196f3" name="Carbs (g)" />
+                              <Bar dataKey="fat" fill="#ff9800" name="Fat (g)" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </Box>
+                      ) : (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                          <CircularProgress />
+                        </Box>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+                
+                {/* Right column - AI Recommendations */}
+                <Grid item xs={12} md={5}>
+                  <Card sx={{ 
+                    mb: 3, 
+                    borderRadius: 2, 
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                    overflow: 'hidden',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}>
+                    <Box sx={{ 
+                      p: 2, 
+                      bgcolor: 'primary.dark', 
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      <SmartToyIcon sx={{ mr: 1 }} />
+                      <Typography variant="h6">AI Nutrition Assistant</Typography>
+                    </Box>
+                    
+                    <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                      {aiLoading ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
+                          <Box sx={{ textAlign: 'center' }}>
+                            <CircularProgress sx={{ mb: 2 }} />
+                            <Typography>AI is analyzing your cart...</Typography>
+                          </Box>
+                        </Box>
+                      ) : !aiRecommendations ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1, textAlign: 'center' }}>
+                          <Box>
+                            <SmartToyIcon sx={{ fontSize: 60, color: 'primary.main', opacity: 0.7, mb: 2 }} />
+                            <Typography variant="h6" gutterBottom>AI Nutrition Analysis</Typography>
+                            <Typography variant="body2" paragraph>
+                              Add items to your cart and click "Analyze My Cart" to get AI-powered nutrition insights.
+                            </Typography>
+                          </Box>
+                        </Box>
+                      ) : (
+                        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                          {/* AI Score */}
+                          <Box sx={{ 
+                            display: 'flex', 
+                            justifyContent: 'center', 
+                            mb: 3
+                          }}>
+                            <Box sx={{ 
+                              position: 'relative', 
+                              width: 120, 
+                              height: 120,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}>
+                              <CircularProgress 
+                                variant="determinate" 
+                                value={100} 
+                                size={120} 
+                                thickness={4}
+                                sx={{ color: 'grey.300', position: 'absolute' }}
+                              />
+                              <CircularProgress 
+                                variant="determinate" 
+                                value={aiRecommendations.score} 
+                                size={120} 
+                                thickness={4}
+                                sx={{ 
+                                  color: aiRecommendations.score >= 80 ? 'success.main' : 
+                                    aiRecommendations.score >= 60 ? 'warning.main' : 'error.main',
+                                  position: 'absolute'
+                                }}
+                              />
+                              <Box sx={{ textAlign: 'center' }}>
+                                <Typography variant="h4" color="primary.main">
+                                  {aiRecommendations.score}
+                                </Typography>
+                                <Typography variant="caption">Nutrition Score</Typography>
+                              </Box>
+                            </Box>
+                          </Box>
+                          
+                          {/* Diet Balance */}
+                          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
+                            Food Group Balance
+                          </Typography>
+                          <Box sx={{ mb: 2 }}>
+                            <Grid container spacing={1}>
+                              <Grid item xs={6}>
+                                <Box sx={{ mb: 1 }}>
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                    <Typography variant="body2">Produce</Typography>
+                                    <Typography variant="body2">{aiRecommendations.balanceData.produce.toFixed(0)}%</Typography>
+                                  </Box>
+                                  <LinearProgress 
+                                    variant="determinate" 
+                                    value={aiRecommendations.balanceData.produce} 
+                                    color="success"
+                                    sx={{ height: 8, borderRadius: 4 }}
+                                  />
+                                </Box>
+                              </Grid>
+                              <Grid item xs={6}>
+                                <Box sx={{ mb: 1 }}>
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                    <Typography variant="body2">Protein</Typography>
+                                    <Typography variant="body2">{aiRecommendations.balanceData.protein.toFixed(0)}%</Typography>
+                                  </Box>
+                                  <LinearProgress 
+                                    variant="determinate" 
+                                    value={aiRecommendations.balanceData.protein} 
+                                    color="primary"
+                                    sx={{ height: 8, borderRadius: 4 }}
+                                  />
+                                </Box>
+                              </Grid>
+                              <Grid item xs={6}>
+                                <Box sx={{ mb: 1 }}>
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                    <Typography variant="body2">Grains</Typography>
+                                    <Typography variant="body2">{aiRecommendations.balanceData.grains.toFixed(0)}%</Typography>
+                                  </Box>
+                                  <LinearProgress 
+                                    variant="determinate" 
+                                    value={aiRecommendations.balanceData.grains} 
+                                    color="warning"
+                                    sx={{ height: 8, borderRadius: 4 }}
+                                  />
+                                </Box>
+                              </Grid>
+                              <Grid item xs={6}>
+                                <Box sx={{ mb: 1 }}>
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                    <Typography variant="body2">Dairy</Typography>
+                                    <Typography variant="body2">{aiRecommendations.balanceData.dairy.toFixed(0)}%</Typography>
+                                  </Box>
+                                  <LinearProgress 
+                                    variant="determinate" 
+                                    value={aiRecommendations.balanceData.dairy}
+                                    color="info" 
+                                    sx={{ height: 8, borderRadius: 4 }}
+                                  />
+                                </Box>
+                              </Grid>
+                            </Grid>
+                          </Box>
+                          
+                          {/* AI analysis */}
+                          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
+                            AI Analysis
+                          </Typography>
+                          
+                          {aiRecommendations.strengths.length > 0 && (
+                            <Box sx={{ mb: 2 }}>
+                              <Typography variant="body2" color="success.main" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+                                <CheckCircleIcon fontSize="small" sx={{ mr: 0.5 }} />
+                                Strengths
+                              </Typography>
+                              <Box component="ul" sx={{ mt: 0.5, pl: 2 }}>
+                                {aiRecommendations.strengths.map((strength, index) => (
+                                  <Typography component="li" variant="body2" key={`strength-${index}`}>
+                                    {strength}
+                                  </Typography>
+                                ))}
+                              </Box>
+                            </Box>
+                          )}
+                          
+                          {aiRecommendations.weaknesses.length > 0 && (
+                            <Box sx={{ mb: 2 }}>
+                              <Typography variant="body2" color="error.main" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+                                <InfoIcon fontSize="small" sx={{ mr: 0.5 }} />
+                                Areas for Improvement
+                              </Typography>
+                              <Box component="ul" sx={{ mt: 0.5, pl: 2 }}>
+                                {aiRecommendations.weaknesses.map((weakness, index) => (
+                                  <Typography component="li" variant="body2" key={`weakness-${index}`}>
+                                    {weakness}
+                                  </Typography>
+                                ))}
+                              </Box>
+                            </Box>
+                          )}
+                          
+                          {aiRecommendations.suggestions.length > 0 && (
+                            <Box sx={{ mb: 3 }}>
+                              <Typography variant="body2" color="primary.main" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+                                <SmartToyIcon fontSize="small" sx={{ mr: 0.5 }} />
+                                AI Recommendations
+                              </Typography>
+                              <Box component="ul" sx={{ mt: 0.5, pl: 2 }}>
+                                {aiRecommendations.suggestions.map((suggestion, index) => (
+                                  <Typography component="li" variant="body2" key={`suggestion-${index}`}>
+                                    {suggestion}
+                                  </Typography>
+                                ))}
+                              </Box>
+                            </Box>
+                          )}
+                          
+                          {/* Missing Nutrients */}
+                          {aiRecommendations.missingNutrients.length > 0 && (
+                            <Box sx={{ mb: 3 }}>
+                              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
+                                Missing Nutrients
+                              </Typography>
+                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                                {aiRecommendations.missingNutrients.map((nutrient, index) => (
+                                  <Chip 
+                                    key={`nutrient-${index}`}
+                                    label={nutrient} 
+                                    color="primary" 
+                                    variant="outlined"
+                                    size="small"
+                                  />
+                                ))}
+                              </Box>
+                            </Box>
+                          )}
+                          
+                          {/* Smart Recipe Suggestions */}
+                          {aiSuggestions.length > 0 && (
+                            <Box>
+                              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
+                                Smart Suggestions
+                              </Typography>
+                              {aiSuggestions.map((suggestion, index) => (
+                                <Card key={`ai-suggestion-${index}`} sx={{ mb: 1, bgcolor: 'primary.lighter' }}>
+                                  <CardContent sx={{ pb: 1, "&:last-child": { pb: 1 } }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                      <Box sx={{ 
+                                        mr: 1, 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        justifyContent: 'center', 
+                                        bgcolor: 'primary.main',
+                                        color: 'white',
+                                        width: 24,
+                                        height: 24,
+                                        borderRadius: '50%',
+                                        fontSize: '0.8rem',
+                                        fontWeight: 'bold'
+                                      }}>
+                                        AI
+                                      </Box>
+                                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold', flexGrow: 1 }}>
+                                        {suggestion.title}
+                                      </Typography>
+                                      <Chip 
+                                        label={`${suggestion.confidence}%`} 
+                                        size="small" 
+                                        color="primary"
+                                        sx={{ height: 20, fontSize: '0.7rem' }}
+                                      />
+                                    </Box>
+                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                                      {suggestion.type}
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontStyle: 'italic', fontSize: '0.8rem', mb: 1 }}>
+                                      Main ingredients: {suggestion.ingredients.join(', ')}
+                                    </Typography>
+                                    {suggestion.missingIngredients.length > 0 && (
+                                      <Typography variant="body2" color="error" sx={{ fontSize: '0.8rem' }}>
+                                        Missing from cart: {suggestion.missingIngredients.join(', ')}
+                                      </Typography>
+                                    )}
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </Box>
+                          )}
+                          
+                          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 'auto', pt: 2 }}>
+                            <Button 
+                              variant="contained"
+                              color="primary"
+                              onClick={() => setActiveTab(4)}
+                              startIcon={<MenuBookIcon />}
+                            >
+                              Create Meal Plan
+                            </Button>
+                          </Box>
+                        </Box>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+                
+                {/* Recommended Smart Recipes */}
+                <Grid item xs={12}>
+                  <Card sx={{ 
+                    borderRadius: 2, 
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                    overflow: 'hidden'
+                  }}>
+                    <Box sx={{ 
+                      p: 2, 
+                      bgcolor: 'success.main', 
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <EmojiEventsIcon sx={{ mr: 1 }} />
+                        <Typography variant="h6">AI-Recommended Recipes</Typography>
+                      </Box>
+                      <Typography variant="caption" sx={{ 
+                        bgcolor: 'rgba(255,255,255,0.3)', 
+                        px: 1, 
+                        py: 0.5, 
+                        borderRadius: 1,
+                        fontWeight: 'bold'
+                      }}>
+                        <FiberNewIcon sx={{ fontSize: '0.9rem', mr: 0.5, verticalAlign: 'text-bottom' }} />
+                        Smart Match Technology
+                      </Typography>
+                    </Box>
+                    
+                    <CardContent>
+                      {smartRecipes.length === 0 ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                          <CircularProgress />
+                        </Box>
+                      ) : (
+                        <Grid container spacing={3}>
+                          {smartRecipes.map(recipe => (
+                            <Grid item xs={12} sm={6} md={4} key={recipe.id}>
+                              <Card sx={{
+                                height: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                position: 'relative',
+                                transition: 'transform 0.2s',
+                                '&:hover': {
+                                  transform: 'translateY(-5px)',
+                                  boxShadow: '0 10px 20px rgba(0,0,0,0.15)'
+                                },
+                                overflow: 'hidden'
+                              }}>
+                                <Box sx={{ position: 'relative' }}>
+                                  <Box 
+                                    component="img"
+                                    src={recipe.image} 
+                                    alt={recipe.title}
+                                    sx={{ width: '100%', height: 180, objectFit: 'cover' }}
+                                  />
+                                  <Box sx={{ 
+                                    position: 'absolute', 
+                                    top: 10, 
+                                    right: 10, 
+                                    display: 'flex', 
+                                    gap: 0.5 
+                                  }}>
+                                    <Chip 
+                                      label={`${recipe.dietMatch}% Match`} 
+                                      size="small" 
+                                      color="success"
+                                      sx={{ 
+                                        fontWeight: 'bold',
+                                        bgcolor: 'rgba(76, 175, 80, 0.9)'
+                                      }}
+                                    />
+                                  </Box>
+                                </Box>
+                                
+                                <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+                                    {recipe.title}
+                                  </Typography>
+                                  
+                                  <Box sx={{ display: 'flex', mb: 1, gap: 1 }}>
+                                    <Chip 
+                                      icon={<AccessTimeIcon fontSize="small" />} 
+                                      label={`${recipe.prepTime + recipe.cookTime} min`} 
+                                      size="small"
+                                      variant="outlined"
+                                    />
+                                    <Chip 
+                                      icon={<LocalDiningIcon fontSize="small" />} 
+                                      label={`${recipe.nutrients.calories} cal`} 
+                                      size="small"
+                                      variant="outlined"
+                                    />
+                                  </Box>
+                                  
+                                  <Typography variant="body2" sx={{ 
+                                    mb: 2,
+                                    flexGrow: 1,
+                                    color: 'text.secondary',
+                                    fontStyle: 'italic'
+                                  }}>
+                                    {recipe.aiRecommendedReason}
+                                  </Typography>
+                                  
+                                  <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 'bold' }}>
+                                    Key Nutrients:
+                                  </Typography>
+                                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 2 }}>
+                                    <Chip 
+                                      label={`Protein: ${recipe.nutrients.protein}g`} 
+                                      size="small" 
+                                      color="primary"
+                                      variant="outlined"
+                                      sx={{ height: 24 }}
+                                    />
+                                    <Chip 
+                                      label={`Carbs: ${recipe.nutrients.carbs}g`} 
+                                      size="small" 
+                                      color="secondary"
+                                      variant="outlined"
+                                      sx={{ height: 24 }}
+                                    />
+                                    <Chip 
+                                      label={`Fiber: ${recipe.nutrients.fiber}g`} 
+                                      size="small" 
+                                      color="success"
+                                      variant="outlined"
+                                      sx={{ height: 24 }}
+                                    />
+                                  </Box>
+                                  
+                                  <Button 
+                                    variant="contained" 
+                                    color="primary"
+                                    fullWidth
+                                    onClick={() => {
+                                      // Create cart items from recipe ingredients
+                                      const recipeItems = recipe.ingredients.map((ingredient, index) => ({
+                                        id: `recipe-${recipe.id}-${index}`,
+                                        name: ingredient,
+                                        price: parseFloat((Math.random() * 5 + 1).toFixed(2)),
+                                        category: determineCategory(ingredient),
+                                        quantity: 1,
+                                        image: `https://source.unsplash.com/100x100/?${encodeURIComponent(ingredient)}`,
+                                        fromRecipe: recipe.title
+                                      }));
+                                      
+                                      setCartItems(prev => [...prev, ...recipeItems]);
+                                      showAlert(`Added ingredients for ${recipe.title} to your cart!`, "success");
+                                    }}
+                                  >
+                                    Add Ingredients To Cart
+                                  </Button>
+                                </CardContent>
+                              </Card>
+                            </Grid>
+                          ))}
+                        </Grid>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+          
+          {/* Meal Planner Tab */}
+          {activeTab === 4 && (
+            <Box>
+              <Typography variant="h5" gutterBottom sx={{ 
+                mb: 3, 
+                display: 'flex', 
+                alignItems: 'center',
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+                pb: 2
+              }}>
+                <MenuBookIcon sx={{ mr: 1 }} />
+                Smart Meal Planner
+              </Typography>
+              
+              <Card sx={{ 
+                mb: 3, 
+                borderRadius: 2, 
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                bgcolor: 'primary.lighter'
+              }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <SpaIcon color="primary" sx={{ mr: 1 }} />
+                    <Typography variant="h6" color="primary.main">Create Your Personalized Meal Plan</Typography>
+                  </Box>
+                  <Typography variant="body1" paragraph>
+                    Our AI-powered meal planner creates a customized weekly meal plan based on your dietary preferences, nutritional needs, and lifestyle.
+                  </Typography>
+                  <Button 
+                    variant="contained"
+                    color="primary"
+                    size="large"
+                    startIcon={<SmartToyIcon />}
+                    onClick={() => setMealPlannerOpen(true)}
+                  >
+                    Create New Meal Plan
+                  </Button>
+                </CardContent>
+              </Card>
+              
+              {/* Pre-made meal plans */}
+              <Typography variant="h6" gutterBottom sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                mt: 4
+              }}>
+                <RestaurantIcon sx={{ mr: 1 }} />
+                Recommended Meal Plans
+              </Typography>
+              
+              <Grid container spacing={3}>
+                {mealPlans.map(plan => (
+                  <Grid item xs={12} md={4} key={plan.id}>
+                    <Card sx={{ 
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      transition: 'transform 0.2s',
+                      '&:hover': {
+                        transform: 'translateY(-5px)',
+                        boxShadow: '0 12px 28px rgba(0,0,0,0.15)'
+                      },
+                      position: 'relative',
+                      borderRadius: 3,
+                      overflow: 'hidden'
+                    }}>
+                      <Box sx={{ position: 'relative', height: 160, overflow: 'hidden' }}>
+                        <Box
+                          component="img"
+                          src={plan.image}
+                          alt={plan.name}
+                          sx={{ 
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                        <Box sx={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          p: 1,
+                          bgcolor: 'rgba(0,0,0,0.6)',
+                          color: 'white'
+                        }}>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                            {plan.name}
+                          </Typography>
+                        </Box>
+                      </Box>
+                      
+                      <CardContent sx={{ flexGrow: 1 }}>
+                        <Typography variant="body2" color="text.secondary" paragraph>
+                          <strong>Diet Type:</strong> {dietTypes[plan.dietType]?.name || plan.dietType}
+                        </Typography>
+                        
+                        <Grid container spacing={1} sx={{ mb: 2 }}>
+                          <Grid item xs={6}>
+                            <Typography variant="body2" color="text.secondary">
+                              <strong>Days:</strong> {plan.days}
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={6}>
+                            <Typography variant="body2" color="text.secondary">
+                              <strong>Meals/day:</strong> {plan.mealsPerDay}
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={12}>
+                            <Typography variant="body2" color="text.secondary">
+                              <strong>Avg. Calories/day:</strong> {plan.avgCaloriesPerDay}
+                            </Typography>
+                          </Grid>
+                        </Grid>
+                        
+                        <Button 
+                          variant="contained" 
+                          color="primary"
+                          fullWidth
+                          onClick={() => setSelectedMealPlan(plan)}
+                        >
+                          View Plan
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+              
+              {/* Custom Meal Plans */}
+              {generatedMealPlan && (
+                <>
+                  <Typography variant="h6" gutterBottom sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    mt: 4
+                  }}>
+                    <FiberNewIcon sx={{ mr: 1 }} />
+                    Your Custom Meal Plan
+                  </Typography>
+                  
+                  <Card sx={{ 
+                    mb: 3, 
+                    borderRadius: 2, 
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                  }}>
+                    <Box sx={{ 
+                      p: 2, 
+                      bgcolor: 'primary.main', 
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}>
+                      <Typography variant="h6">{generatedMealPlan.name}</Typography>
+                      <Button 
+                        variant="contained" 
+                        size="small" 
+                        color="secondary"
+                        onClick={() => addMealPlanToCart(generatedMealPlan)}
+                      >
+                        Add All to Cart
+                      </Button>
+                    </Box>
+                    
+                    <CardContent>
+                      <Grid container spacing={2} sx={{ mb: 3 }}>
+                        <Grid item xs={4}>
+                          <Typography variant="body2">
+                            <strong>Diet Type:</strong> {dietTypes[generatedMealPlan.dietType]?.name || generatedMealPlan.dietType}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={4}>
+                          <Typography variant="body2">
+                            <strong>Goal:</strong> {generatedMealPlan.goal}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={4}>
+                          <Typography variant="body2">
+                            <strong>Calories/day:</strong> {generatedMealPlan.avgCaloriesPerDay}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                      
+                      {/* Day tabs */}
+                      <Tabs 
+                        value={0} 
+                        variant="scrollable"
+                        scrollButtons="auto"
+                        sx={{ mb: 2 }}
+                      >
+                        {generatedMealPlan.days.map((day, index) => (
+                          <Tab key={day.day} label={day.day} />
+                        ))}
+                      </Tabs>
+                      
+                      {/* Sample day */}
+                      <Box>
+                        {generatedMealPlan.days[0].meals.map((meal, index) => (
+                          <Accordion key={meal.id} sx={{ mb: 1 }}>
+                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                                <Box sx={{ flexGrow: 1 }}>
+                                  <Typography variant="subtitle1">{meal.type}: {meal.title}</Typography>
+                                </Box>
+                                <Typography variant="body2" color="primary">
+                                  {meal.calories} cal
+                                </Typography>
+                              </Box>
+                            </AccordionSummary>
+                            <AccordionDetails>
+                              <Box>
+                                <Typography variant="body2" sx={{ mb: 1 }}>
+                                  <strong>Prep Time:</strong> {meal.prepTime} minutes
+                                </Typography>
+                                
+                                <Typography variant="body2" sx={{ mb: 1 }}>
+                                  <strong>Ingredients:</strong>
+                                </Typography>
+                                <Box component="ul" sx={{ mb: 2, pl: 2 }}>
+                                  {meal.ingredients.map((ingredient, idx) => (
+                                    <Typography component="li" variant="body2" key={`ingredient-${idx}`}>
+                                      {ingredient}
+                                    </Typography>
+                                  ))}
+                                </Box>
+                                
+                                <Typography variant="body2" sx={{ mb: 1 }}>
+                                  <strong>Macros:</strong> Protein: {meal.macros.protein}g, Carbs: {meal.macros.carbs}g, Fat: {meal.macros.fat}g, Fiber: {meal.macros.fiber}g
+                                </Typography>
+                                
+                                <Button 
+                                  variant="outlined" 
+                                  size="small"
+                                  sx={{ mt: 1 }}
+                                  onClick={() => {
+                                    const mealItems = meal.ingredients.map((ingredient, idx) => ({
+                                      id: `meal-${meal.id}-${idx}`,
+                                      name: ingredient,
+                                      price: parseFloat((Math.random() * 5 + 1).toFixed(2)),
+                                      category: determineCategory(ingredient),
+                                      quantity: 1,
+                                      image: `https://source.unsplash.com/100x100/?${encodeURIComponent(ingredient)}`,
+                                      fromMealPlan: `${generatedMealPlan.name} - ${meal.type}`
+                                    }));
+                                    
+                                    setCartItems(prev => [...prev, ...mealItems]);
+                                    showAlert(`Added ingredients for ${meal.title} to your cart!`, "success");
+                                  }}
+                                >
+                                  Add to Cart
+                                </Button>
+                              </Box>
+                            </AccordionDetails>
+                          </Accordion>
+                        ))}
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+            </Box>
+          )}
         </CardContent>
       </Card>
       
@@ -2273,6 +3937,708 @@ const GroceryTab = () => {
             </DialogActions>
           </>
         )}
+      </Dialog>
+      
+      {/* Nutrition Goals Dialog */}
+      <Dialog
+        open={nutritionDialogOpen}
+        onClose={() => setNutritionDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <CalculateIcon sx={{ mr: 1 }} />
+            Customize Nutrition Goals
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" paragraph>
+            Set your daily nutrition targets to personalize your analysis and recommendations.
+          </Typography>
+          
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <Typography gutterBottom>Daily Calorie Target</Typography>
+              <Slider
+                value={nutritionGoals.calories}
+                onChange={(e, newValue) => setNutritionGoals(prev => ({ ...prev, calories: newValue }))}
+                min={1200}
+                max={3500}
+                step={50}
+                valueLabelDisplay="auto"
+                marks={[
+                  { value: 1500, label: '1500' },
+                  { value: 2000, label: '2000' },
+                  { value: 2500, label: '2500' },
+                  { value: 3000, label: '3000' }
+                ]}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <Typography gutterBottom>Protein (g)</Typography>
+              <Slider
+                value={nutritionGoals.protein}
+                onChange={(e, newValue) => setNutritionGoals(prev => ({ ...prev, protein: newValue }))}
+                min={50}
+                max={200}
+                step={5}
+                valueLabelDisplay="auto"
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <Typography gutterBottom>Carbohydrates (g)</Typography>
+              <Slider
+                value={nutritionGoals.carbs}
+                onChange={(e, newValue) => setNutritionGoals(prev => ({ ...prev, carbs: newValue }))}
+                min={100}
+                max={400}
+                step={10}
+                valueLabelDisplay="auto"
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <Typography gutterBottom>Fat (g)</Typography>
+              <Slider
+                value={nutritionGoals.fat}
+                onChange={(e, newValue) => setNutritionGoals(prev => ({ ...prev, fat: newValue }))}
+                min={30}
+                max={120}
+                step={5}
+                valueLabelDisplay="auto"
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <Typography gutterBottom>Fiber (g)</Typography>
+              <Slider
+                value={nutritionGoals.fiber}
+                onChange={(e, newValue) => setNutritionGoals(prev => ({ ...prev, fiber: newValue }))}
+                min={15}
+                max={50}
+                step={1}
+                valueLabelDisplay="auto"
+              />
+            </Grid>
+          </Grid>
+          
+          <Box sx={{ mt: 4, p: 2, bgcolor: 'primary.lighter', borderRadius: 2 }}>
+            <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+              <SmartToyIcon fontSize="small" sx={{ mr: 1 }} />
+              AI Diet Type Preset
+            </Typography>
+            <FormControl fullWidth sx={{ mt: 1 }}>
+              <Select
+                value={userDietaryPreferences?.primaryDiet || 'balanced'}
+                onChange={(e) => {
+                  const dietType = e.target.value;
+                  // Adjust nutrition goals based on diet type
+                  switch(dietType) {
+                    case 'keto':
+                      setNutritionGoals({
+                        calories: 2000,
+                        protein: 150,
+                        carbs: 50,
+                        fat: 166,
+                        fiber: 25,
+                        sugar: 25
+                      });
+                      break;
+                    case 'vegan':
+                      setNutritionGoals({
+                        calories: 2000,
+                        protein: 80,
+                        carbs: 275,
+                        fat: 65,
+                        fiber: 35,
+                        sugar: 40
+                      });
+                      break;
+                    case 'paleo':
+                      setNutritionGoals({
+                        calories: 2000,
+                        protein: 150,
+                        carbs: 100,
+                        fat: 130,
+                        fiber: 25,
+                        sugar: 30
+                      });
+                      break;
+                    case 'mediterranean':
+                      setNutritionGoals({
+                        calories: 2000,
+                        protein: 90,
+                        carbs: 250,
+                        fat: 80,
+                        fiber: 35,
+                        sugar: 40
+                      });
+                      break;
+                    case 'muscle_gain':
+                      setNutritionGoals({
+                        calories: 2500,
+                        protein: 190,
+                        carbs: 275,
+                        fat: 80,
+                        fiber: 35,
+                        sugar: 50
+                      });
+                      break;
+                    case 'weight_loss':
+                      setNutritionGoals({
+                        calories: 1600,
+                        protein: 130,
+                        carbs: 130,
+                        fat: 65,
+                        fiber: 30,
+                        sugar: 25
+                      });
+                      break;
+                    default: // balanced
+                      setNutritionGoals({
+                        calories: 2000,
+                        protein: 120,
+                        carbs: 225,
+                        fat: 65,
+                        fiber: 30,
+                        sugar: 50
+                      });
+                  }
+                }}
+              >
+                {Object.entries(dietTypes).map(([key, diet]) => (
+                  <MenuItem key={key} value={key}>{diet.name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setNutritionDialogOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="contained"
+            color="primary"
+            onClick={() => {
+              setNutritionDialogOpen(false);
+              analyzeNutrition();
+              showAlert("Nutrition goals updated", "success");
+            }}
+          >
+            Save & Analyze
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Meal Planner Dialog */}
+      <Dialog
+        open={mealPlannerOpen}
+        onClose={() => !aiLoading && setMealPlannerOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <MenuBookIcon sx={{ mr: 1 }} />
+            Create Your Custom Meal Plan
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Stepper activeStep={mealPlanWizardStep} sx={{ mb: 4 }}>
+            <Step key="diet-type">
+              <StepLabel>Diet Type</StepLabel>
+            </Step>
+            <Step key="preferences">
+              <StepLabel>Preferences</StepLabel>
+            </Step>
+            <Step key="restrictions">
+              <StepLabel>Restrictions</StepLabel>
+            </Step>
+            <Step key="meals">
+              <StepLabel>Meals</StepLabel>
+            </Step>
+            <Step key="lifestyle">
+              <StepLabel>Lifestyle</StepLabel>
+            </Step>
+            <Step key="review">
+              <StepLabel>Review</StepLabel>
+            </Step>
+          </Stepper>
+          
+          {/* Diet Type Step */}
+          {mealPlanWizardStep === 0 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>Choose Your Diet Type</Typography>
+              <Typography variant="body2" sx={{ mb: 3 }}>
+                Select the dietary approach that best aligns with your goals and preferences.
+              </Typography>
+              
+              <Grid container spacing={2}>
+                {Object.entries(dietTypes).map(([key, diet]) => (
+                  <Grid item xs={12} sm={6} md={4} key={key}>
+                    <Card sx={{ 
+                      height: '100%',
+                      cursor: 'pointer',
+                      border: mealPlanProfile.dietType === key ? '2px solid' : '1px solid',
+                      borderColor: mealPlanProfile.dietType === key ? 'primary.main' : 'divider',
+                      bgcolor: mealPlanProfile.dietType === key ? 'primary.lighter' : 'background.paper',
+                      '&:hover': {
+                        borderColor: 'primary.main',
+                        bgcolor: 'primary.lighter',
+                        transform: 'translateY(-3px)',
+                        boxShadow: 3
+                      },
+                      transition: 'all 0.2s ease',
+                    }}
+                    onClick={() => setMealPlanProfile(prev => ({ ...prev, dietType: key }))}
+                    >
+                      <CardContent>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
+                          {diet.name}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                          {diet.description}
+                        </Typography>
+                        <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', fontWeight: 'bold' }}>
+                          Typical Macros:
+                        </Typography>
+                        <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>
+                          Protein: {diet.macros.protein} • Carbs: {diet.macros.carbs} • Fat: {diet.macros.fat}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          )}
+          
+          {/* Preferences Step */}
+          {mealPlanWizardStep === 1 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>Your Goals & Preferences</Typography>
+              <Typography variant="body2" sx={{ mb: 3 }}>
+                Tell us about your nutrition goals and food preferences.
+              </Typography>
+              
+              <Typography variant="subtitle1" gutterBottom>Primary Goal</Typography>
+              <RadioGroup
+                value={mealPlanProfile.goal}
+                onChange={(e) => setMealPlanProfile(prev => ({ ...prev, goal: e.target.value }))}
+                sx={{ mb: 3 }}
+              >
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <FormControlLabel 
+                      value="weight_loss" 
+                      control={<Radio />} 
+                      label="Weight Loss" 
+                      sx={{ 
+                        p: 1, 
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        width: '100%',
+                        m: 0
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <FormControlLabel 
+                      value="weight_management" 
+                      control={<Radio />} 
+                      label="Weight Maintenance" 
+                      sx={{ 
+                        p: 1, 
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        width: '100%',
+                        m: 0
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <FormControlLabel 
+                      value="muscle_gain" 
+                      control={<Radio />} 
+                      label="Muscle Gain" 
+                      sx={{ 
+                        p: 1, 
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        width: '100%',
+                        m: 0
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <FormControlLabel 
+                      value="athletic_performance" 
+                      control={<Radio />} 
+                      label="Athletic Performance" 
+                      sx={{ 
+                        p: 1, 
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        width: '100%',
+                        m: 0
+                      }}
+                    />
+                  </Grid>
+                </Grid>
+              </RadioGroup>
+              
+              <Typography variant="subtitle1" gutterBottom>Daily Calorie Target</Typography>
+              <Slider
+                value={mealPlanProfile.calories}
+                onChange={(e, newValue) => setMealPlanProfile(prev => ({ ...prev, calories: newValue }))}
+                min={1200}
+                max={3500}
+                step={50}
+                valueLabelDisplay="auto"
+                marks={[
+                  { value: 1500, label: '1500' },
+                  { value: 2000, label: '2000' },
+                  { value: 2500, label: '2500' },
+                  { value: 3000, label: '3000' }
+                ]}
+                sx={{ mb: 3 }}
+              />
+              
+              <Typography variant="subtitle1" gutterBottom>Food Preferences</Typography>
+              <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
+                Select foods you especially like to include in your meal plan.
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+                {['chicken', 'beef', 'fish', 'tofu', 'eggs', 'quinoa', 'rice', 'pasta', 'potatoes', 'leafy greens', 'berries', 'nuts'].map(preference => (
+                  <Chip
+                    key={preference}
+                    label={preference}
+                    onClick={() => {
+                      setMealPlanProfile(prev => {
+                        const newPreferences = prev.preferences.includes(preference)
+                          ? prev.preferences.filter(p => p !== preference)
+                          : [...prev.preferences, preference];
+                        return { ...prev, preferences: newPreferences };
+                      });
+                    }}
+                    color={mealPlanProfile.preferences.includes(preference) ? "primary" : "default"}
+                    sx={{ textTransform: 'capitalize' }}
+                  />
+                ))}
+              </Box>
+            </Box>
+          )}
+          
+          {/* Restrictions Step */}
+          {mealPlanWizardStep === 2 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>Dietary Restrictions</Typography>
+              <Typography variant="body2" sx={{ mb: 3 }}>
+                Let us know about any foods you need to avoid.
+              </Typography>
+              
+              <Typography variant="subtitle1" gutterBottom>Food Allergies & Restrictions</Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+                {['gluten', 'dairy', 'eggs', 'soy', 'nuts', 'shellfish', 'peanuts', 'wheat'].map(restriction => (
+                  <Chip
+                    key={restriction}
+                    label={restriction}
+                    onClick={() => {
+                      setMealPlanProfile(prev => {
+                        const newRestrictions = prev.restrictions.includes(restriction)
+                          ? prev.restrictions.filter(r => r !== restriction)
+                          : [...prev.restrictions, restriction];
+                        return { ...prev, restrictions: newRestrictions };
+                      });
+                    }}
+                    color={mealPlanProfile.restrictions.includes(restriction) ? "error" : "default"}
+                    sx={{ textTransform: 'capitalize' }}
+                  />
+                ))}
+              </Box>
+              
+              <Typography variant="subtitle1" gutterBottom>Special Diets</Typography>
+              <FormControl component="fieldset" sx={{ mb: 3 }}>
+                <Grid container spacing={1}>
+                  <Grid item xs={12} sm={6}>
+                    <FormControlLabel 
+                      control={
+                        <Switch 
+                          checked={mealPlanProfile.restrictions.includes('vegetarian')}
+                          onChange={(e) => {
+                            setMealPlanProfile(prev => {
+                              const newRestrictions = e.target.checked
+                                ? [...prev.restrictions, 'vegetarian']
+                                : prev.restrictions.filter(r => r !== 'vegetarian');
+                              return { ...prev, restrictions: newRestrictions };
+                            });
+                          }}
+                        />
+                      } 
+                      label="Vegetarian" 
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <FormControlLabel 
+                      control={
+                        <Switch 
+                          checked={mealPlanProfile.restrictions.includes('vegan')}
+                          onChange={(e) => {
+                            setMealPlanProfile(prev => {
+                              const newRestrictions = e.target.checked
+                                ? [...prev.restrictions, 'vegan']
+                                : prev.restrictions.filter(r => r !== 'vegan');
+                              return { ...prev, restrictions: newRestrictions };
+                            });
+                          }}
+                        />
+                      } 
+                      label="Vegan" 
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <FormControlLabel 
+                      control={
+                        <Switch 
+                          checked={mealPlanProfile.restrictions.includes('gluten-free')}
+                          onChange={(e) => {
+                            setMealPlanProfile(prev => {
+                              const newRestrictions = e.target.checked
+                                ? [...prev.restrictions, 'gluten-free']
+                                : prev.restrictions.filter(r => r !== 'gluten-free');
+                              return { ...prev, restrictions: newRestrictions };
+                            });
+                          }}
+                        />
+                      } 
+                      label="Gluten Free" 
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <FormControlLabel 
+                      control={
+                        <Switch 
+                          checked={mealPlanProfile.restrictions.includes('dairy-free')}
+                          onChange={(e) => {
+                            setMealPlanProfile(prev => {
+                              const newRestrictions = e.target.checked
+                                ? [...prev.restrictions, 'dairy-free']
+                                : prev.restrictions.filter(r => r !== 'dairy-free');
+                              return { ...prev, restrictions: newRestrictions };
+                            });
+                          }}
+                        />
+                      } 
+                      label="Dairy Free" 
+                    />
+                  </Grid>
+                </Grid>
+              </FormControl>
+            </Box>
+          )}
+          
+          {/* Meals Step */}
+          {mealPlanWizardStep === 3 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>Meals Configuration</Typography>
+              <Typography variant="body2" sx={{ mb: 3 }}>
+                Tell us about your meal frequency and preferences.
+              </Typography>
+              
+              <Typography variant="subtitle1" gutterBottom>Meals Per Day</Typography>
+              <ToggleButtonGroup
+                value={mealPlanProfile.mealsPerDay}
+                exclusive
+                onChange={(e, newValue) => {
+                  if (newValue !== null) {
+                    setMealPlanProfile(prev => ({ ...prev, mealsPerDay: newValue }));
+                  }
+                }}
+                sx={{ display: 'flex', mb: 3, flexWrap: 'wrap' }}
+              >
+                <ToggleButton value={3} sx={{ flex: '1 0 30%' }}>
+                  3 Meals
+                </ToggleButton>
+                <ToggleButton value={4} sx={{ flex: '1 0 30%' }}>
+                  4 Meals
+                </ToggleButton>
+                <ToggleButton value={5} sx={{ flex: '1 0 30%' }}>
+                  5 Meals
+                </ToggleButton>
+                <ToggleButton value={6} sx={{ flex: '1 0 30%' }}>
+                  6 Meals
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+          )}
+          
+          {/* Lifestyle Step */}
+          {mealPlanWizardStep === 4 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>Lifestyle Factors</Typography>
+              <Typography variant="body2" sx={{ mb: 3 }}>
+                Tell us about your cooking preferences and lifestyle.
+              </Typography>
+              
+              <Typography variant="subtitle1" gutterBottom>Cooking Time</Typography>
+              <RadioGroup
+                value={mealPlanProfile.cookingTime}
+                onChange={(e) => setMealPlanProfile(prev => ({ ...prev, cookingTime: e.target.value }))}
+                sx={{ mb: 3 }}
+              >
+                <FormControlLabel value="minimal" control={<Radio />} label="Quick meals only (15 min or less)" />
+                <FormControlLabel value="moderate" control={<Radio />} label="Moderate cooking time (up to 30 min)" />
+                <FormControlLabel value="extended" control={<Radio />} label="I enjoy cooking (any duration)" />
+              </RadioGroup>
+              
+              <Typography variant="subtitle1" gutterBottom>Cooking Skill Level</Typography>
+              <RadioGroup
+                value={mealPlanProfile.skillLevel}
+                onChange={(e) => setMealPlanProfile(prev => ({ ...prev, skillLevel: e.target.value }))}
+                sx={{ mb: 3 }}
+              >
+                <FormControlLabel value="beginner" control={<Radio />} label="Beginner" />
+                <FormControlLabel value="intermediate" control={<Radio />} label="Intermediate" />
+                <FormControlLabel value="advanced" control={<Radio />} label="Advanced" />
+              </RadioGroup>
+              
+              <Typography variant="subtitle1" gutterBottom>Budget Level</Typography>
+              <RadioGroup
+                value={mealPlanProfile.budgetLevel}
+                onChange={(e) => setMealPlanProfile(prev => ({ ...prev, budgetLevel: e.target.value }))}
+                sx={{ mb: 3 }}
+              >
+                <FormControlLabel value="budget" control={<Radio />} label="Budget-friendly" />
+                <FormControlLabel value="moderate" control={<Radio />} label="Moderate" />
+                <FormControlLabel value="premium" control={<Radio />} label="Premium" />
+              </RadioGroup>
+            </Box>
+          )}
+          
+          {/* Review Step */}
+          {mealPlanWizardStep === 5 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>Your Meal Plan is Ready!</Typography>
+              
+              {aiLoading ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4 }}>
+                  <CircularProgress size={60} sx={{ mb: 2 }} />
+                  <Typography variant="body1" gutterBottom>
+                    AI is creating your personalized meal plan...
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    This may take a moment as we analyze your preferences and generate optimal meals.
+                  </Typography>
+                </Box>
+              ) : (
+                <Box>
+                  <Card sx={{ mb: 3, bgcolor: 'success.lighter', borderRadius: 2 }}>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                        <CheckCircleIcon color="success" sx={{ mr: 1 }} />
+                        <Typography variant="h6" color="success.main">Meal Plan Generated Successfully!</Typography>
+                      </Box>
+                      
+                      <Typography variant="body1" paragraph>
+                        Your custom {dietTypes[mealPlanProfile.dietType]?.name || mealPlanProfile.dietType} plan has been created based on your preferences.
+                      </Typography>
+                      
+                      <Button 
+                        variant="contained" 
+                        color="primary"
+                        onClick={() => {
+                          setMealPlannerOpen(false);
+                          setTimeout(() => setSelectedMealPlan(generatedMealPlan), 500);
+                        }}
+                        fullWidth
+                      >
+                        View Your Meal Plan
+                      </Button>
+                    </CardContent>
+                  </Card>
+                  
+                  <Typography variant="subtitle1" gutterBottom>Plan Summary</Typography>
+                  <Grid container spacing={2} sx={{ mb: 2 }}>
+                    <Grid item xs={6}>
+                      <Typography variant="body2"><strong>Diet Type:</strong> {dietTypes[mealPlanProfile.dietType]?.name}</Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2"><strong>Goal:</strong> {mealPlanProfile.goal}</Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2"><strong>Calories/day:</strong> {mealPlanProfile.calories}</Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2"><strong>Meals/day:</strong> {mealPlanProfile.mealsPerDay}</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2">
+                        <strong>Restrictions:</strong> {mealPlanProfile.restrictions.length > 0 
+                          ? mealPlanProfile.restrictions.join(', ') 
+                          : 'None'}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </Box>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          {mealPlanWizardStep > 0 && mealPlanWizardStep < 5 && (
+            <Button 
+              onClick={() => setMealPlanWizardStep(prev => prev - 1)}
+            >
+              Back
+            </Button>
+          )}
+          
+          {mealPlanWizardStep < 4 && (
+            <Button 
+              variant="contained"
+              color="primary"
+              onClick={() => setMealPlanWizardStep(prev => prev + 1)}
+            >
+              Next
+            </Button>
+          )}
+          
+          {mealPlanWizardStep === 4 && (
+            <Button 
+              variant="contained"
+              color="primary"
+              onClick={generateMealPlan}
+            >
+              Generate Plan
+            </Button>
+          )}
+          
+          {mealPlanWizardStep === 5 && (
+            <Button 
+              variant="contained"
+              color="success"
+              onClick={() => {
+                setMealPlannerOpen(false);
+                if (generatedMealPlan) {
+                  addMealPlanToCart(generatedMealPlan);
+                }
+              }}
+              startIcon={<ShoppingCartIcon />}
+            >
+              Add All to Cart
+            </Button>
+          )}
+        </DialogActions>
       </Dialog>
       
       {/* Checkout Dialog with stepper */}
