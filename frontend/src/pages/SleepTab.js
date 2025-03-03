@@ -448,6 +448,13 @@ const SleepTab = () => {
   const { avgDuration, avgDeepSleep, avgEfficiency, avgScore } = getStats();
   const qualityLevel = getSleepQualityLevel(avgScore);
 
+  // Determine if we're using mock data
+  const isMockData = sleepData && sleepData.length > 0 && (
+    sleepData[0].startTime?.includes('PM') || 
+    sleepData[0].startTime?.includes('AM') ||
+    (sleepData[0].remSleepPercentage === 20 + Math.floor(Math.random() * 15))
+  );
+
   return (
     <Box sx={{ p: 2 }}>
       <motion.div
@@ -672,8 +679,24 @@ const SleepTab = () => {
                   </Grid>
                 </Box>
                 
-                <Box sx={{ mt: 2 }}>
+                <Box sx={{ mt: 2, position: 'relative' }}>
                   <SleepChart data={sleepData} period={period} />
+                  {isMockData && (
+                    <Box 
+                      sx={{ 
+                        position: 'absolute', 
+                        bottom: 8, 
+                        right: 8, 
+                        fontSize: '10px',
+                        fontStyle: 'italic',
+                        opacity: 0.3,
+                        color: theme.palette.primary.main,
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      ◆
+                    </Box>
+                  )}
                 </Box>
                 
                 <Box sx={{ px: 3, pb: 3 }}>

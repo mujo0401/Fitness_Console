@@ -492,6 +492,9 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
   const { avgHR, maxHR, minHR, restingHR } = getStats();
   const currentZone = getHeartRateZone(avgHR);
 
+  // Determine if we're using mock data
+  const isMockData = heartData && heartData.length > 0 && (heartData[0].time?.includes('AM') || heartData[0].time?.includes('PM'));
+
   return (
     <Box sx={{ p: 2 }}>
       <motion.div
@@ -948,8 +951,24 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
                   </Grid>
                 </Box>
                 
-                <Box sx={{ mt: 2 }}>
+                <Box sx={{ mt: 2, position: 'relative' }}>
                   <HeartRateChart data={heartData} period={period} />
+                  {isMockData && (
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        position: 'absolute', 
+                        bottom: 8, 
+                        right: 8, 
+                        color: 'rgba(0,0,0,0.2)', 
+                        fontSize: '9px',
+                        fontStyle: 'italic',
+                        opacity: 0.8
+                      }}
+                    >
+                      ℹ
+                    </Typography>
+                  )}
                 </Box>
                 
                 {abnormalEvents && abnormalEvents.length > 0 && (

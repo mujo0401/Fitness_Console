@@ -490,6 +490,13 @@ const ActivityTab = () => {
   
   const { totalSteps, totalCalories, totalActiveMinutes, totalDistance } = getStats();
 
+  // Determine if we're using mock data
+  const isMockData = activityData && activityData.length > 0 && (
+    activityData[0].time?.includes('AM') || 
+    activityData[0].time?.includes('PM') ||
+    activityData.some(item => item.activityLevel === 'Very Active' || item.activityLevel === 'Active')
+  );
+  
   return (
     <Box sx={{ p: 2 }}>
       <motion.div
@@ -716,8 +723,23 @@ const ActivityTab = () => {
                   </Grid>
                 </Box>
                 
-                <Box sx={{ mt: 2 }}>
+                <Box sx={{ mt: 2, position: 'relative' }}>
                   <ActivityChart data={activityData} period={period} />
+                  {isMockData && (
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        position: 'absolute', 
+                        bottom: 8, 
+                        right: 8, 
+                        color: 'rgba(76, 175, 80, 0.25)', 
+                        fontSize: '10px',
+                        fontStyle: 'italic'
+                      }}
+                    >
+                      ⊕
+                    </Typography>
+                  )}
                 </Box>
                 
                 <Box sx={{ px: 3, pb: 3 }}>
