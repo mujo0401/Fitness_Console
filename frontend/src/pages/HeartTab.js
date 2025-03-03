@@ -177,6 +177,7 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
   useEffect(() => {
     // Fetch real data when component mounts or period/date changes
     console.log('HeartTab useEffect triggered, fetching data...');
+    console.log(`Current date object: ${date}, ISO string: ${date.toISOString()}`);
     fetchHeartData();
   }, [period, date, isAuthenticated]);
 
@@ -365,9 +366,14 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
     setLoading(true);
     setError(null);
     try {
-      // Format date properly as a string
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      console.log(`🔍 Fetching heart rate data for period: ${period}, date: ${formattedDate}`);
+      // Format date properly as a string, ensuring it's in local timezone to avoid shifts
+      // Use the date parts to ensure proper timezone handling
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const formattedDate = `${year}-${month}-${day}`;
+      
+      console.log(`🔍 Fetching heart rate data for period: ${period}, date: ${formattedDate} (from date object: ${date})`);
       
       // Check authentication first with error handling
       // First check Fitbit connection status
@@ -453,9 +459,24 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
     setPeriod(event.target.value);
   };
 
-  const handleDateChange = (newDate) => {
-    if (isValid(newDate)) {
-      setDate(newDate);
+  const handleDateChange = (dateString) => {
+    // Fix for timezone issues when parsing date strings
+    if (typeof dateString === 'string') {
+      // Parse date string in local timezone by constructing date parts
+      const [year, month, day] = dateString.split('-');
+      if (year && month && day) {
+        const newDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0);
+        if (isValid(newDate)) {
+          console.log(`Date picker: Converting ${dateString} to ${newDate.toISOString().slice(0, 10)}`);
+          setDate(newDate);
+          return;
+        }
+      }
+    }
+    
+    // Fall back to original behavior for other cases
+    if (isValid(dateString)) {
+      setDate(dateString);
     }
   };
 
@@ -571,7 +592,7 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
                 type="date"
                 size="small"
                 value={date ? format(date, 'yyyy-MM-dd') : ''}
-                onChange={(e) => handleDateChange(new Date(e.target.value))}
+                onChange={(e) => handleDateChange(e.target.value)}
                 InputLabelProps={{ shrink: true }}
                 sx={{ 
                   bgcolor: 'rgba(255,255,255,0.1)', 

@@ -141,8 +141,21 @@ export const heartRateService = {
     try {
       console.log(`Fetching heart rate data for ${period} on ${date}`);
       
-      // Ensure date is in string format
-      const formattedDate = typeof date === 'string' ? date : date.toISOString().split('T')[0];
+      // Ensure date is in string format and handle timezone issues
+      let formattedDate;
+      if (typeof date === 'string') {
+        // Already a string, just use it
+        formattedDate = date;
+      } else if (date instanceof Date) {
+        // Format using date parts to avoid timezone issues
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        formattedDate = `${year}-${month}-${day}`;
+      } else {
+        // Fallback
+        formattedDate = new Date().toISOString().split('T')[0];
+      }
       
       // Simplify the request as much as possible
       console.log(`Making simple request to: ${API_BASE_URL}/fitbit/heart-rate?period=${period}&date=${formattedDate}`);
