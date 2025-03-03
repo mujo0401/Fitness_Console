@@ -54,7 +54,7 @@ def cache_response(timeout=3600):
     return decorator
 
 @spoonacular_bp.route('/search/products', methods=['GET'])
-@cache_response(timeout=current_app.config.get('SPOONACULAR_CACHE_TIMEOUT', 3600))
+@cache_response(timeout=3600)  # Default to 1 hour cache
 def search_grocery_products():
     """
     Search for grocery products using Spoonacular API
@@ -108,7 +108,7 @@ def search_grocery_products():
         return jsonify({'error': f'Error contacting Spoonacular API: {str(e)}'}), 500
 
 @spoonacular_bp.route('/products/<int:product_id>', methods=['GET'])
-@cache_response(timeout=current_app.config.get('SPOONACULAR_CACHE_TIMEOUT', 3600))
+@cache_response(timeout=3600)  # Default to 1 hour cache
 def get_product_information(product_id):
     """
     Get detailed information about a specific product
@@ -140,7 +140,7 @@ def get_product_information(product_id):
         return jsonify({'error': f'Error contacting Spoonacular API: {str(e)}'}), 500
 
 @spoonacular_bp.route('/search/recipes', methods=['GET'])
-@cache_response(timeout=current_app.config.get('SPOONACULAR_CACHE_TIMEOUT', 3600))
+@cache_response(timeout=3600)  # Default to 1 hour cache
 def search_recipes():
     """
     Search for recipes using Spoonacular API
