@@ -4260,6 +4260,7 @@ const generateDynamicGroceryItems = (searchQuery) => {
   const [isSearching, setIsSearching] = useState(false);
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
   const [enableDietFiltering, setEnableDietFiltering] = useState(false);
+  const [selectedDietType, setSelectedDietType] = useState('all');
   
   // Add debounce to search term to avoid unnecessary API calls
   useEffect(() => {
@@ -5129,6 +5130,30 @@ const generateDynamicGroceryItems = (searchQuery) => {
     }
   }, [currentMealPlan]);
   
+  // Function to get user's current location using the browser's Geolocation API
+  const getUserLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation is not supported by your browser");
+      return;
+    }
+    
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        });
+        setLocationLoading(false);
+      },
+      (error) => {
+        setLocationError(`Error: ${error.message}`);
+        setLocationLoading(false);
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
+  };
+
   // Automatically get user location when cart tab is opened
   useEffect(() => {
     if (activeTab === 1 && cartItems.length > 0 && !userLocation && !locationLoading) {
