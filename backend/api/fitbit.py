@@ -156,7 +156,7 @@ def get_profile():
     url = f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/profile.json"
     data, status_code = fitbit_request(url, headers)
     
-    if status_code \!= 200:
+    if status_code != 200:
         return jsonify({
             'error': 'Failed to fetch profile',
             'details': data
@@ -259,7 +259,7 @@ def get_heart_rate():
     params = {}
     heart_rate_data, status_code = fitbit_request(url, headers, params)
     
-    if status_code \!= 200:
+    if status_code != 200:
         return jsonify({
             'error': 'Failed to fetch heart rate data',
             'details': heart_rate_data
@@ -326,7 +326,7 @@ def get_sleep():
     
     sleep_data, status_code = fitbit_request(url, headers, params)
     
-    if status_code \!= 200:
+    if status_code != 200:
         return jsonify({
             'error': 'Failed to fetch sleep data',
             'details': sleep_data
