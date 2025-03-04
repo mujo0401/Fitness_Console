@@ -7,6 +7,8 @@ import time
 import hashlib
 import json
 from functools import wraps
+import threading
+import asyncio
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.data_processor import process_heart_rate_data, detect_abnormal_rhythms, process_sleep_data, process_activity_data
 
@@ -21,6 +23,16 @@ CACHE_EXPIRATION = 1800
 REQUEST_LIMIT = 150  # Fitbit allows 150 requests per hour
 RATE_LIMIT_WINDOW = 3600  # 1 hour in seconds
 request_timestamps = []
+
+# BLE connection and data management
+bluetooth_connected = False
+bluetooth_hr_data = {}
+bluetooth_lock = threading.Lock()
+bluetooth_device = None
+bluetooth_thread = None
+FITBIT_HR_SERVICE_UUID = "180d"  # Heart Rate service UUID
+FITBIT_HR_CHARACTERISTIC_UUID = "2a37"  # Heart Rate Measurement characteristic UUID
+FITBIT_DEVICE_NAME_PREFIX = "Charge 6"  # Device name prefix for Fitbit Charge 6
 
 
 def rate_limit():
@@ -458,4 +470,237 @@ def cache_stats():
     return jsonify({
         'cache_size': len(cache),
         'cache_keys': list(cache.keys())
+    })
+
+
+# Bluetooth Low Energy (BLE) implementation for direct connection to Fitbit Charge 6
+async def handle_heart_rate_notification(sender, data):
+    """Process heart rate notifications from the Fitbit device"""
+    # Heart rate data format according to BLE GATT standard
+    # First byte: Flags
+    # - Bit 0: Heart Rate Value Format (0: UINT8, 1: UINT16)
+    # - Bit 1: Sensor Contact Status (0: Not supported or not detected, 1: Supported and detected)
+    # - Bit 2: Sensor Contact Support (0: Not supported, 1: Supported)
+    # - Bit 3: Energy Expended Status (0: Not present, 1: Present)
+    # - Bit 4: RR-Interval (0: Not present, 1: Present)
+    # Second byte: Heart Rate Value (UINT8 or UINT16 depending on bit 0 of flags)
+    
+    flags = data[0]
+    value_format = flags & 0x01  # Get bit 0 (Heart Rate Value Format)
+    
+    if value_format == 0:
+        # UINT8 format
+        heart_rate = data[1]
+    else:
+        # UINT16 format (little endian)
+        heart_rate = int.from_bytes(data[1:3], byteorder='little')
+    
+    timestamp = datetime.now().isoformat()
+    
+    with bluetooth_lock:
+        # Store only 3600 data points (1 hour at 1 per second)
+        while len(bluetooth_hr_data) >= 3600:
+            oldest_timestamp = min(bluetooth_hr_data.keys())
+            bluetooth_hr_data.pop(oldest_timestamp)
+        
+        bluetooth_hr_data[timestamp] = {
+            'value': heart_rate,
+            'time': datetime.now().strftime('%H:%M:%S'),
+            'date': datetime.now().strftime('%Y-%m-%d')
+        }
+    
+    current_app.logger.info(f"BLE Heart Rate: {heart_rate} BPM")
+
+
+async def connect_to_fitbit_ble():
+    """Connect to Fitbit Charge 6 via Bluetooth LE"""
+    global bluetooth_connected, bluetooth_device
+    
+    # Import bleak inside the function to avoid loading it in environments where it's not available
+    try:
+        from bleak import BleakScanner, BleakClient
+    except ImportError:
+        current_app.logger.error("Bleak package not installed. Cannot use Bluetooth connectivity.")
+        return False
+    
+    try:
+        current_app.logger.info("Scanning for Fitbit Charge 6...")
+        devices = await BleakScanner.discover()
+        
+        fitbit_device = None
+        for device in devices:
+            if device.name and FITBIT_DEVICE_NAME_PREFIX in device.name:
+                current_app.logger.info(f"Found Fitbit device: {device.name} ({device.address})")
+                fitbit_device = device
+                break
+        
+        if not fitbit_device:
+            current_app.logger.error("No Fitbit device found")
+            return False
+        
+        current_app.logger.info(f"Connecting to {fitbit_device.name}...")
+        client = BleakClient(fitbit_device.address)
+        
+        await client.connect()
+        current_app.logger.info("Connected to Fitbit device")
+        
+        # Discover services and characteristics
+        services = await client.get_services()
+        hr_service = None
+        
+        for service in services:
+            if service.uuid.lower().startswith(FITBIT_HR_SERVICE_UUID):
+                hr_service = service
+                current_app.logger.info(f"Found Heart Rate service: {service.uuid}")
+                break
+        
+        if not hr_service:
+            current_app.logger.error("Heart Rate service not found")
+            await client.disconnect()
+            return False
+        
+        # Find the Heart Rate Measurement characteristic
+        hr_characteristic = None
+        for char in hr_service.characteristics:
+            if char.uuid.lower().startswith(FITBIT_HR_CHARACTERISTIC_UUID):
+                hr_characteristic = char
+                current_app.logger.info(f"Found Heart Rate characteristic: {char.uuid}")
+                break
+        
+        if not hr_characteristic:
+            current_app.logger.error("Heart Rate characteristic not found")
+            await client.disconnect()
+            return False
+        
+        # Subscribe to notifications
+        await client.start_notify(hr_characteristic.uuid, handle_heart_rate_notification)
+        current_app.logger.info("Subscribed to Heart Rate notifications")
+        
+        bluetooth_device = client
+        bluetooth_connected = True
+        
+        # Keep the connection active
+        while bluetooth_connected:
+            await asyncio.sleep(1)
+        
+        # Cleanup when disconnection is requested
+        if bluetooth_device:
+            await bluetooth_device.disconnect()
+            bluetooth_device = None
+            current_app.logger.info("Disconnected from Fitbit device")
+        
+        return True
+        
+    except Exception as e:
+        current_app.logger.error(f"Error connecting to Fitbit via BLE: {str(e)}")
+        bluetooth_connected = False
+        if bluetooth_device:
+            try:
+                await bluetooth_device.disconnect()
+            except:
+                pass
+            bluetooth_device = None
+        return False
+
+
+def start_bluetooth_connection():
+    """Start BLE connection in a background thread"""
+    global bluetooth_thread, bluetooth_connected
+    
+    if bluetooth_thread and bluetooth_thread.is_alive():
+        current_app.logger.info("Bluetooth connection already running")
+        return jsonify({"status": "already_running"})
+    
+    def run_bluetooth_loop():
+        """Run the asyncio event loop for Bluetooth operations"""
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(connect_to_fitbit_ble())
+    
+    bluetooth_connected = False
+    bluetooth_thread = threading.Thread(target=run_bluetooth_loop, daemon=True)
+    bluetooth_thread.start()
+    
+    return jsonify({"status": "connecting"})
+
+
+def stop_bluetooth_connection():
+    """Stop the BLE connection"""
+    global bluetooth_connected
+    
+    if not bluetooth_connected:
+        return jsonify({"status": "not_connected"})
+    
+    bluetooth_connected = False
+    return jsonify({"status": "disconnecting"})
+
+
+@bp.route('/bluetooth/connect', methods=['POST'])
+def connect_bluetooth():
+    """API endpoint to start Bluetooth connection to Fitbit"""
+    return start_bluetooth_connection()
+
+
+@bp.route('/bluetooth/disconnect', methods=['POST'])
+def disconnect_bluetooth():
+    """API endpoint to stop Bluetooth connection to Fitbit"""
+    return stop_bluetooth_connection()
+
+
+@bp.route('/bluetooth/status', methods=['GET'])
+def bluetooth_status():
+    """Get current Bluetooth connection status"""
+    return jsonify({
+        "connected": bluetooth_connected,
+        "data_points": len(bluetooth_hr_data) if bluetooth_hr_data else 0,
+        "latest_reading": list(bluetooth_hr_data.values())[-1] if bluetooth_hr_data else None
+    })
+
+
+@bp.route('/bluetooth/heart-rate', methods=['GET'])
+def get_bluetooth_heart_rate():
+    """Get heart rate data collected via Bluetooth"""
+    # Get query parameters
+    period = request.args.get('period', 'day')  # day, hour, minute
+    
+    with bluetooth_lock:
+        if not bluetooth_hr_data:
+            return jsonify({
+                'error': 'No Bluetooth heart rate data available',
+                'connected': bluetooth_connected
+            }), 404
+            
+        # Filter data based on period
+        now = datetime.now()
+        filtered_data = []
+        
+        for timestamp, data in bluetooth_hr_data.items():
+            data_time = datetime.fromisoformat(timestamp)
+            
+            if period == 'minute' and (now - data_time).total_seconds() <= 60:
+                filtered_data.append(data)
+            elif period == 'hour' and (now - data_time).total_seconds() <= 3600:
+                filtered_data.append(data)
+            elif period == 'day' and (now - data_time).total_seconds() <= 86400:
+                filtered_data.append(data)
+        
+    # Process the data similar to API data
+    processed_data = process_heart_rate_data({"activities-heart-intraday": {"dataset": filtered_data}}, period)
+    
+    # Check if data should be processed for abnormal rhythms
+    if period in ['minute', 'hour']:
+        abnormal_events = detect_abnormal_rhythms(processed_data)
+        return jsonify({
+            'data': processed_data,
+            'abnormal_events': abnormal_events,
+            'period': period,
+            'source': 'bluetooth',
+            'connected': bluetooth_connected
+        })
+    
+    return jsonify({
+        'data': processed_data,
+        'period': period,
+        'source': 'bluetooth',
+        'connected': bluetooth_connected
     })

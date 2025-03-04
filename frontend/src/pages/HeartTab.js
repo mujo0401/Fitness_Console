@@ -20,7 +20,9 @@ import {
   LinearProgress,
   IconButton,
   Tooltip,
-  Stack
+  Stack,
+  Tabs,
+  Tab
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import { format, isValid } from 'date-fns';
@@ -38,8 +40,12 @@ import ShowChartIcon from '@mui/icons-material/ShowChart';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import SpeedIcon from '@mui/icons-material/Speed';
+import BluetoothIcon from '@mui/icons-material/Bluetooth';
+import BluetoothConnectedIcon from '@mui/icons-material/BluetoothConnected';
+import DevicesIcon from '@mui/icons-material/Devices';
 import { heartRateService, authService, fitbitService } from '../services/api';
 import HeartRateChart from '../components/charts/HeartRateChart';
+import BluetoothHeartRate from '../components/charts/BluetoothHeartRate';
 import { useAuth } from '../context/AuthContext';
 import InfoIcon from '@mui/icons-material/Info';
 
@@ -173,13 +179,25 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
   const [abnormalEvents, setAbnormalEvents] = useState([]);
   const [hrv, setHrv] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [dataSource, setDataSource] = useState('api'); // 'api' or 'bluetooth'
+  const [bluetoothHeartRateData, setBluetoothHeartRateData] = useState([]);
 
   useEffect(() => {
     // Fetch real data when component mounts or period/date changes
+    if (dataSource === 'bluetooth') {
+      // Skip API call if using Bluetooth
+      return;
+    }
+    
     console.log('HeartTab useEffect triggered, fetching data...');
     console.log(`Current date object: ${date}, ISO string: ${date.toISOString()}`);
     fetchHeartData();
-  }, [period, date, isAuthenticated]);
+  }, [period, date, isAuthenticated, dataSource]);
+  
+  // Handle Bluetooth heart rate data
+  const handleBluetoothHeartRateData = (data) => {
+    setBluetoothHeartRateData(data);
+  };
 
   // Generate mock heart rate data for demonstration
   const generateMockHeartRateData = (dataPeriod) => {
@@ -536,6 +554,11 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
     });
   };
   
+  // Handle data source change
+  const handleDataSourceChange = (event, newValue) => {
+    setDataSource(newValue);
+  };
+  
   // Calculate statistics
   const getStats = () => {
     if (!heartData || heartData.length === 0) {
@@ -594,7 +617,9 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
             px: 3,
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center'
+            alignItems: 'center',
+            flexWrap: { xs: 'wrap', md: 'nowrap' },
+            gap: { xs: 2, md: 0 }
           }}>
             <Typography 
               variant="h5" 
@@ -610,6 +635,46 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
               <FavoriteIcon sx={{ filter: 'drop-shadow(0 2px 4px rgba(255,255,255,0.3))' }} /> 
               Heart Rate Analytics
             </Typography>
+            
+            {/* Data source tabs */}
+            <Tabs
+              value={dataSource}
+              onChange={handleDataSourceChange}
+              sx={{ 
+                minHeight: 40, 
+                background: 'rgba(255,255,255,0.1)',
+                borderRadius: 2,
+                mr: { xs: 0, md: 2 },
+                '& .MuiTabs-indicator': {
+                  height: 3,
+                  borderRadius: '3px 3px 0 0',
+                  backgroundColor: 'white'
+                },
+                '& .MuiTab-root': {
+                  color: 'rgba(255,255,255,0.7)',
+                  minHeight: 40,
+                  p: 1,
+                  px: 2,
+                  minWidth: 0,
+                  '&.Mui-selected': {
+                    color: 'white'
+                  }
+                }
+              }}
+            >
+              <Tab 
+                icon={<FavoriteIcon fontSize="small" />} 
+                label="Fitbit API" 
+                value="api" 
+                iconPosition="start"
+              />
+              <Tab 
+                icon={<BluetoothIcon fontSize="small" />} 
+                label="Bluetooth" 
+                value="bluetooth" 
+                iconPosition="start"
+              />
+            </Tabs>
               
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               <FormControl 
@@ -677,7 +742,12 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
           </Box>
           
           <CardContent sx={{ p: 0 }}>
-            {loading ? (
+            {dataSource === 'bluetooth' ? (
+              // Bluetooth connection and heart rate section
+              <Box sx={{ p: 3 }}>
+                <BluetoothHeartRate onHeartRateData={handleBluetoothHeartRateData} />
+              </Box>
+            ) : loading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', p: 8, flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                 <CircularProgress size={60} thickness={4} />
                 <Typography variant="body2" color="text.secondary">
