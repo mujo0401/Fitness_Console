@@ -566,6 +566,15 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
   // Determine if we're using mock data
   const isMockData = heartData && heartData.length > 0 && (heartData[0].time?.includes('AM') || heartData[0].time?.includes('PM'));
 
+  // Pass authentication details to HeartRateChart for Diagnostics dialog
+  const chartProps = {
+    data: heartData,
+    period,
+    tokenScopes,
+    isAuthenticated,
+    date
+  };
+
   return (
     <Box sx={{ p: 2 }}>
       <motion.div
@@ -798,29 +807,7 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
                   </Paper>
                   
                   <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
-                    <Button 
-                      variant="outlined" 
-                      onClick={handleRefresh} 
-                      startIcon={<RefreshIcon />}
-                    >
-                      {error ? "Try Again" : "Refresh"}
-                    </Button>
-                    
-                    <Button 
-                      variant="contained" 
-                      color="primary"
-                      onClick={() => {
-                        authService.logout().then(() => {
-                          // After logging out, redirect to Fitbit auth
-                          setTimeout(() => authService.login(), 500);
-                        }).catch(err => {
-                          console.error('Error during reauth flow:', err);
-                          alert('Error during reauthentication: ' + err.message);
-                        });
-                      }}
-                    >
-                      Re-authenticate (Fix Permissions)
-                    </Button>
+                    {/* Debug buttons removed */}
                   </Box>
                 </Box>
                 
@@ -867,7 +854,7 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
                 </Box>
                 
                 <Box sx={{ mt: 2 }}>
-                  <HeartRateChart data={[]} period={period} />
+                  <HeartRateChart {...chartProps} data={[]} />
                 </Box>
                 
                 {/* Advanced analysis section - still shown with empty data */}
@@ -1600,7 +1587,7 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
                 </Box>
                 
                 <Box sx={{ mt: 2, position: 'relative' }}>
-                  <HeartRateChart data={heartData} period={period} />
+                  <HeartRateChart {...chartProps} />
                   {isMockData && (
                     <Typography 
                       variant="caption" 
