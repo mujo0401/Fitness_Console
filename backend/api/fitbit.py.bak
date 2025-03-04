@@ -88,58 +88,10 @@ def fitbit_request(url, headers, params=None):
     
     if response.status_code != 200:
         current_app.logger.error(f"Error response: {response.text}")
-        # Add more detailed logging for troubleshooting
-        if response.status_code == 401:
-            current_app.logger.error("Authentication error - token may be invalid or missing required scopes")
-            # Check token scopes
-            token = session.get('oauth_token')
-            if token and 'scope' in token:
-                scopes = token['scope'].split(' ')
-                current_app.logger.error(f"Token scopes: {scopes}")
-                if 'heartrate' not in scopes:
-                    current_app.logger.error("CRITICAL: 'heartrate' scope is missing from token!")
     
     # Cache successful responses
     if response.status_code == 200:
-        # Log a sample of the response for debugging
-        try:
-            response_json = response.json()
-            cache_response(url, response_json, params)
-            
-            # Debug log the structure of the response if it's a heart rate request
-            if 'heart' in url:
-                current_app.logger.info("Analyzing heart rate response structure:")
-                
-                if 'activities-heart' in response_json:
-                    heart_data = response_json['activities-heart']
-                    current_app.logger.info(f"Heart data entries: {len(heart_data)}")
-                    
-                    # Log first entry as sample
-                    if heart_data and len(heart_data) > 0:
-                        current_app.logger.info(f"Sample heart entry: {heart_data[0]}")
-                    else:
-                        current_app.logger.warning("Heart data array is empty!")
-                    
-                    # Check for intraday data
-                    if 'activities-heart-intraday' in response_json:
-                        intraday = response_json['activities-heart-intraday']
-                        dataset = intraday.get('dataset', [])
-                        current_app.logger.info(f"Intraday data points: {len(dataset)}")
-                        
-                        # Log first few points if available
-                        if dataset and len(dataset) > 0:
-                            current_app.logger.info(f"Sample intraday points: {dataset[:3]}")
-                        else:
-                            current_app.logger.warning("Intraday dataset is empty!")
-                    else:
-                        current_app.logger.warning("No intraday data found in response!")
-                else:
-                    current_app.logger.warning("Unexpected response format - no activities-heart field")
-            
-            return response_json, response.status_code
-        except Exception as e:
-            current_app.logger.error(f"Error processing response JSON: {str(e)}")
-            return response.json() if response.status_code == 200 else response.text, response.status_code
+        cache_response(url, response.json(), params)
     
     return response.json() if response.status_code == 200 else response.text, response.status_code
 
@@ -156,7 +108,7 @@ def get_profile():
     url = f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/profile.json"
     data, status_code = fitbit_request(url, headers)
     
-    if status_code \!= 200:
+    if status_code != 200:
         return jsonify({
             'error': 'Failed to fetch profile',
             'details': data
@@ -200,25 +152,9 @@ def debug_heart():
 @rate_limit()
 def get_heart_rate():
     """Get heart rate data for a given time period"""
-    # Extra verbose logging for debugging
-    current_app.logger.info("=== HEART RATE ENDPOINT CALLED ===")
-    
-    # Check authentication
-    token = session.get('oauth_token')
-    if token:
-        current_app.logger.info(f"Token found in session. Expires at: {token.get('expires_at', 'unknown')}")
-        if 'scope' in token:
-            scopes = token['scope'].split(' ')
-            current_app.logger.info(f"Token scopes: {scopes}")
-            if 'heartrate' not in scopes:
-                current_app.logger.error("CRITICAL: 'heartrate' scope is missing from token!")
-    else:
-        current_app.logger.error("No OAuth token found in session!")
-    
     headers = get_fitbit_headers()
     
     if not headers:
-        current_app.logger.error("No valid headers - authentication failed")
         return jsonify({'error': 'Not authenticated'}), 401
     
     # Get query parameters
@@ -240,15 +176,10 @@ def get_heart_rate():
     else:
         return jsonify({'error': 'Invalid period'}), 400
     
-    # Set detail level based on period to avoid timeouts with large datasets
-    if period == '3month':
-        # For 3-month period, use 1-minute resolution to avoid timeout and excessive data
-        detail_level = '1min'
-        current_app.logger.info(f"Using reduced detail level {detail_level} for {period} to prevent timeouts")
-    else:
-        # For shorter periods, use highest resolution possible
-        detail_level = '1sec'  # Request second-by-second data for maximum detail
-        current_app.logger.info(f"Using detailed level {detail_level} for period {period}")
+    # Always use the highest resolution possible for all periods
+    # This ensures we get detailed intraday data regardless of period
+    detail_level = '1sec'  # Request second-by-second data for maximum detail
+    current_app.logger.info(f"Using detail level {detail_level} for period {period}")
     
     # Format dates for API
     start_str = start_date.strftime('%Y-%m-%d')
@@ -259,7 +190,7 @@ def get_heart_rate():
     params = {}
     heart_rate_data, status_code = fitbit_request(url, headers, params)
     
-    if status_code \!= 200:
+    if status_code != 200:
         return jsonify({
             'error': 'Failed to fetch heart rate data',
             'details': heart_rate_data
@@ -326,7 +257,7 @@ def get_sleep():
     
     sleep_data, status_code = fitbit_request(url, headers, params)
     
-    if status_code \!= 200:
+    if status_code != 200:
         return jsonify({
             'error': 'Failed to fetch sleep data',
             'details': sleep_data

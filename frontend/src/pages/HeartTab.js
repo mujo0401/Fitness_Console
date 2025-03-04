@@ -395,8 +395,48 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
       let useMockData = false; // Default to using real data
       
       try {
+        // Show what period and date we're requesting
+        console.log('📋 Requesting data with these parameters:');
+        console.log('  - Period:', period);
+        console.log('  - Date:', formattedDate);
+        console.log('  - User authenticated:', isAuthenticated);
+        console.log('  - Available scopes:', tokenScopes);
+        
+        // Check if we have the required scope
+        if (!tokenScopes.includes('heartrate')) {
+          console.warn('⚠️ MISSING REQUIRED SCOPE: heartrate scope is not present in token!');
+        }
+        
+        // Make the API call with extensive logging
+        console.log('🔄 Making API request to Fitbit heart rate endpoint...');
         data = await heartRateService.getHeartRateData(period, formattedDate);
-        console.log('📊 API Response:', data);
+        console.log('📊 API Response received:', data);
+        
+        // Log the actual API URL that would be called (for debugging)
+        const apiBaseUrl = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
+        console.log(`🔍 API URL: ${apiBaseUrl}/api/fitbit/heart-rate?period=${period}&date=${formattedDate}`);
+        
+        // Validate the data
+        if (data && data.data) {
+          console.log(`✅ Received ${data.data.length} data points`);
+          
+          // If we received data but it's empty, log it
+          if (data.data.length === 0) {
+            console.warn('⚠️ API returned success but with empty data array');
+            
+            // Try to determine if we have the right scope
+            const hasHeartRateScope = tokenScopes.includes('heartrate');
+            console.log(`🔑 Has heartrate scope: ${hasHeartRateScope}`);
+            
+            if (!hasHeartRateScope) {
+              setError("Heart rate data access requires the 'heartrate' scope permission. Please re-authenticate with proper permissions.");
+              useMockData = true;
+            } else {
+              setError("No heart rate data available for the selected period. Try selecting a different date range.");
+              useMockData = true;
+            }
+          }
+        }
       } catch (apiError) {
         console.error("🔴 API call failed:", apiError);
         useMockData = true;
@@ -405,6 +445,15 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
         if (apiError.response?.status === 401) {
           console.warn("⚠️ 401 Unauthorized: May need heartrate scope permission");
           setError("Heart rate data access requires additional permissions. This could be because the 'heartrate' scope was not granted during authentication. Using mock data for demonstration.");
+        } else if (apiError.response?.status === 429) {
+          console.warn("⚠️ 429 Rate limit: Too many requests to Fitbit API");
+          setError("You've reached the Fitbit API rate limit. Please wait a few minutes and try again. Using mock data for demonstration.");
+        } else if (apiError.response?.status >= 500) {
+          console.warn("⚠️ 5XX Server error: Fitbit API server issue");
+          setError("The Fitbit API is experiencing server issues. Please try again later. Using mock data for demonstration.");
+        } else if (period === '3month' && (apiError.message?.includes('timeout') || apiError.message?.includes('timed out'))) {
+          console.warn("⚠️ Timeout for 3-month period - this is common for large datasets");
+          setError("Request for 3-month data timed out. The Fitbit API has limits on how much data can be retrieved at once. Try a shorter time period or try again later. Using mock data for demonstration.");
         } else {
           setError(`Failed to fetch heart rate data: ${apiError.message || 'Unknown error'}. Using mock data for demonstration.`);
         }
@@ -582,7 +631,7 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
                     <CalendarTodayIcon fontSize="small" /> 1 Month
                   </MenuItem>
                   <MenuItem value="3month" sx={{ display: 'flex', gap: 1 }}>
-                    <HistoryIcon fontSize="small" /> 3 Months
+                    <HistoryIcon fontSize="small" /> 3 Months (Limited detail)
                   </MenuItem>
                 </Select>
               </FormControl>
@@ -645,22 +694,52 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
                     }}
                   >
                     <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                      <InfoIcon color="info" /> Token Scopes Debug
+                      <InfoIcon color="info" /> Heart Rate Data Diagnostics
                     </Typography>
-                    <Typography variant="body2" align="left">
-                      Current scopes: {tokenScopes.length > 0 ? tokenScopes.join(', ') : 'No scopes found'}
-                    </Typography>
-                    <Typography variant="body2" color="error" sx={{ mt: 1 }} align="left">
-                      Has 'heartrate' scope: {tokenScopes.includes('heartrate') ? 'Yes' : 'No - this is required for heart rate data'}
-                    </Typography>
+                    
+                    <Box sx={{ mb: 2, p: 1, border: '1px solid rgba(0,0,0,0.1)', borderRadius: 1, bgcolor: 'background.paper' }}>
+                      <Typography variant="subtitle2" gutterBottom>Authentication Status:</Typography>
+                      <Typography variant="body2" align="left">
+                        Authenticated: <strong>{isAuthenticated ? 'Yes' : 'No'}</strong>
+                      </Typography>
+                      <Typography variant="body2" align="left">
+                        Current scopes: {tokenScopes.length > 0 ? tokenScopes.join(', ') : 'No scopes found'}
+                      </Typography>
+                      <Typography variant="body2" color={tokenScopes.includes('heartrate') ? 'success.main' : 'error.main'} sx={{ mt: 1 }} align="left">
+                        Has 'heartrate' scope: <strong>{tokenScopes.includes('heartrate') ? 'Yes' : 'No - this is required for heart rate data'}</strong>
+                      </Typography>
+                    </Box>
+                    
+                    <Box sx={{ mb: 2, p: 1, border: '1px solid rgba(0,0,0,0.1)', borderRadius: 1, bgcolor: 'background.paper' }}>
+                      <Typography variant="subtitle2" gutterBottom>Current Request Parameters:</Typography>
+                      <Typography variant="body2" align="left">
+                        Period: <strong>{period}</strong>
+                      </Typography>
+                      <Typography variant="body2" align="left">
+                        Date: <strong>{format(date, 'yyyy-MM-dd')}</strong>
+                      </Typography>
+                      <Typography variant="body2" align="left">
+                        API Endpoint: <code>{process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000'}/api/fitbit/heart-rate?period={period}&date={format(date, 'yyyy-MM-dd')}</code>
+                      </Typography>
+                    </Box>
+                    
                     <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1 }}>
                       <Button 
                         variant="outlined" 
                         color="info"
-                        onClick={() => authService.debugSession().then(data => console.log('Session debug:', data))}
+                        onClick={async () => {
+                          try {
+                            const data = await authService.debugSession();
+                            console.log('Session debug:', data);
+                            alert('Session info logged to console - check browser console (F12)');
+                          } catch (e) {
+                            console.error('Error debugging session:', e);
+                            alert('Error debugging session: ' + e.message);
+                          }
+                        }}
                         size="small"
                       >
-                        Debug Session (Check Console)
+                        Debug Session
                       </Button>
                       <Button
                         variant="outlined"
@@ -674,16 +753,46 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
                               
                             await fetch(`${apiBaseUrl}/api/fitbit/debug-heart`, { credentials: 'include' })
                               .then(res => res.json())
-                              .then(data => console.log('Heart debug data:', data));
-                            alert('Debug info logged to console - please check the browser console');
+                              .then(data => {
+                                console.log('Heart debug data:', data);
+                                // Create a formatted string for the alert
+                                const message = `
+                                  Status: ${data.status_code || 'Unknown'}
+                                  Scopes: ${data.scopes ? data.scopes.join(', ') : 'No scopes found'}
+                                  Has 'heartrate' scope: ${data.scopes && data.scopes.includes('heartrate') ? 'Yes' : 'No (required)'}
+                                `;
+                                alert('Heart API debug info:\n' + message + '\n\nFull details logged to console (F12)');
+                              });
                           } catch (e) {
                             console.error('Error calling debug endpoint:', e);
-                            alert('Error calling debug endpoint - see console');
+                            alert('Error calling debug endpoint: ' + e.message);
                           }
                         }}
                         size="small"
                       >
-                        Debug Heart API (Check Console)
+                        Test Heart API
+                      </Button>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => {
+                          authService.logout().then(() => {
+                            // After logging out, redirect to Fitbit auth with explicit heartrate scope
+                            setTimeout(() => {
+                              // Try to open auth URL with explicit scope request
+                              const apiBaseUrl = process.env.NODE_ENV === 'production' 
+                                ? '' // Empty string for same-domain in production
+                                : 'http://localhost:5000';
+                              window.location.href = `${apiBaseUrl}/api/auth/login?scopes=heartrate`;
+                            }, 500);
+                          }).catch(err => {
+                            console.error('Error during reauth flow:', err);
+                            alert('Error during reauthentication: ' + err.message);
+                          });
+                        }}
+                        size="small"
+                      >
+                        Re-authenticate with Heartrate Scope
                       </Button>
                     </Box>
                   </Paper>

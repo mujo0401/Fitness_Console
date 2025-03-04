@@ -63,10 +63,34 @@ def login():
         current_app.logger.info(f"Auth URL: {auth_url}")
         current_app.logger.info(f"Redirect URI: {redirect_uri}")
         
+        # Check if specific scopes were requested
+        requested_scopes = request.args.get('scopes')
+        if requested_scopes:
+            # User requested specific scopes
+            scopes = requested_scopes.split()
+            # Ensure these are valid scopes
+            valid_scopes = ['activity', 'heartrate', 'location', 'nutrition', 
+                          'profile', 'settings', 'sleep', 'social', 'weight']
+            # Only include valid scopes
+            filtered_scopes = [s for s in scopes if s in valid_scopes]
+            # Add heartrate scope if explicitly requested
+            if 'heartrate' in scopes:
+                current_app.logger.info("Heartrate scope explicitly requested")
+            
+            # Combine with default scopes from config
+            default_scopes = current_app.config['FITBIT_SCOPES']
+            combined_scopes = list(set(default_scopes + filtered_scopes))
+            scope_string = ' '.join(combined_scopes)
+            current_app.logger.info(f"Using custom scope set: {scope_string}")
+        else:
+            # Use default scopes from config
+            scope_string = ' '.join(current_app.config['FITBIT_SCOPES'])
+            current_app.logger.info(f"Using default scopes from config: {scope_string}")
+            
         params = {
             'response_type': 'code',
             'client_id': client_id,
-            'scope': ' '.join(current_app.config['FITBIT_SCOPES']),
+            'scope': scope_string,
             'redirect_uri': redirect_uri
         }
         

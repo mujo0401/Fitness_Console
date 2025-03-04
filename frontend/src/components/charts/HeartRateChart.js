@@ -282,12 +282,18 @@ const HeartRateChart = ({ data, period }) => {
     setProcessedData(enhanced);
   }, [data, resolution]);
   
-  // Handle missing or empty data
-  if (!data || data.length === 0) {
-    return (
-      <Skeleton variant="rectangular" width="100%" height={400} animation="wave" />
-    );
-  }
+  // Handle missing or empty data
+  if (!data || data.length === 0) {
+    console.warn("HeartRateChart received empty data:", data);
+    return (
+      <Box sx={{ width: "100%", height: 400, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 2 }}>
+        <Skeleton variant="rectangular" width="100%" height={300} animation="wave" />
+        <Typography variant="caption" color="text.secondary">
+          No heart rate data available for the selected period
+        </Typography>
+      </Box>
+    );
+  }
   
   // Find min/max values for Y axis
   let minValue = 40;
