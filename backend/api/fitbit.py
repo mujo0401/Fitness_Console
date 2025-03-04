@@ -164,20 +164,22 @@ def get_heart_rate():
     # Calculate start and end dates based on period
     end_date = datetime.strptime(date, '%Y-%m-%d')
     
+    # Set the date range based on period
     if period == 'day':
         start_date = end_date
-        detail_level = '1sec'  # Get the highest available resolution for a single day
     elif period == 'week':
         start_date = end_date - timedelta(days=7)
-        detail_level = '1min'
     elif period == 'month':
         start_date = end_date - timedelta(days=30)
-        detail_level = '5min'
     elif period == '3month':
         start_date = end_date - timedelta(days=90)
-        detail_level = '15min'
     else:
         return jsonify({'error': 'Invalid period'}), 400
+    
+    # Always use the highest resolution possible for all periods
+    # This ensures we get detailed intraday data regardless of period
+    detail_level = '1sec'  # Request second-by-second data for maximum detail
+    current_app.logger.info(f"Using detail level {detail_level} for period {period}")
     
     # Format dates for API
     start_str = start_date.strftime('%Y-%m-%d')

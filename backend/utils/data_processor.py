@@ -15,131 +15,136 @@ def process_heart_rate_data(raw_data, period):
     """
     processed_data = []
     
-    # Extract heart rate data based on period
-    if period == 'day':
-        # For a single day, we'll use intraday data at the highest resolution available
-        try:
+    # Extract heart rate data handling both intraday and multi-day data
+    try:
+        # First get any available intraday data (this is higher resolution data)
+        has_intraday_data = False
+        
+        # Check if we have intraday data available
+        if 'activities-heart-intraday' in raw_data and 'dataset' in raw_data['activities-heart-intraday']:
             intraday_data = raw_data['activities-heart-intraday']['dataset']
-            base_date = raw_data['activities-heart'][0]['dateTime']
-            
-            # Check if we have detailed intraday data directly
-            if len(intraday_data) > 0:
-                # Return individual data points for more granular visualization
-                # Group data points by 1-minute intervals to prevent overloading the chart
-                minute_groups = {}
+            if intraday_data and len(intraday_data) > 0:
+                has_intraday_data = True
+                base_date = raw_data['activities-heart'][0]['dateTime'] if 'activities-heart' in raw_data and raw_data['activities-heart'] else ''
                 
-                for point in intraday_data:
+                # Process full intraday dataset when available - this gives the most detailed view
+                processed_data_full = []
+                for idx, point in enumerate(intraday_data):
                     time_str = point['time']
-                    minute_key = time_str[:5]  # Get HH:MM part
-                    
-                    if minute_key not in minute_groups:
-                        minute_groups[minute_key] = []
-                    
-                    minute_groups[minute_key].append(point['value'])
-                
-                # Create one data point per minute with stats
-                for minute, values in minute_groups.items():
-                    # Get hour and minute for better display
-                    hour_min = minute.split(':')
-                    hour = int(hour_min[0])
-                    hour_12 = hour % 12 or 12  # Convert to 12-hour format
+                    hour_min_sec = time_str.split(':')
+                    hour = int(hour_min_sec[0])
+                    hour_12 = hour % 12 or 12
                     am_pm = 'AM' if hour < 12 else 'PM'
                     
-                    processed_data.append({
-                        'time': f"{hour_12}:{hour_min[1]} {am_pm}",
-                        'rawTime': minute,  # For sorting
+                    processed_data_full.append({
+                        'time': f"{hour_12}:{hour_min_sec[1]}:{hour_min_sec[2]} {am_pm}",
+                        'rawTime': time_str,
                         'date': base_date,
-                        'avg': round(statistics.mean(values)),
-                        'min': min(values),
-                        'max': max(values),
-                        'values': values
+                        'value': point['value'],  # Raw heart rate value
+                        'avg': point['value'],    # For visualization compatibility
+                        'timestamp': idx  # For sorting and animation
                     })
                 
-                # Sort by raw time
-                processed_data.sort(key=lambda x: x['rawTime'])
-                
-                # Also add original raw data points for potential high-resolution display
-                if len(intraday_data) > 0:
-                    processed_data_full = []
-                    for idx, point in enumerate(intraday_data):
+                # If there are too many points, downsample by grouping by minutes
+                # This helps with performance while still preserving the data distribution
+                if len(processed_data_full) > 5000:
+                    print(f"Downsampling large dataset with {len(processed_data_full)} points")
+                    # Group by minutes
+                    minute_groups = {}
+                    for point in intraday_data:
                         time_str = point['time']
-                        hour_min_sec = time_str.split(':')
-                        hour = int(hour_min_sec[0])
-                        hour_12 = hour % 12 or 12
-                        am_pm = 'AM' if hour < 12 else 'PM'
+                        minute_key = time_str[:5]  # Get HH:MM part
                         
-                        processed_data_full.append({
-                            'time': f"{hour_12}:{hour_min_sec[1]}:{hour_min_sec[2]} {am_pm}",
-                            'rawTime': time_str,
-                            'date': base_date,
-                            'value': point['value'],  # Raw heart rate value
-                            'avg': point['value'],    # For visualization compatibility
-                            'timestamp': idx  # For sorting and animation
-                        })
+                        if minute_key not in minute_groups:
+                            minute_groups[minute_key] = []
+                        
+                        minute_groups[minute_key].append(point['value'])
                     
-                    # Include the raw data if there are fewer than 1000 points,
-                    # otherwise stick with the minute-aggregated data
-                    if len(processed_data_full) <= 1000:
-                        processed_data = processed_data_full
-            else:
-                # Fallback to hourly organization if no detailed data
-                hours = {}
-                for point in intraday_data:
-                    time_obj = datetime.strptime(point['time'], '%H:%M:%S')
-                    hour = time_obj.hour
-                    
-                    if hour not in hours:
-                        hours[hour] = []
-                    
-                    hours[hour].append(point['value'])
-                
-                # Calculate stats for each hour
-                for hour, values in hours.items():
-                    if values:
+                    # Create one data point per minute with stats
+                    processed_data_minutes = []
+                    for minute, values in minute_groups.items():
+                        # Get hour and minute for better display
+                        hour_min = minute.split(':')
+                        hour = int(hour_min[0])
                         hour_12 = hour % 12 or 12  # Convert to 12-hour format
                         am_pm = 'AM' if hour < 12 else 'PM'
                         
-                        processed_data.append({
-                            'time': f"{hour_12}:00 {am_pm}",
+                        processed_data_minutes.append({
+                            'time': f"{hour_12}:{hour_min[1]} {am_pm}",
+                            'rawTime': minute,  # For sorting
                             'date': base_date,
                             'avg': round(statistics.mean(values)),
                             'min': min(values),
                             'max': max(values),
-                            'values': values
+                            'values': values,
+                            'count': len(values)  # How many original data points
                         })
-        except (KeyError, IndexError) as e:
-            # Handle missing data
-            print(f"Error processing intraday heart rate data: {e}")
-            pass
-    else:
-        # For longer periods, we'll use daily summaries
-        try:
-            for day in raw_data['activities-heart']:
-                date = day['dateTime']
-                
-                # Check if heart rate zones are available
-                if 'value' in day and 'heartRateZones' in day['value']:
-                    zones = day['value']['heartRateZones']
-                    resting_hr = day['value'].get('restingHeartRate', 0)
                     
-                    # Get max and min from zones
-                    out_of_range = next((z for z in zones if z['name'] == 'Out of Range'), {})
-                    max_hr = 0
-                    for zone in zones:
-                        if 'max' in zone and zone['max'] > max_hr:
-                            max_hr = zone['max']
+                    # Sort by raw time
+                    processed_data_minutes.sort(key=lambda x: x['rawTime'])
+                    processed_data = processed_data_minutes
+                    print(f"Downsampled to {len(processed_data_minutes)} minute-grouped points")
+                else:
+                    # Use full resolution data
+                    processed_data = processed_data_full
+                    print(f"Using full resolution data with {len(processed_data_full)} points")
+        
+        # If no intraday data or if we have a multi-day period, also process daily summaries
+        if not has_intraday_data or period != 'day':
+            if 'activities-heart' in raw_data:
+                for day in raw_data['activities-heart']:
+                    date = day['dateTime']
                     
-                    min_hr = out_of_range.get('min', 0)
+                    # For multi-day periods, we'll check if each day has intraday data
+                    day_intraday_data = None
+                    if period != 'day' and 'intraday' in day:
+                        day_intraday_data = day['intraday'].get('dataset', [])
                     
-                    processed_data.append({
-                        'date': date,
-                        'restingHeartRate': resting_hr,
-                        'min': min_hr,
-                        'max': max_hr
-                    })
-        except (KeyError, IndexError):
-            # Handle missing data
-            pass
+                    # If we have intraday data for this day, process it (for multi-day requests)
+                    if day_intraday_data and len(day_intraday_data) > 0:
+                        for idx, point in enumerate(day_intraday_data):
+                            time_str = point['time']
+                            hour_min_sec = time_str.split(':')
+                            hour = int(hour_min_sec[0])
+                            hour_12 = hour % 12 or 12
+                            am_pm = 'AM' if hour < 12 else 'PM'
+                            
+                            processed_data.append({
+                                'time': f"{hour_12}:{hour_min_sec[1]}:{hour_min_sec[2]} {am_pm}",
+                                'rawTime': time_str,
+                                'date': date,
+                                'value': point['value'],
+                                'avg': point['value'],
+                                'timestamp': idx
+                            })
+                    else:
+                        # Otherwise use daily summary
+                        if 'value' in day and 'heartRateZones' in day['value']:
+                            zones = day['value']['heartRateZones']
+                            resting_hr = day['value'].get('restingHeartRate', 0)
+                            
+                            # Get max and min from zones
+                            out_of_range = next((z for z in zones if z['name'] == 'Out of Range'), {})
+                            max_hr = 0
+                            for zone in zones:
+                                if 'max' in zone and zone['max'] > max_hr:
+                                    max_hr = zone['max']
+                            
+                            min_hr = out_of_range.get('min', 0)
+                            
+                            # Only add day summaries if we don't have intraday data (to avoid duplicates)
+                            if not has_intraday_data or date != base_date:
+                                processed_data.append({
+                                    'date': date,
+                                    'restingHeartRate': resting_hr,
+                                    'min': min_hr,
+                                    'max': max_hr,
+                                    'is_daily_summary': True
+                                })
+    except (KeyError, IndexError) as e:
+        # Handle missing data
+        print(f"Error processing heart rate data: {e}")
+        pass
     
     return processed_data
 
