@@ -32,13 +32,15 @@ import AppleIcon from '@mui/icons-material/Apple';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import SyncIcon from '@mui/icons-material/Sync';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import GoogleIcon from '@mui/icons-material/Google';
+import YouTubeIcon from '@mui/icons-material/YouTube';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const Header = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const { isAuthenticated, user, login, logout, loginFitbit, loginAppleFitness, connectedServices } = useAuth();
+  const { isAuthenticated, user, login, logout, loginFitbit, loginAppleFitness, loginGoogleFit, loginYouTubeMusic, connectedServices } = useAuth();
   const [anchorEl, setAnchorEl] = useState(null);
   const [notificationEl, setNotificationEl] = useState(null);
   const [servicesMenuEl, setServicesMenuEl] = useState(null);
@@ -46,7 +48,7 @@ const Header = () => {
   const [currentHeartRate, setCurrentHeartRate] = useState(78);
   
   // Check if all services are connected
-  const allServicesConnected = connectedServices.fitbit && connectedServices.appleFitness;
+  const allServicesConnected = connectedServices.fitbit && connectedServices.appleFitness && connectedServices.googleFit && connectedServices.youtubeMusic;
 
   // Update heart rate with animation
   useEffect(() => {
@@ -125,7 +127,7 @@ const Header = () => {
       PaperProps={{
         sx: {
           mt: 1.5,
-          width: 220,
+          width: 260,
           borderRadius: 3,
           boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
           border: '1px solid rgba(255,255,255,0.1)',
@@ -172,10 +174,46 @@ const Header = () => {
           secondary={connectedServices.appleFitness ? "Connected" : null}
         />
       </MenuItem>
+      <MenuItem 
+        onClick={() => {
+          loginGoogleFit();
+          handleServicesMenuClose();
+        }}
+        disabled={connectedServices.googleFit}
+      >
+        <ListItemIcon>
+          {connectedServices.googleFit ? 
+            <CheckCircleIcon color="success" /> : 
+            <GoogleIcon color="primary" />
+          }
+        </ListItemIcon>
+        <ListItemText 
+          primary="Connect Google Fit" 
+          secondary={connectedServices.googleFit ? "Connected" : null}
+        />
+      </MenuItem>
+      <MenuItem 
+        onClick={() => {
+          loginYouTubeMusic();
+          handleServicesMenuClose();
+        }}
+        disabled={connectedServices.youtubeMusic}
+      >
+        <ListItemIcon>
+          {connectedServices.youtubeMusic ? 
+            <CheckCircleIcon color="success" /> : 
+            <YouTubeIcon color="error" />
+          }
+        </ListItemIcon>
+        <ListItemText 
+          primary="Connect YouTube Music" 
+          secondary={connectedServices.youtubeMusic ? "Connected" : null}
+        />
+      </MenuItem>
       <Divider />
       <MenuItem 
         onClick={handleServicesMenuClose}
-        disabled={!connectedServices.fitbit && !connectedServices.appleFitness}
+        disabled={!connectedServices.fitbit && !connectedServices.appleFitness && !connectedServices.googleFit}
       >
         <ListItemIcon><SyncIcon /></ListItemIcon>
         <ListItemText primary="Sync Data" />
@@ -241,7 +279,8 @@ const Header = () => {
                   size="small"
                   sx={{ 
                     borderRadius: 30,
-                    px: 2,
+                    px: 2.5,
+                    minWidth: 160,
                     textTransform: 'none',
                     fontWeight: 'medium',
                     background: 'linear-gradient(45deg, #673ab7 0%, #9c27b0 100%)',
@@ -492,6 +531,7 @@ const Header = () => {
                   borderRadius: 30,
                   px: 3,
                   py: 1,
+                  minWidth: 160,
                   textTransform: 'none',
                   fontWeight: 'bold',
                   background: 'linear-gradient(45deg, #673ab7 0%, #9c27b0 100%)',

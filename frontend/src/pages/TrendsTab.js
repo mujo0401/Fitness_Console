@@ -510,7 +510,7 @@ const TrendsTab = () => {
                             Workout Recovery Optimization
                           </Typography>
                           <Typography variant="body2" paragraph>
-                            Your high-intensity workouts (HR >85% max) show optimal adaptations when followed by an active recovery day rather than complete rest or another high-intensity session.
+                            Your high-intensity workouts (HR {'>'} 85% max) show optimal adaptations when followed by an active recovery day rather than complete rest or another high-intensity session.
                           </Typography>
                           <Typography variant="subtitle2" color="text.secondary">
                             Recommendation:

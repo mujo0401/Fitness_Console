@@ -1,7 +1,7 @@
 // frontend/src/context/AuthContext.js
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import axios from 'axios';
-import { authService, fitbitService, appleFitnessService } from '../services/api';
+import { authService, fitbitService, appleFitnessService, googleFitService } from '../services/api';
 
 // Configure axios for all requests
 axios.defaults.baseURL = 'http://localhost:5000';
@@ -18,7 +18,9 @@ export const AuthProvider = ({ children }) => {
   const [authError, setAuthError] = useState(null);
   const [connectedServices, setConnectedServices] = useState({
     fitbit: false,
-    appleFitness: false
+    appleFitness: false,
+    googleFit: false,
+    youtubeMusic: false
   });
   
   // Track token scopes for debugging
@@ -93,6 +95,41 @@ export const AuthProvider = ({ children }) => {
           console.error('Error fetching Apple Fitness connection status:', appleError);
           setConnectedServices(prev => ({...prev, appleFitness: false}));
         }
+        
+        try {
+          // Try to get Google Fit status
+          const googleFitResponse = await googleFitService.checkStatus();
+          if (googleFitResponse && googleFitResponse.connected) {
+            setConnectedServices(prev => ({...prev, googleFit: true}));
+            
+            // Get Google Fit profile if user not set and neither Fitbit nor Apple Fitness are connected
+            if (!user && !connectedServices.fitbit && !connectedServices.appleFitness) {
+              const profileResponse = await googleFitService.getProfile();
+              console.log('Google Fit profile response:', profileResponse);
+              if (profileResponse && profileResponse.user) {
+                setUser(profileResponse.user);
+              }
+            }
+          } else {
+            setConnectedServices(prev => ({...prev, googleFit: false}));
+          }
+        } catch (googleFitError) {
+          console.error('Error fetching Google Fit connection status:', googleFitError);
+          setConnectedServices(prev => ({...prev, googleFit: false}));
+        }
+        
+        try {
+          // Try to get YouTube Music status
+          const youtubeMusicResponse = await axios.get('/api/youtube-music/status');
+          if (youtubeMusicResponse.data && youtubeMusicResponse.data.connected) {
+            setConnectedServices(prev => ({...prev, youtubeMusic: true}));
+          } else {
+            setConnectedServices(prev => ({...prev, youtubeMusic: false}));
+          }
+        } catch (youtubeMusicError) {
+          console.error('Error fetching YouTube Music connection status:', youtubeMusicError);
+          setConnectedServices(prev => ({...prev, youtubeMusic: false}));
+        }
       } else {
         console.log('User is not authenticated');
         setIsAuthenticated(false);
@@ -100,7 +137,9 @@ export const AuthProvider = ({ children }) => {
         setTokenScopes([]);
         setConnectedServices({
           fitbit: false,
-          appleFitness: false
+          appleFitness: false,
+          googleFit: false,
+          youtubeMusic: false
         });
       }
       
@@ -113,7 +152,9 @@ export const AuthProvider = ({ children }) => {
       setTokenScopes([]);
       setConnectedServices({
         fitbit: false,
-        appleFitness: false
+        appleFitness: false,
+        googleFit: false,
+        youtubeMusic: false
       });
       setAuthError(error.message || 'Authentication check failed');
     } finally {
@@ -132,19 +173,9 @@ export const AuthProvider = ({ children }) => {
   const loginFitbit = useCallback(async () => {
     try {
       console.log('Initiating Fitbit login...');
-      const response = await authService.login();
-      
-      console.log('Full login response:', JSON.stringify(response, null, 2));
-      
-      if (response && response.authorization_url) {
-        console.log('Redirecting to:', response.authorization_url);
-        // Redirect to Fitbit authorization page
-        window.location.href = response.authorization_url;
-      } else {
-        console.error('Invalid response from login endpoint:', response);
-        setAuthError('Failed to connect to Fitbit. No authorization URL provided.');
-        alert('Failed to connect to Fitbit. Please try again.');
-      }
+      // Let the service handle the URL and redirection
+      await authService.login();
+      // The API service will handle the redirect directly
     } catch (error) {
       console.error('Fitbit login failed:', error);
       console.error('Login error details:', {
@@ -153,7 +184,7 @@ export const AuthProvider = ({ children }) => {
         status: error.response?.status
       });
       setAuthError(error.message || 'Fitbit login failed');
-      alert(`Failed to connect to Fitbit: ${error.message}. Please try again.`);
+      alert(`Failed to connect to Fitbit: ${error.message || 'Authentication failed'}. Please try again.`);
     }
   }, []);
 
@@ -161,19 +192,9 @@ export const AuthProvider = ({ children }) => {
   const loginAppleFitness = useCallback(async () => {
     try {
       console.log('Initiating Apple Fitness login...');
-      const response = await appleFitnessService.login();
-      
-      console.log('Full Apple Fitness login response:', JSON.stringify(response, null, 2));
-      
-      if (response && response.authorization_url) {
-        console.log('Redirecting to:', response.authorization_url);
-        // Redirect to Apple Fitness authorization page
-        window.location.href = response.authorization_url;
-      } else {
-        console.error('Invalid response from Apple Fitness login endpoint:', response);
-        setAuthError('Failed to connect to Apple Fitness. No authorization URL provided.');
-        alert('Failed to connect to Apple Fitness. Please try again.');
-      }
+      // Let the service handle the URL and redirection
+      await appleFitnessService.login();
+      // The service will handle redirection
     } catch (error) {
       console.error('Apple Fitness login failed:', error);
       console.error('Login error details:', {
@@ -182,7 +203,48 @@ export const AuthProvider = ({ children }) => {
         status: error.response?.status
       });
       setAuthError(error.message || 'Apple Fitness login failed');
-      alert(`Failed to connect to Apple Fitness: ${error.message}. Please try again.`);
+      alert(`Failed to connect to Apple Fitness: ${error.message || 'Authentication failed'}. Please try again.`);
+    }
+  }, []);
+  
+  // Google Fit login function - use the API service instead of direct URL
+  const loginGoogleFit = useCallback(async () => {
+    try {
+      console.log('Initiating Google Fit login...');
+      // Let the service handle the URL construction
+      await googleFitService.login();
+    } catch (error) {
+      console.error('Google Fit login failed:', error);
+      console.error('Login error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      setAuthError(error.message || 'Google Fit login failed');
+      alert(`Failed to connect to Google Fit: ${error.message || 'Request failed with status code 404'}. Please try again.`);
+    }
+  }, []);
+  
+  // YouTube Music login function
+  const loginYouTubeMusic = useCallback(async () => {
+    try {
+      console.log('Initiating YouTube Music login...');
+      // Use API service we'll create
+      const response = await axios.get('/api/youtube-music/auth');
+      if (response.data && response.data.authorization_url) {
+        window.location.href = response.data.authorization_url;
+      } else {
+        throw new Error('No authorization URL returned from server');
+      }
+    } catch (error) {
+      console.error('YouTube Music login failed:', error);
+      console.error('Login error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      setAuthError(error.message || 'YouTube Music login failed');
+      alert(`Failed to connect to YouTube Music: ${error.message || 'Authentication failed'}. Please try again.`);
     }
   }, []);
 
@@ -255,13 +317,43 @@ export const AuthProvider = ({ children }) => {
       return false;
     }
   }, []);
+  
+  // Check Google Fit connection status
+  const checkGoogleFitConnection = useCallback(async () => {
+    try {
+      const status = await googleFitService.checkStatus();
+      console.log('Google Fit connection status check result:', status);
+      setConnectedServices(prev => ({...prev, googleFit: status.connected}));
+      return status.connected;
+    } catch (error) {
+      console.error('Google Fit connection check failed:', error);
+      setConnectedServices(prev => ({...prev, googleFit: false}));
+      return false;
+    }
+  }, []);
 
   // Check all connections status
+  // Check YouTube Music connection status
+  const checkYouTubeMusicConnection = useCallback(async () => {
+    try {
+      const response = await axios.get('/api/youtube-music/status');
+      console.log('YouTube Music connection status check result:', response.data);
+      setConnectedServices(prev => ({...prev, youtubeMusic: response.data.connected}));
+      return response.data.connected;
+    } catch (error) {
+      console.error('YouTube Music connection check failed:', error);
+      setConnectedServices(prev => ({...prev, youtubeMusic: false}));
+      return false;
+    }
+  }, []);
+
   const checkConnection = useCallback(async () => {
     const fitbitConnected = await checkFitbitConnection();
     const appleConnected = await checkAppleFitnessConnection();
-    return fitbitConnected || appleConnected;
-  }, [checkFitbitConnection, checkAppleFitnessConnection]);
+    const googleFitConnected = await checkGoogleFitConnection();
+    const youtubeMusicConnected = await checkYouTubeMusicConnection();
+    return fitbitConnected || appleConnected || googleFitConnected || youtubeMusicConnected;
+  }, [checkFitbitConnection, checkAppleFitnessConnection, checkGoogleFitConnection, checkYouTubeMusicConnection]);
 
   // Context value
   const value = {
@@ -273,11 +365,15 @@ export const AuthProvider = ({ children }) => {
     login,
     loginFitbit,
     loginAppleFitness,
+    loginGoogleFit,
+    loginYouTubeMusic,
     logout,
     checkAuthStatus,
     checkConnection,
     checkFitbitConnection,
     checkAppleFitnessConnection,
+    checkGoogleFitConnection,
+    checkYouTubeMusicConnection,
     connectedServices
   };
 

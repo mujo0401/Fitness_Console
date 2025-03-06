@@ -29,11 +29,27 @@ class Config:
     APPLE_FITNESS_AUTH_URL = 'https://appleid.apple.com/auth/authorize'
     APPLE_FITNESS_TOKEN_URL = 'https://appleid.apple.com/auth/token'
     APPLE_FITNESS_API_BASE_URL = 'https://api.apple-fitness.apple.com' 
+    
+    # Google Fit API configuration
+    GOOGLE_FIT_CLIENT_ID = os.environ.get('GOOGLE_FIT_CLIENT_ID', '')
+    GOOGLE_FIT_CLIENT_SECRET = os.environ.get('GOOGLE_FIT_CLIENT_SECRET', '')
+    GOOGLE_FIT_AUTH_URL = 'https://accounts.google.com/o/oauth2/auth'
+    GOOGLE_FIT_TOKEN_URL = 'https://oauth2.googleapis.com/token'
+    GOOGLE_FIT_API_BASE_URL = 'https://www.googleapis.com/fitness/v1'
+    
+    # YouTube Music API configuration
+    YOUTUBE_MUSIC_CLIENT_ID = os.environ.get('YOUTUBE_MUSIC_CLIENT_ID', '')
+    YOUTUBE_MUSIC_CLIENT_SECRET = os.environ.get('YOUTUBE_MUSIC_CLIENT_SECRET', '')
+    YOUTUBE_OAUTH_AUTH_URL = 'https://accounts.google.com/o/oauth2/auth'
+    YOUTUBE_OAUTH_TOKEN_URL = 'https://oauth2.googleapis.com/token'
+    YOUTUBE_API_KEY = os.environ.get('YOUTUBE_API_KEY', '')
 
     # For development, use localhost. For production, use your actual domain
     FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://fitness-console-gtxc.onrender.com')
     FITBIT_REDIRECT_URI = os.environ.get('FITBIT_REDIRECT_URI', 'http://localhost:5000/api/auth/callback')
     APPLE_FITNESS_REDIRECT_URI = os.environ.get('APPLE_FITNESS_REDIRECT_URI', 'http://localhost:5000/api/apple-fitness/callback')
+    GOOGLE_FIT_REDIRECT_URI = os.environ.get('GOOGLE_FIT_REDIRECT_URI', 'http://localhost:5000/api/google-fit/callback')
+    YOUTUBE_MUSIC_REDIRECT_URI = os.environ.get('YOUTUBE_MUSIC_REDIRECT_URI', 'http://localhost:5000/api/youtube-music/callback')
 
     # Requested scopes from Fitbit API
     FITBIT_SCOPES = [
@@ -54,8 +70,30 @@ class Config:
         'fitness',
         'activity',
         'workout',
-      'vitalsigns'
-    ]    # Google API configuration
+        'vitalsigns'
+    ]
+    
+    # Requested scopes from Google Fit API
+    GOOGLE_FIT_SCOPES = [
+        'https://www.googleapis.com/auth/fitness.activity.read',
+        'https://www.googleapis.com/auth/fitness.body.read',
+        'https://www.googleapis.com/auth/fitness.heart_rate.read',
+        'https://www.googleapis.com/auth/fitness.location.read',
+        'https://www.googleapis.com/auth/fitness.sleep.read',
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/userinfo.email'
+    ]
+    
+    # Requested scopes from YouTube Music API
+    YOUTUBE_MUSIC_SCOPES = [
+        'https://www.googleapis.com/auth/youtube.readonly',
+        'https://www.googleapis.com/auth/youtube',
+        'https://www.googleapis.com/auth/youtubepartner',
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/userinfo.email'
+    ]
+    
+    # Google API configuration
     GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY', '')
     
     # DoorDash API configuration

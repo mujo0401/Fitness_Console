@@ -8,8 +8,9 @@ import logging
 
 from dotenv import load_dotenv
 
-from api import auth, fitbit, apple_fitness, google_places
+from api import auth, fitbit, apple_fitness, google_places, google_fit
 from api.spoonacular.routes import spoonacular_bp
+from api.youtube_music import youtube_music_bp
 
 from config import Config
 
@@ -21,9 +22,14 @@ from flask_session_fix import apply_session_fix
 
 
 
-# Load environment variables from .env file
-
-load_dotenv()
+# Load environment variables based on environment
+env = os.environ.get('FLASK_ENV', 'development')
+if env == 'production':
+    load_dotenv('.env.production')
+    print("Loading PRODUCTION environment")
+else:
+    load_dotenv('.env.development')
+    print("Loading DEVELOPMENT environment")
 
 
 
@@ -159,7 +165,10 @@ app.register_blueprint(google_places.google_places_bp, url_prefix="/api/places")
 
 app.register_blueprint(apple_fitness.bp, url_prefix='/api/apple-fitness')
 
+app.register_blueprint(google_fit.google_fit_bp, url_prefix='/api/google-fit')
+
 app.register_blueprint(spoonacular_bp, url_prefix='/api/spoonacular')
+app.register_blueprint(youtube_music_bp)
 
 
 # Route for checking API status
@@ -199,6 +208,9 @@ def debug_session():
         'has_oauth_state': 'oauth_state' in session,
 
         'has_apple_fitness_token': 'apple_fitness_access_token' in session,
+
+        'has_google_fit_token': 'google_fit_token' in session,
+        'has_youtube_music_token': 'youtube_music_access_token' in session,
 
         'session_id': session.sid if hasattr(session, 'sid') else None
 
@@ -385,13 +397,17 @@ if __name__ == '__main__':
     app.logger.info("Starting Flask app...")
 
     app.logger.info(f"FITBIT_CLIENT_ID: {app.config['FITBIT_CLIENT_ID']}")
-
     app.logger.info(f"FITBIT_REDIRECT_URI: {app.config['FITBIT_REDIRECT_URI']}")
-
     app.logger.info(f"APPLE_FITNESS_CLIENT_ID: {app.config['APPLE_FITNESS_CLIENT_ID']}")
-
     app.logger.info(f"APPLE_FITNESS_REDIRECT_URI: {app.config['APPLE_FITNESS_REDIRECT_URI']}")
-
+    app.logger.info(f"GOOGLE_FIT_CLIENT_ID: {app.config['GOOGLE_FIT_CLIENT_ID']}")
+    app.logger.info(f"GOOGLE_FIT_REDIRECT_URI: {app.config['GOOGLE_FIT_REDIRECT_URI']}")
+    app.logger.info(f"YOUTUBE_MUSIC_CLIENT_ID: {Config.YOUTUBE_MUSIC_CLIENT_ID}")
+    app.logger.info(f"YOUTUBE_MUSIC_REDIRECT_URI: {Config.YOUTUBE_MUSIC_REDIRECT_URI}")
     app.logger.info(f"CORS configured to allow origins: {allowed_origins}")
-
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    
+    # Get debug setting from environment
+    debug_mode = os.environ.get('FLASK_DEBUG', 'True').lower() == 'true'
+    app.logger.info(f"Running in {'DEBUG' if debug_mode else 'PRODUCTION'} mode")
+    
+    app.run(host='0.0.0.0', port=5000, debug=debug_mode)

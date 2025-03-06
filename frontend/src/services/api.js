@@ -17,9 +17,12 @@ const debounce = (func, wait) => {
 // API base URL - pointing to the backend server
 // In production, API requests go to the same domain (no need to specify a different domain)
 // In development, we need to point to the separate backend server
+// Fix for localhost - use window.location.origin instead of hardcoding the port
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
   ? '/api'  // In production, API is on the same domain
-  : 'http://localhost:5000/api'; // In development, API is on a different port
+  : window.location.origin.includes('localhost:3000') 
+    ? 'http://localhost:5000/api' // In development with React dev server
+    : `${window.location.origin}/api`; // For other setups
 
 // Create axios instance with defaults
 const apiClient = axios.create({
@@ -205,8 +208,22 @@ export const authService = {
   login: async () => {
     try {
       console.log('Initiating Fitbit login flow...');
+      // Create the URL with consistent format
+      const apiBase = process.env.NODE_ENV === 'production' 
+        ? '/api' 
+        : window.location.origin.includes('localhost:3000') 
+          ? 'http://localhost:5000/api' 
+          : `${window.location.origin}/api`;
+        
       const response = await apiClient.get('/auth/login');
       console.log('Login response:', response.data);
+      
+      // For consistency with Google Fit flow
+      if (response.data.authorization_url) {
+        console.log('Redirecting to:', response.data.authorization_url);
+        window.location.href = response.data.authorization_url;
+      }
+      
       return response.data;
     } catch (error) {
       console.error('Error initiating login:', error);
@@ -328,8 +345,25 @@ export const appleFitnessService = {
   login: async () => {
     try {
       console.log('Initiating Apple Fitness login flow...');
+      // Set window.location directly to the auth endpoint for OAuth flow
+      const apiBase = process.env.NODE_ENV === 'production' 
+        ? '/api' 
+        : window.location.origin.includes('localhost:3000') 
+          ? 'http://localhost:5000/api' 
+          : `${window.location.origin}/api`;
+      
+      const authUrl = `${apiBase}/apple-fitness/login`;
+      console.log('Redirecting to Apple Fitness auth URL:', authUrl);
+      
+      // Get the URL first
       const response = await apiClient.get('/apple-fitness/login');
       console.log('Apple Fitness login response:', response.data);
+      
+      // Then redirect if there's an authorization URL
+      if (response.data && response.data.authorization_url) {
+        window.location.href = response.data.authorization_url;
+      }
+      
       return response.data;
     } catch (error) {
       console.error('Error initiating Apple Fitness login:', error);
@@ -417,13 +451,124 @@ export const appleFitnessService = {
   }
 };
 
+// Google Fit API calls
+export const googleFitService = {
+  // Check if user is authenticated with Google Fit
+  checkAuth: async () => {
+    try {
+      console.log('Checking Google Fit authentication status...');
+      const response = await apiClient.get('/google-fit/status');
+      console.log('Google Fit auth check response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error checking Google Fit auth status:', error);
+      return { connected: false };
+    }
+  },
+  
+  // Initiate login flow for Google Fit
+  login: async () => {
+    try {
+      console.log('Initiating Google Fit login flow...');
+      // Set window.location directly to the auth endpoint for OAuth flow
+      const apiBase = process.env.NODE_ENV === 'production' 
+        ? '/api' 
+        : window.location.origin.includes('localhost:3000') 
+          ? 'http://localhost:5000/api' 
+          : `${window.location.origin}/api`;
+      
+      const authUrl = `${apiBase}/google-fit/auth`;
+      console.log('Redirecting to Google Fit auth URL:', authUrl);
+      
+      // This will trigger a redirect to Google's OAuth page
+      window.location.href = authUrl;
+      return { success: true };
+    } catch (error) {
+      console.error('Error initiating Google Fit login:', error);
+      throw error;
+    }
+  },
+
+  // Check connection status (with debouncing to prevent frequent calls)
+  checkStatus: debounce(async () => {
+    try {
+      console.log('Checking Google Fit connection status...');
+      const response = await apiClient.get('/google-fit/status');
+      console.log('Google Fit connection status response:', response);
+      console.log('Google Fit connection data:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error checking Google Fit status:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      return { connected: false };
+    }
+  }, 1000), // 1 second debounce
+
+  // Get user profile from Google Fit
+  getProfile: async () => {
+    try {
+      console.log('Fetching Google Fit user profile...');
+      const response = await apiClient.get('/google-fit/profile');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching Google Fit profile:', error);
+      throw error;
+    }
+  },
+  
+  // Get heart rate data from Google Fit
+  getHeartRateData: async (period = 'day', date = new Date().toISOString().split('T')[0]) => {
+    try {
+      console.log(`Fetching Google Fit heart rate data for ${period} on ${date}`);
+      const response = await apiClient.get('/google-fit/heart-rate', {
+        params: { period, date }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching Google Fit heart rate data:', error);
+      throw error;
+    }
+  },
+  
+  // Get activity data from Google Fit
+  getActivityData: async (period = 'day', date = new Date().toISOString().split('T')[0]) => {
+    try {
+      console.log(`Fetching Google Fit activity data for ${period} on ${date}`);
+      const response = await apiClient.get('/google-fit/activity', {
+        params: { period, date }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching Google Fit activity data:', error);
+      throw error;
+    }
+  },
+  
+  // Logout from Google Fit
+  logout: async () => {
+    try {
+      console.log('Logging out from Google Fit...');
+      const response = await apiClient.get('/google-fit/disconnect');
+      return response.data;
+    } catch (error) {
+      console.error('Error logging out from Google Fit:', error);
+      throw error;
+    }
+  }
+};
+
 const apiServices = {
   heartRate: heartRateService,
   auth: authService,
   fitbit: fitbitService,
   sleep: sleepService,
   activity: activityService,
-  appleFitness: appleFitnessService
+  appleFitness: appleFitnessService,
+  googleFit: googleFitService
 };
 
 export default apiServices;

@@ -24,18 +24,24 @@ import HeartBrokenIcon from '@mui/icons-material/HeartBroken';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import SpeedIcon from '@mui/icons-material/Speed';
 import AppleIcon from '@mui/icons-material/Apple';
+import GoogleIcon from '@mui/icons-material/Google';
+import YouTubeIcon from '@mui/icons-material/YouTube';
 import { useAuth } from '../context/AuthContext';
 
 const Footer = () => {
   const theme = useTheme();
-  const { isAuthenticated, checkFitbitConnection, checkAppleFitnessConnection, connectedServices } = useAuth();
+  const { isAuthenticated, checkFitbitConnection, checkAppleFitnessConnection, checkGoogleFitConnection, checkYouTubeMusicConnection, connectedServices } = useAuth();
   const [syncing, setSyncing] = useState({
     fitbit: false,
-    appleFitness: false
+    appleFitness: false,
+    googleFit: false,
+    youtubeMusic: false
   });
   const [connectionAttempts, setConnectionAttempts] = useState({
     fitbit: 0,
-    appleFitness: 0
+    appleFitness: 0,
+    googleFit: 0,
+    youtubeMusic: 0
   });
   const currentYear = new Date().getFullYear();
 
@@ -58,10 +64,28 @@ const Footer = () => {
         } else {
           setConnectionAttempts(prev => ({...prev, appleFitness: 0}));
         }
+        
+        // Check Google Fit connection
+        const googleFitStatus = await checkGoogleFitConnection();
+        if (!googleFitStatus) {
+          setConnectionAttempts(prev => ({...prev, googleFit: prev.googleFit + 1}));
+        } else {
+          setConnectionAttempts(prev => ({...prev, googleFit: 0}));
+        }
+        
+        // Check YouTube Music connection
+        const youtubeMusicStatus = await checkYouTubeMusicConnection();
+        if (!youtubeMusicStatus) {
+          setConnectionAttempts(prev => ({...prev, youtubeMusic: prev.youtubeMusic + 1}));
+        } else {
+          setConnectionAttempts(prev => ({...prev, youtubeMusic: 0}));
+        }
       } else {
         setConnectionAttempts({
           fitbit: 0,
-          appleFitness: 0
+          appleFitness: 0,
+          googleFit: 0,
+          youtubeMusic: 0
         });
       }
     };
@@ -70,7 +94,7 @@ const Footer = () => {
     const interval = setInterval(checkStatus, 60000); // Check every minute
 
     return () => clearInterval(interval);
-  }, [isAuthenticated, checkFitbitConnection, checkAppleFitnessConnection]);
+  }, [isAuthenticated, checkFitbitConnection, checkAppleFitnessConnection, checkGoogleFitConnection, checkYouTubeMusicConnection]);
   
   const handleSyncFitbit = () => {
     setSyncing(prev => ({...prev, fitbit: true}));
@@ -91,6 +115,28 @@ const Footer = () => {
       setSyncing(prev => ({...prev, appleFitness: false}));
       // Force update connection status
       checkAppleFitnessConnection();
+    }, 2000);
+  };
+  
+  const handleSyncGoogleFit = () => {
+    setSyncing(prev => ({...prev, googleFit: true}));
+    
+    // Simulate syncing
+    setTimeout(() => {
+      setSyncing(prev => ({...prev, googleFit: false}));
+      // Force update connection status
+      checkGoogleFitConnection();
+    }, 2000);
+  };
+  
+  const handleSyncYouTubeMusic = () => {
+    setSyncing(prev => ({...prev, youtubeMusic: true}));
+    
+    // Simulate syncing
+    setTimeout(() => {
+      setSyncing(prev => ({...prev, youtubeMusic: false}));
+      // Force update connection status
+      checkYouTubeMusicConnection();
     }, 2000);
   };
 
@@ -156,6 +202,30 @@ const Footer = () => {
                         size="small" 
                         label={connectedServices.appleFitness ? "Connected" : "Disconnected"} 
                         color={connectedServices.appleFitness ? "success" : "default"}
+                      />
+                    </Box>
+                    
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <GoogleIcon color={connectedServices.googleFit ? "primary" : "disabled"} />
+                        <Typography>Google Fit</Typography>
+                      </Box>
+                      <Chip 
+                        size="small" 
+                        label={connectedServices.googleFit ? "Connected" : "Disconnected"} 
+                        color={connectedServices.googleFit ? "success" : "default"}
+                      />
+                    </Box>
+                    
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <YouTubeIcon color={connectedServices.youtubeMusic ? "error" : "disabled"} />
+                        <Typography>YouTube Music</Typography>
+                      </Box>
+                      <Chip 
+                        size="small" 
+                        label={connectedServices.youtubeMusic ? "Connected" : "Disconnected"} 
+                        color={connectedServices.youtubeMusic ? "success" : "default"}
                       />
                     </Box>
                   </Box>
