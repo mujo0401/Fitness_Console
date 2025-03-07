@@ -112,6 +112,12 @@ def callback():
         session['youtube_music_token_expiry'] = time.time() + tokens['expires_in']
         session['youtube_music_connected'] = True
         
+        # Clear any disconnect flags since we have a fresh authentication
+        if 'youtube_music_explicitly_disconnected' in session:
+            logger.info("Clearing youtube_music_explicitly_disconnected flag after successful authentication")
+            session.pop('youtube_music_explicitly_disconnected', None)
+            
+        session.modified = True
         logger.info("YouTube Music authentication successful")
         return redirect(f"{Config.FRONTEND_URL}/music?connected=true")
         
@@ -124,18 +130,74 @@ def status():
     """Check if user is connected to YouTube Music"""
     # Add logging
     logger.info("YouTube Music status check called")
+    logger.info(f"Session keys: {list(session.keys())}")
+    logger.info(f"Session disconnect flag: {session.get('youtube_music_explicitly_disconnected')}")
     
-    # Always force connected status for testing
-    # This will allow the frontend to proceed with YouTube Music features
-    session['youtube_music_connected'] = True
-    session['youtube_music_access_token'] = 'test_access_token'
-    session['youtube_music_refresh_token'] = 'test_refresh_token'
-    session['youtube_music_token_expiry'] = time.time() + 3600
+    # Get query parameter to check if we're forcing a reconnection
+    force_reconnect = request.args.get('force_reconnect', 'false').lower() == 'true'
     
-    logger.info("Auto-connected YouTube Music for testing")
+    # If forcing reconnection, always clear disconnect flag and ensure connection
+    if force_reconnect:
+        logger.info("Force reconnect requested, ensuring connection")
+        session.pop('youtube_music_explicitly_disconnected', None)
+        session['youtube_music_connected'] = True
+        session['youtube_music_access_token'] = 'test_access_token'
+        session['youtube_music_refresh_token'] = 'test_refresh_token'
+        session['youtube_music_token_expiry'] = time.time() + 3600
+        session.modified = True
+        
+        logger.info(f"After force_reconnect, disconnect flag: {session.get('youtube_music_explicitly_disconnected')}")
+        logger.info(f"After force_reconnect, connected status: {session.get('youtube_music_connected')}")
+        
+        return jsonify({
+            'connected': True,
+            'tokenExpiresAt': session['youtube_music_token_expiry'],
+            'forced': True
+        })
+    
+    # Check if there is an explicit disconnect flag set in the session
+    if session.get('youtube_music_explicitly_disconnected') == True:
+        logger.info("YouTube Music was explicitly disconnected, returning not connected status")
+        return jsonify({
+            'connected': False
+        })
+    
+    # At this point, just return the connection status directly
+    is_connected = session.get('youtube_music_connected', False)
+    
+    # If not connected, auto-connect for testing
+    if not is_connected:
+        session['youtube_music_connected'] = True
+        session['youtube_music_access_token'] = 'test_access_token'
+        session['youtube_music_refresh_token'] = 'test_refresh_token'
+        session['youtube_music_token_expiry'] = time.time() + 3600
+        session.modified = True
+        logger.info("Auto-connected YouTube Music for testing")
+        is_connected = True
+    
+    # Attempt to get user profile info from Google APIs using the token
+    profile_info = None
+    if is_connected:
+        try:
+            # Try to get user info from Google's userinfo endpoint
+            access_token = session.get('youtube_music_access_token')
+            if access_token:
+                user_info_response = requests.get(
+                    'https://www.googleapis.com/oauth2/v2/userinfo',
+                    headers={'Authorization': f'Bearer {access_token}'}
+                )
+                if user_info_response.status_code == 200:
+                    profile_info = user_info_response.json()
+                    logger.info(f"Retrieved YouTube Music user profile: {profile_info.get('name')}")
+                else:
+                    logger.warning(f"Failed to get user profile: {user_info_response.status_code}")
+        except Exception as e:
+            logger.error(f"Error getting YouTube Music user profile: {str(e)}")
+    
     return jsonify({
-        'connected': True,
-        'tokenExpiresAt': session['youtube_music_token_expiry']
+        'connected': is_connected,
+        'tokenExpiresAt': session.get('youtube_music_token_expiry', time.time() + 3600),
+        'profile': profile_info
     })
     
     # Original implementation:
@@ -217,15 +279,46 @@ def refresh_youtube_music_token(refresh_token):
     
     return True
 
+@youtube_music_bp.route('/force-connect', methods=['GET', 'POST'])
+def force_connect():
+    """Force YouTube Music to be connected (for troubleshooting)"""
+    logger.info("Force-connect YouTube Music called")
+    
+    # Clear any disconnect flags
+    session.pop('youtube_music_explicitly_disconnected', None)
+    
+    # Set connection tokens
+    session['youtube_music_connected'] = True
+    session['youtube_music_access_token'] = 'test_access_token'
+    session['youtube_music_refresh_token'] = 'test_refresh_token'
+    session['youtube_music_token_expiry'] = time.time() + 3600
+    session.modified = True
+    
+    logger.info("YouTube Music force-connected")
+    return jsonify({
+        'success': True,
+        'connected': True,
+        'message': 'YouTube Music force-connected successfully'
+    })
+
 @youtube_music_bp.route('/disconnect', methods=['GET'])
 def disconnect():
     """Disconnect from YouTube Music"""
+    # Add logging
+    logger.info("YouTube Music disconnect called")
+    
     # Remove YouTube Music tokens from session
     session.pop('youtube_music_access_token', None)
     session.pop('youtube_music_refresh_token', None)
     session.pop('youtube_music_token_expiry', None)
     session.pop('youtube_music_connected', None)
     
+    # Set a flag to indicate that the user has explicitly disconnected
+    # This will prevent auto-reconnection in the status endpoint
+    session['youtube_music_explicitly_disconnected'] = True
+    session.modified = True
+    
+    logger.info("YouTube Music explicitly disconnected, all tokens removed")
     return jsonify({'success': True})
 
 @youtube_music_bp.route('/search', methods=['GET'])
