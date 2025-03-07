@@ -1,4 +1,3 @@
-// TabNav.js - Sticky tab navigation component
 import React from 'react';
 import { 
   Box, 
@@ -21,19 +20,21 @@ import HeadsetMicIcon from '@mui/icons-material/HeadsetMic';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import InfoIcon from '@mui/icons-material/Info';
 
-const TabNav = ({ currentTab, handleTabChange, isAuthenticated }) => {
+const TabContainer = ({ currentTab, handleTabChange, isAuthenticated }) => {
   const theme = useTheme();
 
   return (
     <Box 
       sx={{ 
         width: '100%', 
-        position: 'fixed',
-        top: 64, // Position right below the app bar
+        position: 'sticky',
+        top: { xs: 64, sm: 66, md: 68 }, // Position below AppBar
         left: 0,
         right: 0,
-        zIndex: 9999, // Increase z-index to ensure it's on top
-        px: { xs: 2, sm: 3, md: 4 },
+        zIndex: 1080, // High z-index to stay on top
+        px: { xs: 0.5, sm: 1, md: 2 }, // Minimized padding to maximize width
+        marginBottom: { xs: '60px', sm: '65px', md: '70px' }, // Spacing below tabs
+        height: { xs: '80px', sm: '85px', md: '90px' }, // Further increased height
       }}
     >
       <motion.div
@@ -45,14 +46,15 @@ const TabNav = ({ currentTab, handleTabChange, isAuthenticated }) => {
           elevation={8} 
           sx={{ 
             borderRadius: { xs: '16px', sm: '20px' }, 
-            mb: { xs: 2, sm: 3, md: 4 }, 
-            mx: 'auto',
-            maxWidth: 'xl',
             background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(240, 245, 255, 0.9))',
-            overflow: 'visible',
+            overflow: 'hidden', // Change to hidden to contain all tabs properly
             boxShadow: '0 10px 30px rgba(33, 150, 243, 0.2), 0 -5px 15px rgba(63, 81, 181, 0.1)',
             border: '1px solid rgba(255,255,255,0.8)',
             backdropFilter: 'blur(10px)',
+            height: { xs: '80px', sm: '85px', md: '90px' }, // Further increased height content area
+            display: 'flex',
+            flexDirection: 'column',
+            width: '100%', // Ensure full width
             '&::before': {
               content: '""',
               position: 'absolute',
@@ -73,18 +75,24 @@ const TabNav = ({ currentTab, handleTabChange, isAuthenticated }) => {
             scrollButtons="auto"
             centered={false}
             allowScrollButtonsMobile={true}
+            visibleScrollbar={false}
             TabIndicatorProps={{
               sx: { display: 'none' }
             }}
             sx={{ 
-              px: { xs: 1, sm: 2 },
-              pt: 1.5,
-              pb: 1,
-              width: '100%',
+              px: { xs: 0.5, sm: 1, md: 1.5 },
+              py: { xs: 1, sm: 1.5, md: 2 },
+              flex: '1 1 auto',
               maxWidth: '100%',
-              position: 'relative',
               '& .MuiTabs-flexContainer': {
-                gap: 1, // Consistent spacing
+                gap: { xs: 0.5, sm: 0.8, md: 1 }, // Reduced gap on smaller screens
+                height: { xs: '52px', sm: '60px', md: '65px' }, // Increased height for tabs row
+                justifyContent: 'flex-start', // Align tabs to start
+                alignItems: 'center', // Center tabs vertically
+              },
+              '& .MuiTabs-scroller': {
+                height: { xs: '52px', sm: '60px', md: '65px' }, // Increased scroller height
+                overflowX: 'auto',
               },
               // Style for scroll buttons
               '& .MuiTabs-scrollButtons': {
@@ -100,26 +108,30 @@ const TabNav = ({ currentTab, handleTabChange, isAuthenticated }) => {
               },
               '& .MuiTab-root': {
                 color: '#5C6BC0', // Indigo color for tabs
-                px: { xs: 1.5, sm: 2 }, 
-                py: { xs: 1, sm: 1.2 },
-                minWidth: { xs: 100, sm: 110 }, // Fixed width for consistency
-                minHeight: 60, // Consistent height for all tabs
-                height: 60, // Fixed height 
-                margin: '0 2px',
+                px: { xs: 1, sm: 1.5, md: 2 }, // Smaller padding on mobile
+                py: { xs: 0.5, sm: 0.75, md: 1 }, // Added vertical padding
+                minWidth: { xs: 75, sm: 90, md: 105 }, // Further reduced width on mobile
+                maxWidth: { xs: 95, sm: 115, md: 125 }, // Smaller max width to fit more tabs
+                height: { xs: '52px', sm: '60px', md: '65px' }, // Increased height for all tabs
+                margin: { xs: '0 1px', sm: '0 2px' }, // Smaller margins on mobile
                 borderRadius: '8px',
                 textTransform: 'none',
-                fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.8rem' }, // Smaller font on mobile
                 fontWeight: 600,
                 border: '1px solid rgba(92, 107, 192, 0.1)',
                 background: 'linear-gradient(180deg, rgba(255,255,255,0.9), rgba(248,249,255,0.8))',
                 boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                backdropFilter: 'blur(8px)',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
+                flexShrink: 0, // Prevent tabs from shrinking
                 '&:hover': {
                   background: 'rgba(255,255,255,0.95)',
                   boxShadow: '0 3px 6px rgba(92, 107, 192, 0.15)'
+                },
+                // Fix hover transform issue on selected tab
+                '&.Mui-selected': {
+                  transform: 'none !important'
                 }
               },
               '& .MuiTabs-indicator': {
@@ -133,7 +145,6 @@ const TabNav = ({ currentTab, handleTabChange, isAuthenticated }) => {
               label="Heart Rate"
               disabled={!isAuthenticated}
               sx={{
-                fontWeight: 600,
                 '&.Mui-selected': {
                   color: 'white',
                   fontWeight: 700,
@@ -151,7 +162,6 @@ const TabNav = ({ currentTab, handleTabChange, isAuthenticated }) => {
               label="Activity"
               disabled={!isAuthenticated}
               sx={{
-                fontWeight: 600,
                 '&.Mui-selected': {
                   color: 'white',
                   fontWeight: 700,
@@ -169,7 +179,6 @@ const TabNav = ({ currentTab, handleTabChange, isAuthenticated }) => {
               label="Sleep"
               disabled={!isAuthenticated}
               sx={{
-                fontWeight: 600,
                 '&.Mui-selected': {
                   color: 'white',
                   fontWeight: 700,
@@ -187,7 +196,6 @@ const TabNav = ({ currentTab, handleTabChange, isAuthenticated }) => {
               label="ABM"
               disabled={!isAuthenticated}
               sx={{
-                fontWeight: 600,
                 '&.Mui-selected': {
                   color: 'white',
                   fontWeight: 700,
@@ -205,7 +213,6 @@ const TabNav = ({ currentTab, handleTabChange, isAuthenticated }) => {
               icon={<SportsIcon />}
               label="Fitness Plan"
               sx={{
-                fontWeight: 600,
                 transition: 'all 0.3s ease',
                 '&.Mui-selected': {
                   color: '#4caf50',
@@ -223,7 +230,6 @@ const TabNav = ({ currentTab, handleTabChange, isAuthenticated }) => {
               icon={<HeadsetMicIcon />}
               label="Exercise Coach"
               sx={{
-                fontWeight: 600,
                 transition: 'all 0.3s ease',
                 '&.Mui-selected': {
                   color: '#2196f3',
@@ -241,7 +247,6 @@ const TabNav = ({ currentTab, handleTabChange, isAuthenticated }) => {
               icon={<MusicNoteIcon />}
               label="Music"
               sx={{
-                fontWeight: 600,
                 transition: 'all 0.3s ease',
                 '&.Mui-selected': {
                   color: 'white',
@@ -250,8 +255,8 @@ const TabNav = ({ currentTab, handleTabChange, isAuthenticated }) => {
                   border: '1px solid rgba(156, 39, 176, 0.7)',
                   boxShadow: '0 4px 12px rgba(156, 39, 176, 0.3), inset 0 0 6px rgba(255, 255, 255, 0.3)'
                 },
+                // Remove animation that causes jumping
                 '&:hover': {
-                  transform: 'translateY(-3px) scale(1.05)',
                   boxShadow: '0 6px 15px rgba(156, 39, 176, 0.2)'
                 }
               }}
@@ -260,7 +265,6 @@ const TabNav = ({ currentTab, handleTabChange, isAuthenticated }) => {
               icon={<ShoppingCartIcon />}
               label="Grocery Shop"
               sx={{
-                fontWeight: 600,
                 transition: 'all 0.3s ease',
                 '&.Mui-selected': {
                   color: '#43a047',
@@ -279,7 +283,6 @@ const TabNav = ({ currentTab, handleTabChange, isAuthenticated }) => {
               label="Trends"
               disabled={!isAuthenticated}
               sx={{
-                fontWeight: 600,
                 transition: 'all 0.3s ease',
                 '&.Mui-selected': {
                   color: '#ff9800',
@@ -300,7 +303,6 @@ const TabNav = ({ currentTab, handleTabChange, isAuthenticated }) => {
               icon={<ChatIcon />}
               label="Assistant"
               sx={{
-                fontWeight: 600,
                 transition: 'all 0.3s ease',
                 '&.Mui-selected': {
                   color: '#2196f3',
@@ -320,7 +322,6 @@ const TabNav = ({ currentTab, handleTabChange, isAuthenticated }) => {
               icon={<InfoIcon />}
               label="Information"
               sx={{
-                fontWeight: 600,
                 '&.Mui-selected': {
                   color: 'white',
                   fontWeight: 700,
@@ -338,4 +339,4 @@ const TabNav = ({ currentTab, handleTabChange, isAuthenticated }) => {
   );
 };
 
-export default TabNav;
+export default TabContainer;

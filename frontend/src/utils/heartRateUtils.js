@@ -66,8 +66,16 @@ export const calculateAdvancedHeartMetrics = (heartRateData) => {
   
   // Extract valid heart rate values
   const values = heartRateData
-    .filter(item => (item.avg || item.value || 0) > 0)
+    .filter(item => {
+      const val = item.avg || item.value || 0;
+      if (val === 0) {
+        console.warn("Zero heart rate value found:", item);
+      }
+      return val > 0;
+    })
     .map(item => item.avg || item.value);
+  
+  console.log(`Found ${values.length} valid heart rate values out of ${heartRateData.length} entries`);
   
   // Basic statistics
   const avgHR = values.reduce((sum, val) => sum + val, 0) / values.length;
@@ -258,31 +266,125 @@ export const calculateDataQuality = (data) => {
   
   // Data freshness (is recent data available)
   const now = new Date();
-  const mostRecentData = data.reduce((latest, point) => {
-    const pointDate = point.timestamp ? new Date(point.timestamp) : 
-      new Date(point.date + ' ' + (point.time || '00:00'));
-    return pointDate > latest ? pointDate : latest;
-  }, new Date(0));
   
-  const hoursSinceLatest = (now - mostRecentData) / (1000 * 60 * 60);
-  const freshnessScore = Math.max(0, (24 - hoursSinceLatest) / 24) * 30;
-  
-  // Data consistency (regular intervals)
-  let intervalScores = [];
-  for (let i = 1; i < data.length; i++) {
-    const curr = data[i].timestamp ? new Date(data[i].timestamp) : 
-      new Date(data[i].date + ' ' + (data[i].time || '00:00'));
-    const prev = data[i-1].timestamp ? new Date(data[i-1].timestamp) : 
-      new Date(data[i-1].date + ' ' + (data[i-1].time || '00:00'));
-    const interval = Math.abs(curr - prev);
-    intervalScores.push(interval);
+  try {
+    const mostRecentData = data.reduce((latest, point) => {
+      let pointDate;
+      
+      try {
+        // Handle Google Fit timestamp (seconds since epoch)
+        if (typeof point.timestamp === 'number') {
+          pointDate = new Date(point.timestamp * 1000);
+          console.log(`Converted timestamp ${point.timestamp} to date: ${pointDate.toISOString()}`);
+        } 
+        // Handle string timestamp
+        else if (point.timestamp) {
+          // Check if timestamp is numeric string
+          if (!isNaN(Number(point.timestamp))) {
+            pointDate = new Date(Number(point.timestamp) * 1000);
+            console.log(`Converted numeric string timestamp ${point.timestamp} to date: ${pointDate.toISOString()}`);
+          } else {
+            pointDate = new Date(point.timestamp);
+            console.log(`Parsed string timestamp ${point.timestamp} to date: ${pointDate.toISOString()}`);
+          }
+        }
+        // Handle date + time strings
+        else if (point.date) {
+          pointDate = new Date(point.date + ' ' + (point.time || '00:00'));
+          console.log(`Parsed date+time ${point.date} ${point.time || '00:00'} to: ${pointDate.toISOString()}`);
+        }
+        // Fallback
+        else {
+          pointDate = new Date();
+          console.log(`Using fallback current date: ${pointDate.toISOString()}`);
+        }
+        
+        // Only use valid dates
+        if (isNaN(pointDate.getTime())) {
+          pointDate = new Date();
+          console.log(`Invalid date detected, using current date: ${pointDate.toISOString()}`);
+        }
+      } catch (e) {
+        console.error("Error parsing date:", e, "from point:", point);
+        pointDate = new Date();
+      }
+      
+      return pointDate > latest ? pointDate : latest;
+    }, new Date(0));
+    
+    const hoursSinceLatest = (now - mostRecentData) / (1000 * 60 * 60);
+    const freshnessScore = Math.max(0, (24 - hoursSinceLatest) / 24) * 30;
+    
+    // Data consistency (regular intervals)
+    let intervalScores = [];
+    for (let i = 1; i < data.length && i < 100; i++) { // Limit to max 100 points for performance
+      let curr, prev;
+      
+      try {
+        // Handle Google Fit timestamp (seconds since epoch)
+        if (typeof data[i].timestamp === 'number') {
+          curr = new Date(data[i].timestamp * 1000);
+        } 
+        // Handle string timestamp
+        else if (data[i].timestamp) {
+          curr = new Date(data[i].timestamp * 1000);
+        }
+        // Handle date + time strings
+        else if (data[i].date) {
+          curr = new Date(data[i].date + ' ' + (data[i].time || '00:00'));
+        }
+        // Fallback
+        else {
+          continue; // Skip this point if we can't determine the time
+        }
+        
+        // Same for previous point
+        if (typeof data[i-1].timestamp === 'number') {
+          prev = new Date(data[i-1].timestamp * 1000);
+        }
+        else if (data[i-1].timestamp) {
+          prev = new Date(data[i-1].timestamp * 1000);
+        }
+        else if (data[i-1].date) {
+          prev = new Date(data[i-1].date + ' ' + (data[i-1].time || '00:00'));
+        }
+        else {
+          continue;
+        }
+        
+        // Skip invalid dates
+        if (isNaN(curr.getTime()) || isNaN(prev.getTime())) {
+          continue;
+        }
+        
+        const interval = Math.abs(curr - prev);
+        if (interval > 0) {
+          intervalScores.push(interval);
+        }
+      } catch (e) {
+        console.error("Error calculating interval:", e);
+        continue;
+      }
+    }
+    
+    // Calculate consistency - lower standard deviation is better
+    let consistencyScore = 15; // Default middle score
+    
+    if (intervalScores.length > 0) {
+      const avgInterval = intervalScores.reduce((sum, val) => sum + val, 0) / intervalScores.length;
+      const variance = intervalScores.reduce((sum, val) => sum + Math.pow(val - avgInterval, 2), 0) / intervalScores.length;
+      const stdDev = Math.sqrt(variance);
+      consistencyScore = Math.max(0, (3600000 - stdDev) / 3600000) * 30; // 1 hour is threshold
+    }
+    
+    // Ensure we return a reasonable score
+    const totalScore = Math.round(countScore + freshnessScore + consistencyScore);
+    
+    // Return at least 1 if data exists
+    return Math.max(1, totalScore);
+  } catch (e) {
+    console.error("Error calculating data quality:", e);
+    // Return at least 1 for data quality if data exists
+    return 1;
   }
-  
-  // Calculate consistency - lower standard deviation is better
-  const avgInterval = intervalScores.reduce((sum, val) => sum + val, 0) / intervalScores.length;
-  const variance = intervalScores.reduce((sum, val) => sum + Math.pow(val - avgInterval, 2), 0) / intervalScores.length;
-  const stdDev = Math.sqrt(variance);
-  const consistencyScore = Math.max(0, (3600000 - stdDev) / 3600000) * 30; // 1 hour is threshold
-  
-  return countScore + freshnessScore + consistencyScore;
 };

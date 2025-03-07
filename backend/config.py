@@ -43,6 +43,8 @@ class Config:
     YOUTUBE_OAUTH_AUTH_URL = 'https://accounts.google.com/o/oauth2/auth'
     YOUTUBE_OAUTH_TOKEN_URL = 'https://oauth2.googleapis.com/token'
     YOUTUBE_API_KEY = os.environ.get('YOUTUBE_API_KEY', '')
+    # Always disable mock mode for YouTube Music in production
+    YOUTUBE_MUSIC_MOCK_ENABLED = False
 
     # For development, use localhost. For production, use your actual domain
     FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://fitness-console-gtxc.onrender.com')

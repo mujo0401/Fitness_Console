@@ -93,95 +93,361 @@ import TimerIcon from '@mui/icons-material/Timer';
 import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
 import { format, parseISO, subDays, addHours, addMinutes, differenceInMinutes, set } from 'date-fns';
 
-// Custom tooltip component
+// Enhanced custom tooltip component
 const CustomTooltip = ({ active, payload, label }) => {
+  const theme = useTheme();
+  
   if (!active || !payload || !payload.length) return null;
 
   const data = payload[0].payload;
+  const qualityLevel = getSleepQualityLevel(data.score);
+  
+  // Format timestamp display
+  let timestamp;
+  let formattedTime = '';
+  
+  if (data.timestamp) {
+    // Process timestamp if available (Unix timestamp in seconds)
+    const date = new Date(data.timestamp * 1000);
+    timestamp = format(date, 'yyyy-MM-dd HH:mm:ss');
+    formattedTime = format(date, 'HH:mm:ss');
+  } else {
+    // Fall back to date and time range if available
+    if (data.date) {
+      timestamp = data.startTime && data.endTime 
+        ? `${data.date} (${data.startTime} - ${data.endTime})` 
+        : data.date;
+    } else {
+      // If nothing else is available, use label
+      timestamp = typeof label === 'string' ? label : '';
+    }
+  }
+  
+  // Calculate sleep quality metrics
+  const totalSleepMinutes = (data.deepSleepMinutes || 0) + (data.lightSleepMinutes || 0) + (data.remSleepMinutes || 0);
+  const estimatedRecoveryScore = Math.round(
+    ((data.deepSleepPercentage || 0) * 0.5) + 
+    ((data.efficiency || 0) * 0.3) + 
+    ((data.remSleepPercentage || 0) * 0.2)
+  );
   
   return (
     <Paper
-      elevation={3}
+      elevation={4}
       sx={{
-        p: 2,
+        p: 0,
         borderRadius: 2,
-        maxWidth: 250,
+        maxWidth: 300,
         backdropFilter: 'blur(8px)',
-        background: 'rgba(255, 255, 255, 0.85)',
+        background: 'rgba(255, 255, 255, 0.95)',
         border: '1px solid rgba(200, 200, 200, 0.5)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+        overflow: 'hidden'
       }}
     >
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-        {data.date}
-      </Typography>
-      
-      {data.startTime && data.endTime && (
-        <Typography variant="body2" sx={{ mb: 1 }}>
-          {data.startTime} - {data.endTime}
-        </Typography>
-      )}
-      
-      <Typography variant="body2" sx={{ mb: 0.5 }}>
-        Duration: {formatDuration(data.durationMinutes)}
-      </Typography>
-      
-      <Typography variant="body2" sx={{ mb: 0.5 }}>
-        Sleep Score: {data.score || 'N/A'}
-      </Typography>
-      
-      <Typography variant="body2" sx={{ mb: 0.5 }}>
-        Efficiency: {data.efficiency}%
-      </Typography>
-      
-      {data.deepSleepMinutes && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-          <Box 
-            sx={{ 
-              width: 10, 
-              height: 10, 
-              borderRadius: '50%', 
-              bgcolor: '#3f51b5' 
-            }}
-          />
-          <Typography variant="caption">
-            Deep: {formatDuration(data.deepSleepMinutes)} ({data.deepSleepPercentage}%)
-          </Typography>
-        </Box>
-      )}
-      
-      {data.remSleepMinutes && (
+      {/* Header with quality level color */}
+      <Box sx={{ 
+        p: 1.5, 
+        background: qualityLevel?.gradient || 'linear-gradient(90deg, #9c27b0, #673ab7)', 
+        color: 'white',
+        borderBottom: '1px solid rgba(0,0,0,0.1)'
+      }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Box 
-            sx={{ 
-              width: 10, 
-              height: 10, 
-              borderRadius: '50%', 
-              bgcolor: '#2196f3' 
-            }}
-          />
-          <Typography variant="caption">
-            REM: {formatDuration(data.remSleepMinutes)} ({data.remSleepPercentage}%)
+          <NightsStayIcon fontSize="small" />
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            {timestamp}
           </Typography>
         </Box>
-      )}
+        {qualityLevel && (
+          <Typography variant="caption" sx={{ opacity: 0.9, display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+            <BedtimeIcon fontSize="inherit" /> 
+            {qualityLevel.name} Quality {data.score ? `(${data.score}/100)` : ''}
+          </Typography>
+        )}
+      </Box>
       
-      {data.lightSleepMinutes && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Box 
-            sx={{ 
-              width: 10, 
-              height: 10, 
-              borderRadius: '50%', 
-              bgcolor: '#9c27b0' 
-            }}
-          />
-          <Typography variant="caption">
-            Light: {formatDuration(data.lightSleepMinutes)} ({data.lightSleepPercentage}%)
+      <Box sx={{ p: 2 }}>
+        {/* Primary metrics */}
+        <Grid container spacing={1} sx={{ mb: 1.5 }}>
+          <Grid item xs={6}>
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                p: 1, 
+                textAlign: 'center',
+                border: '1px solid rgba(0,0,0,0.05)',
+                borderRadius: 1,
+                bgcolor: alpha(theme.palette.primary.main, 0.08)
+              }}
+            >
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                Duration
+              </Typography>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
+                {formatDuration(data.durationMinutes)} <Typography component="span" variant="caption">hrs</Typography>
+              </Typography>
+            </Paper>
+          </Grid>
+          
+          <Grid item xs={6}>
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                p: 1, 
+                textAlign: 'center',
+                border: '1px solid rgba(0,0,0,0.05)',
+                borderRadius: 1,
+                bgcolor: alpha(theme.palette.info.main, 0.08)
+              }}
+            >
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                Efficiency
+              </Typography>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.info.main }}>
+                {data.efficiency}% <Typography component="span" variant="caption"></Typography>
+              </Typography>
+            </Paper>
+          </Grid>
+          
+          {data.timestamp && (
+            <Grid item xs={6}>
+              <Paper 
+                elevation={0} 
+                sx={{ 
+                  p: 1, 
+                  textAlign: 'center',
+                  border: '1px solid rgba(0,0,0,0.05)',
+                  borderRadius: 1,
+                  bgcolor: alpha(theme.palette.success.main, 0.08)
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                  Recorded Time
+                </Typography>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.success.main, fontSize: '0.9rem' }}>
+                  {formattedTime}
+                </Typography>
+              </Paper>
+            </Grid>
+          )}
+          
+          {data.score > 0 && (
+            <Grid item xs={data.timestamp ? 6 : 12}>
+              <Paper 
+                elevation={0} 
+                sx={{ 
+                  p: 1, 
+                  textAlign: 'center',
+                  border: '1px solid rgba(0,0,0,0.05)',
+                  borderRadius: 1,
+                  bgcolor: alpha(qualityLevel?.color || theme.palette.secondary.main, 0.08)
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                  Est. Recovery
+                </Typography>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', color: qualityLevel?.color || theme.palette.secondary.main }}>
+                  {estimatedRecoveryScore}<Typography component="span" variant="caption">/100</Typography>
+                </Typography>
+              </Paper>
+            </Grid>
+          )}
+        </Grid>
+        
+        {/* Sleep stages breakdown */}
+        <Box sx={{ mt: 2 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+            Sleep Stages
           </Typography>
+          <Paper 
+            elevation={0}
+            sx={{ 
+              p: 1.5, 
+              bgcolor: alpha(theme.palette.background.default, 0.5), 
+              borderRadius: 1,
+              border: `1px dashed ${alpha(theme.palette.divider, 0.5)}`
+            }}
+          >
+            <Grid container spacing={1}>
+              {data.deepSleepMinutes && (
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box 
+                        sx={{ 
+                          width: 10, 
+                          height: 10, 
+                          borderRadius: '50%', 
+                          bgcolor: '#3f51b5' 
+                        }}
+                      />
+                      <Typography variant="caption" fontWeight="medium">
+                        Deep Sleep:
+                      </Typography>
+                    </Box>
+                    <Typography variant="caption">
+                      {formatDuration(data.deepSleepMinutes)} ({data.deepSleepPercentage}%)
+                    </Typography>
+                  </Box>
+                  <LinearProgress 
+                    variant="determinate" 
+                    value={data.deepSleepPercentage || 0} 
+                    sx={{ 
+                      height: 4, 
+                      borderRadius: 2,
+                      mb: 1,
+                      bgcolor: alpha('#3f51b5', 0.1),
+                      '& .MuiLinearProgress-bar': { bgcolor: '#3f51b5' } 
+                    }} 
+                  />
+                </Grid>
+              )}
+              
+              {data.remSleepMinutes && (
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box 
+                        sx={{ 
+                          width: 10, 
+                          height: 10, 
+                          borderRadius: '50%', 
+                          bgcolor: '#2196f3' 
+                        }}
+                      />
+                      <Typography variant="caption" fontWeight="medium">
+                        REM Sleep:
+                      </Typography>
+                    </Box>
+                    <Typography variant="caption">
+                      {formatDuration(data.remSleepMinutes)} ({data.remSleepPercentage}%)
+                    </Typography>
+                  </Box>
+                  <LinearProgress 
+                    variant="determinate" 
+                    value={data.remSleepPercentage || 0} 
+                    sx={{ 
+                      height: 4, 
+                      borderRadius: 2,
+                      mb: 1,
+                      bgcolor: alpha('#2196f3', 0.1),
+                      '& .MuiLinearProgress-bar': { bgcolor: '#2196f3' } 
+                    }} 
+                  />
+                </Grid>
+              )}
+              
+              {data.lightSleepMinutes && (
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box 
+                        sx={{ 
+                          width: 10, 
+                          height: 10, 
+                          borderRadius: '50%', 
+                          bgcolor: '#9c27b0' 
+                        }}
+                      />
+                      <Typography variant="caption" fontWeight="medium">
+                        Light Sleep:
+                      </Typography>
+                    </Box>
+                    <Typography variant="caption">
+                      {formatDuration(data.lightSleepMinutes)} ({data.lightSleepPercentage}%)
+                    </Typography>
+                  </Box>
+                  <LinearProgress 
+                    variant="determinate" 
+                    value={data.lightSleepPercentage || 0} 
+                    sx={{ 
+                      height: 4, 
+                      borderRadius: 2,
+                      bgcolor: alpha('#9c27b0', 0.1),
+                      '& .MuiLinearProgress-bar': { bgcolor: '#9c27b0' } 
+                    }} 
+                  />
+                </Grid>
+              )}
+            </Grid>
+          </Paper>
         </Box>
-      )}
+        
+        {/* Sleep quality info - show only when we have quality score */}
+        {data.score > 0 && qualityLevel && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+              Sleep Quality
+            </Typography>
+            <Paper 
+              elevation={0}
+              sx={{ 
+                p: 1.5, 
+                bgcolor: alpha(qualityLevel.color, 0.05), 
+                borderRadius: 1,
+                border: `1px dashed ${alpha(qualityLevel.color, 0.3)}`
+              }}
+            >
+              <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                <strong>{qualityLevel.name} Sleep Quality:</strong> {qualityLevel.description}
+              </Typography>
+            </Paper>
+          </Box>
+        )}
+      </Box>
     </Paper>
   );
+};
+
+// Helper function to get sleep quality level
+const getSleepQualityLevel = (score) => {
+  if (!score) return null;
+  
+  // Sleep quality levels with colors
+  const SLEEP_QUALITY_LEVELS = [
+    { 
+      name: 'Excellent', 
+      min: 90, 
+      max: 100, 
+      color: '#3f51b5', 
+      gradient: 'linear-gradient(135deg, #3f51b5 0%, #5c6bc0 100%)',
+      description: 'Optimal sleep quality and duration'
+    },
+    { 
+      name: 'Good', 
+      min: 80, 
+      max: 89, 
+      color: '#2196f3', 
+      gradient: 'linear-gradient(135deg, #2196f3 0%, #4dabf5 100%)',
+      description: 'Good sleep quality with proper sleep cycles'
+    },
+    { 
+      name: 'Fair', 
+      min: 70, 
+      max: 79, 
+      color: '#009688', 
+      gradient: 'linear-gradient(135deg, #009688 0%, #4db6ac 100%)',
+      description: 'Average sleep quality, may need improvement'
+    },
+    { 
+      name: 'Poor', 
+      min: 50, 
+      max: 69, 
+      color: '#ff9800', 
+      gradient: 'linear-gradient(135deg, #ff9800 0%, #ffb74d 100%)',
+      description: 'Below average sleep quality, needs attention'
+    },
+    { 
+      name: 'Very Poor', 
+      min: 0, 
+      max: 49, 
+      color: '#f44336', 
+      gradient: 'linear-gradient(135deg, #f44336 0%, #ef5350 100%)',
+      description: 'Insufficient or disrupted sleep, needs intervention'
+    }
+  ];
+  
+  return SLEEP_QUALITY_LEVELS.find(level => score >= level.min && score <= level.max);
 };
 
 // Format duration as hours and minutes
@@ -371,7 +637,7 @@ const ActiveShapePie = props => {
 };
 
 // Enhanced SleepChart component
-const SleepChart = ({ data, period }) => {
+const SleepChart = ({ data, period, dataSource = 'fitbit' }) => {
   const theme = useTheme();
   const [viewType, setViewType] = useState('sleepTimeline');
   const [chartType, setChartType] = useState('timeline');
@@ -1068,6 +1334,18 @@ const SleepChart = ({ data, period }) => {
         <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <NightsStayIcon sx={{ color: theme.palette.primary.main }} />
           Sleep Analytics Dashboard
+          {dataSource && dataSource !== 'loading' && (
+            <Chip 
+              size="small" 
+              label={dataSource === 'fitbit' ? 'Fitbit' : 
+                     dataSource === 'apple' ? 'Apple Health' : 
+                     dataSource === 'google' ? 'Google Fit' : 
+                     dataSource === 'mock' ? 'Demo Data' : dataSource}
+              color={dataSource === 'mock' ? 'default' : 'primary'}
+              variant="outlined"
+              sx={{ ml: 1, height: 20, fontSize: '0.65rem' }}
+            />
+          )}
         </Typography>
         
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

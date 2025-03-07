@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ResponsiveContainer, 
@@ -351,9 +351,19 @@ const CustomTooltip = ({ active, payload, label }) => {
   const hrZone = data.avg ? getHeartRateZone(data.avg) : null;
   
   // Calculate timestamp if available
-  const timestamp = data.date ? 
-    (data.time ? `${data.date} at ${data.time}` : data.date) : 
-    (typeof label === 'string' ? label : '');
+  let timestamp;
+  if (data.timestamp) {
+    const date = new Date(data.timestamp * 1000);
+    timestamp = format(date, 'yyyy-MM-dd HH:mm:ss');
+  } else if (data.date) {
+    timestamp = data.time ? `${data.date} at ${data.time}` : data.date;
+  } else if (data.formattedTime) {
+    timestamp = data.formattedTime;
+  } else if (typeof label === 'string') {
+    timestamp = label;
+  } else {
+    timestamp = 'Unknown time';
+  }
   
   // Calculate estimated calories if we have heart rate
   const estimatedCalories = data.avg ? Math.round((data.avg * 0.045) * 2) : null;
@@ -1568,37 +1578,60 @@ const DiagnosticsDialog = ({ open, onClose, tokenScopes, isAuthenticated, date, 
   );
 };
 
-// Downsampling function for performance with high-frequency data
-const downsampleData = (data, targetPoints = 500) => {
-  if (!data || data.length <= targetPoints) return data;
+// Process heart rate data with minimal downsampling to preserve detail
+const downsampleData = (data, targetPoints = 5000) => {
+  if (!data || data.length === 0) return [];
   
-  const factor = Math.ceil(data.length / targetPoints);
+  // If data points are fewer than target, no need to downsample
+  if (data.length <= targetPoints) {
+    console.log(`No downsampling needed: ${data.length} points is below target of ${targetPoints}`);
+    return data;
+  }
+  
+  // Calculate the factor by which to reduce the data - use minimal reduction
+  const factor = Math.max(1, Math.ceil(data.length / targetPoints));
+  console.log(`Downsampling ${data.length} points with factor ${factor} to ~${Math.ceil(data.length/factor)} points`);
+  
   const result = [];
   
-  for (let i = 0; i < data.length; i += factor) {
-    const chunk = data.slice(i, i + factor);
-    const avgObj = { ...chunk[0] };
+  // Always include first and last point for proper time range
+  if (data.length > 1) {
+    result.push({...data[0]});
+  }
+  
+  // Process middle points
+  for (let i = 1; i < data.length - 1; i += factor) {
+    const chunk = data.slice(i, Math.min(i + factor, data.length - 1));
     
-    // Calculate averages for each numeric field
-    Object.keys(avgObj).forEach(key => {
-      if (typeof avgObj[key] === 'number') {
-        const validValues = chunk
-          .map(item => item[key])
-          .filter(val => typeof val === 'number' && !isNaN(val));
-          
-        if (validValues.length > 0) {
-          if (key === 'min') {
-            avgObj[key] = Math.min(...validValues);
-          } else if (key === 'max') {
-            avgObj[key] = Math.max(...validValues);
-          } else {
-            avgObj[key] = validValues.reduce((sum, val) => sum + val, 0) / validValues.length;
+    // For high-fidelity detail, use first point in each chunk but preserve min/max
+    const pointObj = { ...chunk[0] };
+    
+    // Only calculate min/max for chunks with multiple points
+    if (chunk.length > 1) {
+      Object.keys(pointObj).forEach(key => {
+        if (typeof pointObj[key] === 'number') {
+          const validValues = chunk
+            .map(item => item[key])
+            .filter(val => typeof val === 'number' && !isNaN(val));
+            
+          if (validValues.length > 0) {
+            if (key === 'min') {
+              pointObj[key] = Math.min(...validValues);
+            } else if (key === 'max') {
+              pointObj[key] = Math.max(...validValues);
+            }
+            // For other values like 'avg', keep original point data for precise visualization
           }
         }
-      }
-    });
+      });
+    }
     
-    result.push(avgObj);
+    result.push(pointObj);
+  }
+  
+  // Always include last point
+  if (data.length > 1) {
+    result.push({...data[data.length - 1]});
   }
   
   return result;
@@ -1661,7 +1694,22 @@ const HeartRateChart = ({
     setDataQualityScores(qualityScores);
   }, [fitbitData, googleFitData, appleHealthData]);
 
+  // First define important util functions
+  // Select the best data source based on quality scores
+  const selectBestDataSource = useCallback(() => {
+    // Filter for available sources only
+    const scores = Object.entries(dataQualityScores)
+      .filter(([source]) => availableSources[source])
+      .sort((a, b) => b[1] - a[1]);
+    
+    // Return the highest scoring source, or 'googleFit' as fallback if available
+    if (scores.length > 0) return scores[0][0];
+    if (availableSources.googleFit) return 'googleFit';
+    return 'fitbit';
+  }, [dataQualityScores, availableSources]);
+  
   // Process data on load and when settings change
+  
   useEffect(() => {
     if (!data || data.length === 0) {
       // Set empty state with placeholder data for visualization
@@ -1686,16 +1734,51 @@ const HeartRateChart = ({
       setCurrentHeartRate(Math.round(latestHR));
     }
     
-    // Downsample based on resolution
-    let pointTarget;
-    switch (resolution) {
-      case 'low': pointTarget = 100; break;
-      case 'high': pointTarget = 1000; break;
-      default: pointTarget = 300; break;
+    // Add a current time data point to extend chart to the present
+    const currentTime = new Date();
+    const latestDataTime = data[data.length - 1]?.timestamp ? 
+      new Date(data[data.length - 1].timestamp * 1000) : 
+      data[data.length - 1]?.date ? 
+        new Date(data[data.length - 1].date + (data[data.length - 1].time ? ' ' + data[data.length - 1].time : '')) :
+        null;
+    
+    let processedData = [...data];
+    
+    // Always add a current time point to ensure chart extends to now
+    if (latestDataTime) {
+      console.log(`Latest data time: ${latestDataTime}, Current time: ${currentTime}`);
+      const minutesDiff = (currentTime - latestDataTime) / (1000 * 60);
+      console.log(`Time difference: ${minutesDiff.toFixed(2)} minutes`);
+      
+      // If the latest data is more than 1 minute old, add current time point
+      if (minutesDiff > 1) {
+        const lastHeartRate = latestHR || 70; // Use latest HR or default
+        processedData.push({
+          timestamp: Math.floor(currentTime.getTime() / 1000),
+          date: format(currentTime, 'yyyy-MM-dd'),
+          time: format(currentTime, 'HH:mm:ss'),
+          formattedTime: format(currentTime, 'HH:mm'),
+          avg: lastHeartRate,
+          value: lastHeartRate,
+          min: lastHeartRate,
+          max: lastHeartRate,
+          source: 'current',
+          zoneName: 'Current',
+          zoneColor: '#4caf50'
+        });
+        console.log(`Added current time point with HR: ${lastHeartRate}`);
+      }
     }
     
-    // Process and set the data
-    let processedData;
+    // Set point target for data visualization (higher = more detail)
+    let pointTarget;
+    switch (resolution) {
+      case 'low': pointTarget = 500; break;      // Increased from 100
+      case 'high': pointTarget = 5000; break;    // Increased from 1000
+      default: pointTarget = 2000; break;        // Increased from 300
+    }
+    
+    // Process and set the data with our updated data that includes current time
     
     if (compareMode && dataSource === 'combined') {
       // In comparison mode, create separate series for each data source
@@ -1754,19 +1837,39 @@ const HeartRateChart = ({
       processedData = combinedData;
     } else if (dataSource === 'auto') {
       // Smart data source selection based on quality metrics
-      const bestSource = selectBestDataSource();
+      let bestSource = selectBestDataSource();
       const sourcesMap = {
         fitbit: fitbitData,
         googleFit: googleFitData,
         appleHealth: appleHealthData
       };
       
-      const bestData = sourcesMap[bestSource] || data;
-      const sampledData = downsampleData(bestData, pointTarget);
-      processedData = enhanceHeartRateData(sampledData, bestSource);
+      // Explicitly check for Google Fit data since that's what we want to prioritize
+      if (googleFitData && googleFitData.length > 0) {
+        console.log("Prioritizing Google Fit data");
+        bestSource = 'googleFit';
+      }
+      
+      // Use our processed data with the current time point
+      const bestData = sourcesMap[bestSource] || processedData || data;
+      
+      // Final fallback - if no data in bestData, try Google Fit directly
+      if (!bestData || bestData.length === 0) {
+        if (googleFitData && googleFitData.length > 0) {
+          console.log("Fallback to Google Fit data");
+          const sampledData = downsampleData(processedData, pointTarget);
+          processedData = enhanceHeartRateData(sampledData, 'googleFit');
+        } else {
+          const sampledData = downsampleData(processedData, pointTarget);
+          processedData = enhanceHeartRateData(sampledData, dataSource);
+        }
+      } else {
+        const sampledData = downsampleData(bestData, pointTarget);
+        processedData = enhanceHeartRateData(sampledData, bestSource);
+      }
     } else {
-      // Regular mode - just process the active data source
-      const sampledData = downsampleData(data, pointTarget);
+      // Regular mode - just process the active data source with current time point
+      const sampledData = downsampleData(processedData, pointTarget);
       processedData = enhanceHeartRateData(sampledData, dataSource);
     }
     
@@ -1776,7 +1879,7 @@ const HeartRateChart = ({
     if (activeTab === 1 && data.length > 10) {
       generateDataInsights(data);
     }
-  }, [data, resolution, compareMode, dataSource, activeTab, fitbitData, googleFitData, appleHealthData]);
+  }, [data, resolution, compareMode, dataSource, activeTab, fitbitData, googleFitData, appleHealthData, selectBestDataSource]);
   
   // Calculate data quality score for a given dataset
   const calculateDataQualityScore = (data) => {
@@ -1816,17 +1919,6 @@ const HeartRateChart = ({
     return Math.round(dataPointsScore + completenessScore + recencyScore);
   };
   
-  // Select the best data source based on quality scores
-  const selectBestDataSource = () => {
-    // Filter for available sources only
-    const scores = Object.entries(dataQualityScores)
-      .filter(([source]) => availableSources[source])
-      .sort((a, b) => b[1] - a[1]);
-    
-    // Return the highest scoring source, or 'fitbit' as fallback
-    return scores.length > 0 ? scores[0][0] : 'fitbit';
-  };
-  
   // Helper function to enhance heart rate data with zone information and source
   const enhanceHeartRateData = (data, source) => {
     return data.map(item => {
@@ -1839,12 +1931,22 @@ const HeartRateChart = ({
       if (item.timestamp) {
         // Google Fit data already has timestamp in seconds since epoch
         timestamp = item.timestamp;
+        console.log(`Using existing timestamp: ${timestamp}, will display as: ${new Date(timestamp * 1000).toISOString()}`);
       } else if (item.date) {
         // Fitbit data has date and possibly time
         timestamp = new Date(item.date + (item.time ? ' ' + item.time : '')).getTime() / 1000;
+        console.log(`Created timestamp from date+time: ${item.date} ${item.time || '00:00'} -> ${timestamp}`);
       } else {
         // Fallback in case no time information is available
         timestamp = Date.now() / 1000;
+        console.log(`Using fallback current timestamp: ${timestamp}`);
+      }
+      
+      // Format a more readable time for display
+      let formattedTime = item.time;
+      if (!formattedTime && timestamp) {
+        const date = new Date(timestamp * 1000);
+        formattedTime = format(date, 'HH:mm:ss');
       }
       
       return {
@@ -1854,6 +1956,8 @@ const HeartRateChart = ({
         value: hrValue, // Ensure all data has a value field
         zoneColor: zone?.color || '#8884d8',
         zoneName: zone?.name || 'Unknown',
+        // Add formatted time if available
+        formattedTime: formattedTime,
         // For zone area chart
         rest: hrValue <= 60 ? hrValue : 0,
         fatBurn: hrValue > 60 && hrValue <= 70 ? hrValue : 0,
@@ -2021,6 +2125,22 @@ const HeartRateChart = ({
         </Typography>
       </Box>
     );
+  }
+  
+  // Additional debug logging to inspect data values
+  console.log("Heart rate data sample:", data.slice(0, 5));
+  let hasValidValues = false;
+  for (let i = 0; i < Math.min(data.length, 10); i++) {
+    const item = data[i];
+    const value = item.avg || item.value || 0;
+    if (value > 0) {
+      hasValidValues = true;
+      console.log(`Found valid heart rate value: ${value} BPM at timestamp ${item.timestamp}`);
+      break;
+    }
+  }
+  if (!hasValidValues) {
+    console.warn("No valid heart rate values found in data. First 5 records:", data.slice(0, 5));
   }
   
   // Find min/max values for Y axis
@@ -2645,12 +2765,20 @@ const HeartRateChart = ({
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(200,200,200,0.2)" />
                         
                         <XAxis 
-                          dataKey={period === 'day' ? "time" : "date"} 
+                          dataKey={period === 'day' ? (processedData[0]?.formattedTime ? "formattedTime" : "time") : "date"} 
                           tick={{ fontSize: 12, fill: theme.palette.text.secondary }} 
                           tickLine={{ stroke: theme.palette.text.secondary }}
                           axisLine={{ stroke: theme.palette.text.secondary }}
                           padding={{ left: 10, right: 10 }}
                           interval="preserveStartEnd"
+                          tickFormatter={(value, index) => {
+                            const item = processedData[index];
+                            if (item && item.timestamp) {
+                              const date = new Date(item.timestamp * 1000);
+                              return format(date, 'HH:mm:ss');
+                            }
+                            return value;
+                          }}
                         />
                         
                         <YAxis 

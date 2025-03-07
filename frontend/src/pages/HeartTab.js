@@ -130,6 +130,30 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
     fetchAllHeartData();
   }, [period, formattedDate, isAuthenticated, activeDataSource]);
   
+  // Add debugging effect to log data state changes and ensure data is displayed
+  useEffect(() => {
+    console.log("Google Fit data updated:", googleFitData ? googleFitData.length : 0);
+    if (googleFitData && googleFitData.length > 0) {
+      console.log("Sample Google Fit data:", googleFitData[0]);
+      
+      // Always force set heart data to Google Fit data if we have it
+      // This ensures the chart always shows data when available
+      console.log("FORCE SETTING HEART DATA to Google Fit data");
+      setHeartData([...googleFitData]);
+      
+      // Clear any error message since we have data
+      setError('');
+    }
+  }, [googleFitData]);
+  
+  // Add debugging effect to log heart data changes
+  useEffect(() => {
+    console.log("Heart data updated:", heartData ? heartData.length : 0);
+    if (heartData && heartData.length > 0) {
+      console.log("Sample heart data:", heartData[0]);
+    }
+  }, [heartData]);
+
   // Effect to calculate advanced metrics and AI insights when heart data changes
   useEffect(() => {
     if (heartData && heartData.length > 0) {
@@ -347,6 +371,31 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
           
           console.log(`Successfully fetched ${source} heart rate data:`, response);
           
+          // Format the data consistently
+          if (source === 'googleFit' && Array.isArray(response)) {
+            // Google Fit returns an array directly - ensure the data is formatted correctly for our app
+            console.log(`Formatting Google Fit data array of length ${response.length}`);
+            console.log("Sample Google Fit data points:", response.slice(0, 3));
+            return response.map(item => {
+              // Check for missing or zero value and log it
+              if (!item.value && item.value !== 0) {
+                console.warn("Found Google Fit data item without value:", item);
+              }
+              
+              // Convert Google Fit format to match our app's expected format
+              return {
+                ...item,
+                // Add any missing fields Google Fit might not provide
+                value: item.value || 0,
+                avg: item.value || 0,
+                // Add default fields if they don't exist
+                min: item.min || item.value || 0,
+                max: item.max || item.value || 0,
+                timestamp: item.timestamp || Date.now() / 1000
+              };
+            });
+          }
+          
           return response;
         } catch (error) {
           console.error(`Error fetching ${source} heart rate data:`, error);
@@ -383,6 +432,13 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
         return;
       }
       
+      // Create object to store the processed data
+      const processedData = {
+        fitbit: null,
+        googleFit: null,
+        appleHealth: null
+      };
+      
       // Wait for all promises to settle
       const results = await Promise.allSettled(promises);
       
@@ -390,32 +446,78 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
       results.forEach((result, index) => {
         const source = promiseLabels[index];
         if (result.status === 'fulfilled') {
-          // Check for data in the response
-          if (result.value?.data?.length > 0) {
-            console.log(`Successfully fetched data from ${source}:`, result.value.data.length);
-            if (source === 'fitbit') setFitbitData(result.value.data);
-            if (source === 'googleFit') setGoogleFitData(result.value.data);
-            if (source === 'appleHealth') setAppleHealthData(result.value.data);
-          } else if (Array.isArray(result.value) && result.value.length > 0) {
-            // Handle the case where the data is directly in the result value
-            console.log(`Successfully fetched ${source} heart rate data:`, result.value.length);
-            if (source === 'googleFit') {
-              setGoogleFitData(result.value);
-            } else if (source === 'fitbit') {
-              setFitbitData(result.value);
-            } else if (source === 'appleHealth') {
-              setAppleHealthData(result.value);
+          console.log(`Processing ${source} result:`, {
+            isArray: Array.isArray(result.value),
+            length: Array.isArray(result.value) ? result.value.length : 'N/A',
+            hasData: result.value?.data ? "Yes" : "No",
+            dataLength: result.value?.data?.length || 0
+          });
+          
+          // Handle Google Fit data which is now pre-formatted in fetchHeartData
+          if (source === 'googleFit') {
+            if (Array.isArray(result.value) && result.value.length > 0) {
+              console.log(`Setting Google Fit data of length ${result.value.length}`);
+              processedData.googleFit = result.value;
+            } else if (result.value?.data?.length > 0) {
+              console.log(`Setting Google Fit data from data field of length ${result.value.data.length}`);
+              processedData.googleFit = result.value.data;
+            } else {
+              console.warn(`No data received from ${source}`);
             }
-          } else {
-            console.warn(`No data received from ${source}`);
+          }
+          // Handle Fitbit and Apple Health
+          else if (source === 'fitbit' || source === 'appleHealth') {
+            if (result.value?.data?.length > 0) {
+              console.log(`Successfully fetched ${source} data:`, result.value.data.length);
+              if (source === 'fitbit') processedData.fitbit = result.value.data;
+              if (source === 'appleHealth') processedData.appleHealth = result.value.data;
+            } else if (Array.isArray(result.value) && result.value.length > 0) {
+              console.log(`Successfully fetched ${source} data (array):`, result.value.length);
+              if (source === 'fitbit') processedData.fitbit = result.value;
+              if (source === 'appleHealth') processedData.appleHealth = result.value;
+            } else {
+              console.warn(`No data received from ${source}`);
+            }
           }
         } else {
           console.error(`Failed to fetch data from ${source}:`, result.reason || 'Unknown error');
         }
       });
       
-      // Determine which data to use based on activeDataSource setting
+      // Now update state with the processed data
+      if (processedData.fitbit) {
+        console.log("Setting Fitbit data state:", processedData.fitbit.length);
+        setFitbitData(processedData.fitbit);
+      }
+      
+      if (processedData.googleFit) {
+        console.log("Setting Google Fit data state:", processedData.googleFit.length);
+        setGoogleFitData(processedData.googleFit);
+        
+        // If we have Google Fit data, immediately use it (especially for debugging)
+        if (activeDataSource === 'auto' || activeDataSource === 'googleFit') {
+          console.log("Immediately using Google Fit data:", processedData.googleFit.length);
+          setHeartData(processedData.googleFit);
+        }
+      }
+      
+      if (processedData.appleHealth) {
+        console.log("Setting Apple Health data state:", processedData.appleHealth.length);
+        setAppleHealthData(processedData.appleHealth);
+      }
+      
+      // Skip the timeout and directly use available data
+      // The data appears in logs but the timeout causes issues with the data selection
       determineHeartRateDataToUse();
+      
+      // Double-check after small delay to ensure we're catching any async updates
+      setTimeout(() => {
+        if ((!heartData || heartData.length === 0) && googleFitData && googleFitData.length > 0) {
+          console.log('Fallback: Setting heart data to Google Fit data');
+          setHeartData([...googleFitData]);
+          setError(''); // Clear any error message
+        }
+      }, 1000);
       
     } catch (error) {
       console.error('Error fetching heart rate data:', error);
@@ -432,10 +534,23 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
   
   // Determine which heart rate data to use based on settings and availability
   const determineHeartRateDataToUse = () => {
+    console.log("Determining heart rate data source:", {
+      activeDataSource,
+      googleFitDataLength: googleFitData ? googleFitData.length : 0,
+      fitbitDataLength: fitbitData ? fitbitData.length : 0,
+      appleHealthLength: appleHealthData ? appleHealthData.length : 0
+    });
+    
+    // Force checking googleFitData again to ensure it's up to date
+    if (googleFitData && googleFitData.length > 0) {
+      console.log('Found Google Fit data in state:', googleFitData.length);
+    }
+    
     switch (activeDataSource) {
       case 'fitbit':
         if (fitbitData && fitbitData.length > 0) {
           setHeartData(fitbitData);
+          console.log('Using Fitbit data');
         } else {
           setError('Fitbit data is not available. Please select another data source.');
           setHeartData([]);
@@ -444,7 +559,8 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
         
       case 'googleFit':
         if (googleFitData && googleFitData.length > 0) {
-          setHeartData(googleFitData);
+          console.log('Setting heart data to Google Fit data');
+          setHeartData([...googleFitData]);  // Create a new array copy to ensure state update
         } else {
           setError('Google Fit data is not available. Please select another data source.');
           setHeartData([]);
@@ -454,6 +570,7 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
       case 'appleHealth':
         if (appleHealthData && appleHealthData.length > 0) {
           setHeartData(appleHealthData);
+          console.log('Using Apple Health data');
         } else {
           setError('Apple Health data is not available. Please select another data source.');
           setHeartData([]);
@@ -474,6 +591,7 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
         
         if (combinedData.length > 0) {
           setHeartData(combinedData);
+          console.log('Using combined data:', combinedData.length);
         } else {
           setError('No heart rate data available from any source.');
           setHeartData([]);
@@ -493,24 +611,28 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
           appleHealth: appleHealthQuality
         });
         
-        // Use the highest quality dataset
-        if (fitbitQuality > googleFitQuality && fitbitQuality > appleHealthQuality && fitbitData) {
-          setHeartData(fitbitData);
+        // Use the highest quality dataset, prioritizing Google Fit if it has data 
+        if (googleFitData && googleFitData.length > 0) {
+          console.log('Auto-selected Google Fit data with length:', googleFitData.length);
+          console.log('Google Fit data sample:', googleFitData[0]);
+          setHeartData(prevData => {
+            // Force reset error state since we have data
+            setError('');
+            console.log('Force setting Google Fit data as heart data source');
+            return [...googleFitData]; // Create a new array copy to ensure state update
+          });
+        } else if (fitbitQuality > appleHealthQuality && fitbitData && fitbitData.length > 0) {
+          setHeartData([...fitbitData]);
           console.log('Auto-selected Fitbit data as highest quality');
-        } else if (googleFitQuality > fitbitQuality && googleFitQuality > appleHealthQuality && googleFitData) {
-          setHeartData(googleFitData);
-          console.log('Auto-selected Google Fit data as highest quality');
-        } else if (appleHealthData) {
-          setHeartData(appleHealthData);
-          console.log('Auto-selected Apple Health data as highest quality');
-        } else if (fitbitData) {
-          setHeartData(fitbitData);
+        } else if (appleHealthData && appleHealthData.length > 0) {
+          setHeartData([...appleHealthData]);
+          console.log('Auto-selected Apple Health data');
+        } else if (fitbitData && fitbitData.length > 0) {
+          setHeartData([...fitbitData]);
           console.log('Defaulting to Fitbit data');
-        } else if (googleFitData) {
-          setHeartData(googleFitData);
-          console.log('Defaulting to Google Fit data');
         } else {
           // No data available from any source
+          console.log('No heart rate data available from any source.');
           setError('No heart rate data available from any source.');
           setHeartData([]);
         }
@@ -633,7 +755,7 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
     const avg = Math.round(values.reduce((sum, val) => sum + val, 0) / values.length);
     
     // Handle both max field and calculating max from values
-    const maxFromField = Math.max(...heartData.filter(item => item.max || 0 > 0).map(item => item.max));
+    const maxFromField = Math.max(...heartData.filter(item => (item.max || 0) > 0).map(item => item.max || 0));
     const maxFromValues = Math.max(...values);
     const max = Math.max(maxFromField, maxFromValues);
     

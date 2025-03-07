@@ -548,6 +548,20 @@ export const googleFitService = {
     }
   },
   
+  // Get sleep data from Google Fit
+  getSleepData: async (period = 'day', date = new Date().toISOString().split('T')[0]) => {
+    try {
+      console.log(`Fetching Google Fit sleep data for ${period} on ${date}`);
+      const response = await apiClient.get('/google-fit/sleep', {
+        params: { period, date }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching Google Fit sleep data:', error);
+      throw error;
+    }
+  },
+  
   // Logout from Google Fit
   logout: async () => {
     try {

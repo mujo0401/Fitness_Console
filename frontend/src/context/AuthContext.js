@@ -31,116 +31,142 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(true);
     try {
       console.log('Checking authentication status...');
-      const response = await authService.checkAuth();
-      console.log('Auth check response:', response);
       
-      // Store token scopes if available
-      if (response.authenticated && response.token && response.token.scopes) {
-        setTokenScopes(response.token.scopes);
-        
-        // Check for missing scopes
-        const requiredScopes = ['heartrate', 'activity', 'sleep', 'profile'];
-        const missingScopes = requiredScopes.filter(scope => !response.token.scopes.includes(scope));
-        
-        if (missingScopes.length > 0) {
-          console.warn(`⚠️ Missing required scopes: ${missingScopes.join(', ')}`);
-          console.warn('Some features may not work correctly due to missing permissions.');
-        }
-      }
+      // Initialize connected services object
+      let updatedConnectedServices = {
+        fitbit: false,
+        appleFitness: false,
+        googleFit: false,
+        youtubeMusic: false
+      };
       
-      if (response.authenticated) {
-        setIsAuthenticated(true);
-        console.log('User is authenticated, fetching profiles...');
-        
-        try {
-          // Try to get Fitbit profile
-          const fitbitResponse = await fitbitService.checkStatus();
-          if (fitbitResponse && fitbitResponse.connected) {
-            setConnectedServices(prev => ({...prev, fitbit: true}));
-            
-            // Get user profile if not already set
-            if (!user) {
+      // Separate authentication check for each service
+      // This is the main change - we now check each service independently
+      
+      // First check Fitbit
+      try {
+        const fitbitResponse = await fitbitService.checkStatus();
+        if (fitbitResponse && fitbitResponse.connected) {
+          updatedConnectedServices.fitbit = true;
+          console.log('Fitbit is connected');
+          
+          // Get user profile if not already set
+          if (!user) {
+            try {
               const profileResponse = await fitbitService.getProfile();
               console.log('Fitbit profile response:', profileResponse);
               if (profileResponse && profileResponse.user) {
                 setUser(profileResponse.user);
               }
+            } catch (profileError) {
+              console.error('Error fetching Fitbit profile:', profileError);
             }
-          } else {
-            setConnectedServices(prev => ({...prev, fitbit: false}));
           }
-        } catch (fitbitError) {
-          console.error('Error fetching Fitbit connection status:', fitbitError);
-          setConnectedServices(prev => ({...prev, fitbit: false}));
+          
+          // Check for fitbit token scopes
+          try {
+            const tokenInfo = await authService.checkAuth();
+            if (tokenInfo.authenticated && tokenInfo.token && tokenInfo.token.scopes) {
+              setTokenScopes(tokenInfo.token.scopes);
+              
+              // Check for missing scopes
+              const requiredScopes = ['heartrate', 'activity', 'sleep', 'profile'];
+              const missingScopes = requiredScopes.filter(scope => !tokenInfo.token.scopes.includes(scope));
+              
+              if (missingScopes.length > 0) {
+                console.warn(`⚠️ Missing required scopes: ${missingScopes.join(', ')}`);
+                console.warn('Some features may not work correctly due to missing permissions.');
+              }
+            }
+          } catch (scopeError) {
+            console.error('Error checking Fitbit token scopes:', scopeError);
+          }
+        } else {
+          console.log('Fitbit is not connected');
         }
-        
-        try {
-          // Try to get Apple Fitness status
-          const appleResponse = await appleFitnessService.checkStatus();
-          if (appleResponse && appleResponse.connected) {
-            setConnectedServices(prev => ({...prev, appleFitness: true}));
-            
-            // Get Apple Fitness profile if user not set and Fitbit not connected
-            if (!user && !connectedServices.fitbit) {
+      } catch (fitbitError) {
+        console.error('Error fetching Fitbit connection status:', fitbitError);
+      }
+      
+      // Check Apple Fitness
+      try {
+        const appleResponse = await appleFitnessService.checkStatus();
+        if (appleResponse && appleResponse.connected) {
+          updatedConnectedServices.appleFitness = true;
+          console.log('Apple Fitness is connected');
+          
+          // Get Apple Fitness profile if user not set and Fitbit not connected
+          if (!user && !updatedConnectedServices.fitbit) {
+            try {
               const profileResponse = await appleFitnessService.getProfile();
               console.log('Apple Fitness profile response:', profileResponse);
               if (profileResponse && profileResponse.user) {
                 setUser(profileResponse.user);
               }
+            } catch (profileError) {
+              console.error('Error fetching Apple Fitness profile:', profileError);
             }
-          } else {
-            setConnectedServices(prev => ({...prev, appleFitness: false}));
           }
-        } catch (appleError) {
-          console.error('Error fetching Apple Fitness connection status:', appleError);
-          setConnectedServices(prev => ({...prev, appleFitness: false}));
+        } else {
+          console.log('Apple Fitness is not connected');
         }
-        
-        try {
-          // Try to get Google Fit status
-          const googleFitResponse = await googleFitService.checkStatus();
-          if (googleFitResponse && googleFitResponse.connected) {
-            setConnectedServices(prev => ({...prev, googleFit: true}));
-            
-            // Get Google Fit profile if user not set and neither Fitbit nor Apple Fitness are connected
-            if (!user && !connectedServices.fitbit && !connectedServices.appleFitness) {
+      } catch (appleError) {
+        console.error('Error fetching Apple Fitness connection status:', appleError);
+      }
+      
+      // Check Google Fit
+      try {
+        const googleFitResponse = await googleFitService.checkStatus();
+        if (googleFitResponse && googleFitResponse.connected) {
+          updatedConnectedServices.googleFit = true;
+          console.log('Google Fit is connected');
+          
+          // Get Google Fit profile if user not set and no other fitness service is connected
+          if (!user && !updatedConnectedServices.fitbit && !updatedConnectedServices.appleFitness) {
+            try {
               const profileResponse = await googleFitService.getProfile();
               console.log('Google Fit profile response:', profileResponse);
               if (profileResponse && profileResponse.user) {
                 setUser(profileResponse.user);
               }
+            } catch (profileError) {
+              console.error('Error fetching Google Fit profile:', profileError);
             }
-          } else {
-            setConnectedServices(prev => ({...prev, googleFit: false}));
           }
-        } catch (googleFitError) {
-          console.error('Error fetching Google Fit connection status:', googleFitError);
-          setConnectedServices(prev => ({...prev, googleFit: false}));
+        } else {
+          console.log('Google Fit is not connected');
         }
-        
-        try {
-          // Try to get YouTube Music status
-          const youtubeMusicResponse = await axios.get('/api/youtube-music/status');
-          if (youtubeMusicResponse.data && youtubeMusicResponse.data.connected) {
-            setConnectedServices(prev => ({...prev, youtubeMusic: true}));
-          } else {
-            setConnectedServices(prev => ({...prev, youtubeMusic: false}));
-          }
-        } catch (youtubeMusicError) {
-          console.error('Error fetching YouTube Music connection status:', youtubeMusicError);
-          setConnectedServices(prev => ({...prev, youtubeMusic: false}));
+      } catch (googleFitError) {
+        console.error('Error fetching Google Fit connection status:', googleFitError);
+      }
+      
+      // Check YouTube Music
+      try {
+        const youtubeMusicResponse = await axios.get('/api/youtube-music/status');
+        if (youtubeMusicResponse.data && youtubeMusicResponse.data.connected) {
+          updatedConnectedServices.youtubeMusic = true;
+          console.log('YouTube Music is connected');
+        } else {
+          console.log('YouTube Music is not connected');
         }
+      } catch (youtubeMusicError) {
+        console.error('Error fetching YouTube Music connection status:', youtubeMusicError);
+      }
+      
+      // Update the connected services state
+      setConnectedServices(updatedConnectedServices);
+      
+      // Consider the user authenticated if ANY service is connected
+      const isAnyServiceConnected = Object.values(updatedConnectedServices).some(connected => connected);
+      
+      if (isAnyServiceConnected) {
+        setIsAuthenticated(true);
+        console.log('User is authenticated with at least one service');
       } else {
-        console.log('User is not authenticated');
+        console.log('User is not authenticated with any service');
         setIsAuthenticated(false);
         setUser(null);
         setTokenScopes([]);
-        setConnectedServices({
-          fitbit: false,
-          appleFitness: false,
-          googleFit: false,
-          youtubeMusic: false
-        });
       }
       
       // Clear any previous auth errors on successful check
@@ -161,7 +187,7 @@ export const AuthProvider = ({ children }) => {
       // Always set loading to false, even if there are errors
       setIsLoading(false);
     }
-  }, [user, connectedServices.fitbit]);
+  }, [user]);
 
   // Initialize auth check when component mounts
   useEffect(() => {
@@ -248,27 +274,135 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // Legacy login function for backward compatibility
-  const login = useCallback(() => {
-    return loginFitbit();
-  }, [loginFitbit]);
+  // Legacy login function for backward compatibility but now allows any service connection
+  const login = useCallback((service = 'fitbit') => {
+    // Allow caller to specify which service to connect to
+    switch (service.toLowerCase()) {
+      case 'fitbit':
+        return loginFitbit();
+      case 'apple':
+      case 'applefitness':
+        return loginAppleFitness();
+      case 'google':
+      case 'googlefit':
+        return loginGoogleFit();
+      case 'youtube':
+      case 'youtubemusic':
+        return loginYouTubeMusic();
+      default:
+        return loginFitbit(); // Default for backward compatibility
+    }
+  }, [loginFitbit, loginAppleFitness, loginGoogleFit, loginYouTubeMusic]);
 
-  // Logout function
-  const logout = useCallback(async () => {
+  // Logout function that can target a specific service
+  const logout = useCallback(async (service) => {
     try {
-      await authService.logout();
-      setIsAuthenticated(false);
-      setUser(null);
-      setTokenScopes([]);
-      setConnectedServices({
-        fitbit: false,
-        appleFitness: false
+      // If no specific service is provided, logout from all services
+      if (!service) {
+        await authService.logout();
+        setIsAuthenticated(false);
+        setUser(null);
+        setTokenScopes([]);
+        setConnectedServices({
+          fitbit: false,
+          appleFitness: false,
+          googleFit: false,
+          youtubeMusic: false
+        });
+        console.log('Logged out from all services');
+        return;
+      }
+      
+      // Create a local copy of the current service connection state
+      // This ensures we check against the correct value when deciding whether to clear user info
+      const currentConnections = {...connectedServices};
+      
+      // Handle disconnection of specific services
+      console.log(`Disconnecting from ${service}`);
+      
+      switch (service.toLowerCase()) {
+        case 'fitbit':
+          await authService.logout('fitbit');
+          setConnectedServices(prev => ({...prev, fitbit: false}));
+          // Only clear user if only fitbit was connected
+          if (!currentConnections.appleFitness && !currentConnections.googleFit && !currentConnections.youtubeMusic) {
+            setUser(null);
+          }
+          break;
+          
+        case 'apple':
+        case 'applefitness':
+          await authService.logout('apple');
+          setConnectedServices(prev => ({...prev, appleFitness: false}));
+          // Only clear user if only apple was connected 
+          if (!currentConnections.fitbit && !currentConnections.googleFit && !currentConnections.youtubeMusic) {
+            setUser(null);
+          }
+          break;
+          
+        case 'google':
+        case 'googlefit':
+          try {
+            // Use specific endpoint for Google Fit logout
+            const response = await axios.get('/api/google-fit/disconnect');
+            if (response.data && response.data.success) {
+              console.log('Successfully disconnected from Google Fit API');
+            }
+          } catch (googleError) {
+            console.error('Error calling Google Fit disconnect API:', googleError);
+          }
+          
+          // Also call the auth service logout for google
+          await authService.logout('google');
+          setConnectedServices(prev => ({...prev, googleFit: false}));
+          
+          // Only clear user if only google was connected
+          if (!currentConnections.fitbit && !currentConnections.appleFitness && !currentConnections.youtubeMusic) {
+            setUser(null);
+          }
+          break;
+          
+        case 'youtube':
+        case 'youtubemusic':
+          try {
+            // Specific endpoint for YouTube Music logout
+            const response = await axios.get('/api/youtube-music/disconnect');
+            if (response.data && response.data.success) {
+              setConnectedServices(prev => ({...prev, youtubeMusic: false}));
+              console.log('Disconnected from YouTube Music');
+            }
+          } catch (youtubeMusicError) {
+            console.error('Error disconnecting from YouTube Music:', youtubeMusicError);
+          }
+          break;
+          
+        default:
+          console.warn(`Unknown service: ${service}, logging out from all`);
+          await authService.logout();
+          setIsAuthenticated(false);
+          setUser(null);
+          setTokenScopes([]);
+          setConnectedServices({
+            fitbit: false,
+            appleFitness: false,
+            googleFit: false,
+            youtubeMusic: false
+          });
+      }
+      
+      // Update the authentication status after updating the connection state
+      // We need to use a callback to access the updated state
+      setConnectedServices(updatedConnections => {
+        const isAnyServiceConnected = Object.values(updatedConnections).some(connected => connected);
+        setIsAuthenticated(isAnyServiceConnected);
+        return updatedConnections;
       });
+      
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error(`Logout from ${service || 'all services'} failed:`, error);
       setAuthError(error.message || 'Logout failed');
     }
-  }, []);
+  }, [connectedServices]);
 
   // Check Fitbit connection status
   const checkFitbitConnection = useCallback(async () => {
@@ -359,6 +493,7 @@ export const AuthProvider = ({ children }) => {
   const value = {
     isAuthenticated,
     isLoading,
+    setIsLoading,
     user,
     authError,
     tokenScopes, // Add scopes to context for component access

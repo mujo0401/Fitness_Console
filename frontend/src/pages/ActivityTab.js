@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Box, 
   Card, 
@@ -20,10 +20,22 @@ import {
   LinearProgress,
   IconButton,
   Tooltip,
-  Stack
+  Stack,
+  useMediaQuery,
+  Avatar,
+  Snackbar,
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText
 } from '@mui/material';
-import { motion } from 'framer-motion';
-import { format, isValid } from 'date-fns';
+import { motion, AnimatePresence } from 'framer-motion';
+import { format, isValid, subDays, addDays, subWeeks, addWeeks, subMonths, addMonths, startOfWeek, endOfWeek } from 'date-fns';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
@@ -36,8 +48,15 @@ import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import TerrainIcon from '@mui/icons-material/Terrain';
 import InfoIcon from '@mui/icons-material/Info';
-import { activityService, fitbitService, authService } from '../services/api';
+import DevicesIcon from '@mui/icons-material/Devices';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
+
+import { activityService, fitbitService, googleFitService, appleFitnessService, authService } from '../services/api';
 import ActivityChart from '../components/charts/ActivityChart';
+import DiagnosticsPanel from '../components/DiagnosticsPanel';
+import { GlassCard, AnimatedGradientText } from '../components/styled/CardComponents';
 import { useAuth } from '../context/AuthContext';
 
 // Activity intensity levels
@@ -77,6 +96,13 @@ const ACTIVITY_INTENSITY_LEVELS = [
     color: '#f44336', 
     description: 'High-intensity interval training, sprinting'
   }
+];
+
+// Time interval options
+const TIME_INTERVALS = [
+  { value: 'day', label: '1 Day' },
+  { value: 'week', label: '1 Week' },
+  { value: 'month', label: '1 Month' }
 ];
 
 // Statistic card component
@@ -135,103 +161,331 @@ const formatDuration = (minutes) => {
 const ActivityTab = () => {
   const theme = useTheme();
   const { isAuthenticated, tokenScopes } = useAuth();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
+  const isExtraSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
+
+  // Core state
   const [period, setPeriod] = useState('day');
   const [date, setDate] = useState(new Date());
+  const [formattedDate, setFormattedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [activityData, setActivityData] = useState(null);
+  const [fitbitData, setFitbitData] = useState(null);
+  const [googleFitData, setGoogleFitData] = useState(null);
+  const [appleHealthData, setAppleHealthData] = useState(null);
+  const [activeDataSource, setActiveDataSource] = useState('auto');
+  const [dataSourcesAvailable, setDataSourcesAvailable] = useState({
+    fitbit: false,
+    googleFit: false,
+    appleHealth: false
+  });
+  
+  // UI state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showDataSourceDialog, setShowDataSourceDialog] = useState(false);
+  const [showDiagnosticsPanel, setShowDiagnosticsPanel] = useState(false);
+  const [alertMessage, setAlertMessage] = useState(null);
+  
+  // Debug mode for loading issues
+  const [debugMode, setDebugMode] = useState(true);
 
+  // Effect to fetch data when parameters change
   useEffect(() => {
     if (isAuthenticated) {
-      fetchActivityData();
+      if (debugMode) console.log('🔍 DEBUG: Starting activity data fetch with params:', { period, formattedDate, activeDataSource });
+      fetchAllActivityData();
     } else {
-      // Set loading to false if not authenticated
+      if (debugMode) console.log('🔍 DEBUG: Not authenticated, setting loading false');
       setLoading(false);
     }
-  }, [isAuthenticated, period, date]);
+  }, [isAuthenticated, period, formattedDate, activeDataSource]);
 
-  const fetchActivityData = async () => {
-    if (!isValid(date)) return;
+  // Handle date change with proper formatting
+  const handleDateChange = (newDate) => {
+    if (newDate && isValid(newDate)) {
+      // Fix timezone issues by using the date parts directly
+      setDate(newDate);
+      setFormattedDate(format(newDate, 'yyyy-MM-dd'));
+    }
+  };
+
+  // Handle period change
+  const handlePeriodChange = (event) => {
+    setPeriod(event.target.value);
+  };
+
+  // Handle refresh button click
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchAllActivityData().finally(() => {
+      setTimeout(() => setIsRefreshing(false), 500);
+    });
+  };
+
+  // Handle data source change
+  const handleDataSourceChange = (source) => {
+    console.log(`Changing data source to: ${source}`);
+    setActiveDataSource(source);
+    
+    // After changing data source, refresh processed data
+    determineActivityDataToUse();
+  };
+
+  // Handle diagnostics panel
+  const handleOpenDiagnosticsPanel = () => {
+    setShowDiagnosticsPanel(true);
+  };
+  
+  const handleCloseDiagnosticsPanel = () => {
+    setShowDiagnosticsPanel(false);
+  };
+
+  // Fetch data from all available sources
+  const fetchAllActivityData = async () => {
+    if (debugMode) console.log('🔍 DEBUG: fetchAllActivityData started');
+    
+    if (!isValid(date)) {
+      if (debugMode) console.log('🔍 DEBUG: Invalid date, setting loading false');
+      setLoading(false);
+      setError("Invalid date selected.");
+      return;
+    }
     
     if (!isAuthenticated) {
+      if (debugMode) console.log('🔍 DEBUG: Not authenticated, setting loading false');
       setLoading(false);
       setError("Authentication required to view activity data.");
       return;
     }
     
+    if (debugMode) console.log('🔍 DEBUG: Setting loading true, clearing error');
     setLoading(true);
     setError(null);
     try {
-      // Format date properly as a string
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      console.log(`🔍 Fetching activity data for period: ${period}, date: ${formattedDate}`);
+      // Check which services are connected
+      const [fitbitStatus, googleFitStatus, appleHealthStatus] = await Promise.allSettled([
+        fitbitService.checkStatus(),
+        googleFitService.checkStatus(),
+        appleFitnessService.checkStatus()
+      ]);
       
-      // Check authentication first (same as HeartTab)
-      try {
-        const connectionStatus = await fitbitService.checkStatus();
-        console.log("Fitbit connection status:", connectionStatus);
-        
-        if (!connectionStatus.connected) {
-          setError("Your Fitbit connection is not active. Please log in again.");
-          setLoading(false);
-          return;
+      const availableSources = {
+        fitbit: fitbitStatus.status === 'fulfilled' && fitbitStatus.value?.connected,
+        googleFit: googleFitStatus.status === 'fulfilled' && googleFitStatus.value?.connected,
+        appleHealth: appleHealthStatus.status === 'fulfilled' && appleHealthStatus.value?.connected
+      };
+      
+      console.log('Available activity data sources:', availableSources);
+      setDataSourcesAvailable(availableSources);
+      
+      // Helper function to fetch activity data from a specific source
+      const fetchActivityData = async (source) => {
+        try {
+          if (debugMode) console.log(`🔍 DEBUG: fetchActivityData for source: ${source}`);
+          console.log(`Fetching activity data from ${source} for ${period} on ${formattedDate}`);
+          let response;
+          
+          switch (source) {
+            case 'fitbit':
+              response = await activityService.getActivityData(period, formattedDate);
+              break;
+            case 'googleFit':
+              if (debugMode) console.log(`🔍 DEBUG: Calling googleFitService.getActivityData`);
+              try {
+                response = await googleFitService.getActivityData(period, formattedDate);
+                if (debugMode) console.log(`🔍 DEBUG: Google Fit response:`, response);
+              } catch (gfError) {
+                if (debugMode) console.log(`🔍 DEBUG: Google Fit error:`, gfError);
+                // If Google Fit API fails, return empty array instead of null
+                return [];
+              }
+              break;
+            case 'appleHealth':
+              response = await appleFitnessService.getActivityData(period, formattedDate);
+              break;
+            default:
+              throw new Error(`Unknown data source: ${source}`);
+          }
+          
+          if (debugMode) console.log(`🔍 DEBUG: ${source} data fetch successful`);
+          console.log(`Successfully fetched ${source} activity data:`, response);
+          
+          // Handle null/undefined response
+          if (!response) {
+            if (debugMode) console.log(`🔍 DEBUG: ${source} returned null/undefined response`);
+            return [];
+          }
+          
+          // Format the data consistently
+          if (source === 'googleFit') {
+            // Google Fit handling with better error checks
+            if (Array.isArray(response)) {
+              if (debugMode) console.log(`🔍 DEBUG: Formatting Google Fit array of length ${response.length}`);
+              return response.map(item => ({
+                ...item,
+                dateTime: item.dateTime || format(new Date((item.timestamp || 0) * 1000), 'yyyy-MM-dd'),
+                activityLevel: item.activityLevel || calculateActivityLevel(item.activeMinutes || 0, item.steps || 0)
+              }));
+            } else if (response.data && Array.isArray(response.data)) {
+              if (debugMode) console.log(`🔍 DEBUG: Formatting Google Fit nested array of length ${response.data.length}`);
+              return response.data.map(item => ({
+                ...item,
+                dateTime: item.dateTime || format(new Date((item.timestamp || 0) * 1000), 'yyyy-MM-dd'),
+                activityLevel: item.activityLevel || calculateActivityLevel(item.activeMinutes || 0, item.steps || 0)
+              }));
+            } else {
+              if (debugMode) console.log(`🔍 DEBUG: Google Fit returned unexpected format, returning empty array`);
+              return [];
+            }
+          } else if (source === 'appleHealth') {
+            // Apple Health handling
+            if (Array.isArray(response)) {
+              return response;
+            } else if (response.data && Array.isArray(response.data)) {
+              return response.data;
+            } else {
+              return [];
+            }
+          }
+          
+          // For Fitbit, we expect a standard format with data property
+          return response.data || [];
+        } catch (error) {
+          if (debugMode) console.log(`🔍 DEBUG: Error in fetchActivityData for ${source}:`, error);
+          console.error(`Error fetching ${source} activity data:`, error);
+          // Return empty array instead of null
+          return [];
         }
-      } catch (statusError) {
-        console.error("🔴 Fitbit status check error:", statusError);
+      };
+      
+      // Fetch data from all connected sources in parallel
+      let promises = [];
+      let promiseLabels = [];
+      
+      if (availableSources.fitbit) {
+        promises.push(fetchActivityData('fitbit'));
+        promiseLabels.push('fitbit');
       }
       
-      // Fetch real data from API, fall back to mock data only if needed
-      let data;
-      let useMockData = false; // Default to using real data
-      
-      try {
-        data = await activityService.getActivityData(period, formattedDate);
-        console.log('📊 API Response:', data);
-      } catch (apiError) {
-        console.error("🔴 API Error:", apiError);
-        useMockData = true;
-        
-        // If it's a 401 error, show specific message about scope permission
-        if (apiError.response?.status === 401) {
-          console.warn("⚠️ 401 Unauthorized: May need activity scope permission");
-          setError("Activity data access requires additional permissions. This could be because the 'activity' scope was not granted during authentication. Using mock data for demonstration.");
-        } else {
-          setError(`Failed to fetch activity data: ${apiError.message || 'Unknown error'}. Using mock data for demonstration.`);
-        }
+      if (availableSources.googleFit) {
+        promises.push(fetchActivityData('googleFit'));
+        promiseLabels.push('googleFit');
       }
       
-      if (useMockData || !data || !data.data || data.data.length === 0) {
-        // Generate mock data for demonstration only when real data is unavailable
-        console.log('⚠️ Using mock data instead');
-        data = generateMockActivityData(period);
+      if (availableSources.appleHealth) {
+        promises.push(fetchActivityData('appleHealth'));
+        promiseLabels.push('appleHealth');
       }
       
-      if (data && data.data && data.data.length > 0) {
-        console.log(`✅ Received ${data.data.length} activity data points`);
-        setActivityData(data.data);
-      } else {
-        console.warn('⚠️ Received empty activity data even after mock generation');
-        setError("No activity data available. Using demo data for visualization.");
+      // If no service is connected, use mock data
+      if (promises.length === 0) {
+        if (debugMode) console.log('🔍 DEBUG: No fitness services connected. Using mock data.');
+        console.log('No fitness services connected. Using mock data.');
         const mockData = generateMockActivityData(period);
         setActivityData(mockData.data);
+        setFitbitData(mockData.data);
+        
+        // Ensure loading is set to false 
+        if (debugMode) console.log('🔍 DEBUG: Setting loading false (no services connected)');
+        setLoading(false);
+        return;
       }
-    } catch (err) {
-      console.error("🔴 Error in fetchActivityData:", err);
       
-      // Use the same error handling style as HeartTab
-      const errorMessage = err.response?.status === 401
-        ? "Authentication required to view activity data. Using mock data for demonstration."
-        : err.response?.status === 429
-          ? "Rate limit exceeded. Please try again later. Using mock data for demonstration."
-          : "Failed to load activity data. Using mock data for demonstration.";
+      // Create object to store the processed data
+      const processedData = {
+        fitbit: null,
+        googleFit: null,
+        appleHealth: null
+      };
       
-      setError(errorMessage);
+      // Wait for all promises to settle
+      const results = await Promise.allSettled(promises);
       
-      // In case of error, generate mock data for demonstration
+      if (debugMode) console.log('🔍 DEBUG: All promises settled, processing results');
+      
+      // Process results
+      results.forEach((result, index) => {
+        const source = promiseLabels[index];
+        if (debugMode) console.log(`🔍 DEBUG: Processing ${source} result`, result);
+        
+        if (result.status === 'fulfilled') {
+          console.log(`Processing ${source} result:`, {
+            isArray: Array.isArray(result.value),
+            length: Array.isArray(result.value) ? result.value.length : 'N/A',
+            hasData: result.value?.length > 0 ? "Yes" : "No",
+            dataLength: result.value?.length || 0
+          });
+          
+          // Store data based on source
+          if (source === 'fitbit' && Array.isArray(result.value) && result.value.length > 0) {
+            console.log(`Setting Fitbit activity data of length ${result.value.length}`);
+            processedData.fitbit = result.value;
+          } else if (source === 'googleFit' && Array.isArray(result.value) && result.value.length > 0) {
+            console.log(`Setting Google Fit activity data of length ${result.value.length}`);
+            processedData.googleFit = result.value;
+          } else if (source === 'appleHealth' && Array.isArray(result.value) && result.value.length > 0) {
+            console.log(`Setting Apple Health activity data of length ${result.value.length}`);
+            processedData.appleHealth = result.value;
+          } else {
+            console.warn(`No data received from ${source}`);
+          }
+        } else {
+          console.error(`Failed to fetch data from ${source}:`, result.reason || 'Unknown error');
+        }
+      });
+      
+      // Now update state with the processed data
+      if (debugMode) console.log('🔍 DEBUG: Updating state with processed data');
+      
+      if (processedData.fitbit) {
+        console.log("Setting Fitbit activity data state:", processedData.fitbit.length);
+        setFitbitData(processedData.fitbit);
+      }
+      
+      if (processedData.googleFit) {
+        console.log("Setting Google Fit activity data state:", processedData.googleFit.length);
+        setGoogleFitData(processedData.googleFit);
+        
+        // If we have Google Fit data, immediately use it (especially for debugging)
+        if (activeDataSource === 'auto' || activeDataSource === 'googleFit') {
+          console.log("Immediately using Google Fit activity data:", processedData.googleFit.length);
+          setActivityData(processedData.googleFit);
+        }
+      }
+      
+      if (processedData.appleHealth) {
+        console.log("Setting Apple Health activity data state:", processedData.appleHealth.length);
+        setAppleHealthData(processedData.appleHealth);
+      }
+      
+      // Important: Call determineActivityDataToUse directly here first as a safeguard
+      if (debugMode) console.log('🔍 DEBUG: First determineActivityDataToUse call (immediately)');
+      determineActivityDataToUse();
+      
+      // Wait for state to update with enough time
+      setTimeout(() => {
+        // Now determine which data to use based on activeDataSource setting (second call)
+        if (debugMode) console.log('🔍 DEBUG: Second determineActivityDataToUse call (after delay)');
+        determineActivityDataToUse();
+        
+        // Ensure loading is set to false here as well (safety)
+        if (debugMode) console.log('🔍 DEBUG: Setting loading to false in setTimeout');
+        setLoading(false);
+      }, 500);
+      
+    } catch (error) {
+      if (debugMode) console.log('🔍 DEBUG: Error in fetchAllActivityData catch block', error);
+      console.error('Error fetching activity data:', error);
+      setError('Failed to fetch activity data. Please try again.');
+      
+      // Use mock data as fallback
+      if (debugMode) console.log('🔍 DEBUG: Generating mock data as fallback');
       const mockData = generateMockActivityData(period);
       setActivityData(mockData.data);
+      setFitbitData(mockData.data);
     } finally {
+      if (debugMode) console.log('🔍 DEBUG: In finally block, setting loading false');
       setLoading(false);
     }
   };
@@ -404,22 +658,98 @@ const ActivityTab = () => {
     if (activeMinutes >= 20 && steps >= 5000) return 'Lightly Active';
     return 'Sedentary';
   };
-
-  const handlePeriodChange = (event) => {
-    setPeriod(event.target.value);
-  };
-
-  const handleDateChange = (newDate) => {
-    if (isValid(newDate)) {
-      setDate(newDate);
-    }
-  };
-
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    fetchActivityData().finally(() => {
-      setTimeout(() => setIsRefreshing(false), 600); // Add a slight delay for visual feedback
+  
+  // Determine which activity data to use based on settings and availability
+  const determineActivityDataToUse = () => {
+    if (debugMode) console.log('🔍 DEBUG: determineActivityDataToUse called');
+    console.log("Determining activity data source:", {
+      activeDataSource,
+      googleFitDataLength: googleFitData ? googleFitData.length : 0,
+      fitbitDataLength: fitbitData ? fitbitData.length : 0,
+      appleHealthLength: appleHealthData ? appleHealthData.length : 0
     });
+    
+    switch (activeDataSource) {
+      case 'fitbit':
+        if (fitbitData && fitbitData.length > 0) {
+          setActivityData(fitbitData);
+          console.log('Using Fitbit activity data');
+        } else {
+          setError('Fitbit activity data is not available. Please select another data source.');
+          setActivityData([]);
+        }
+        break;
+        
+      case 'googleFit':
+        if (googleFitData && googleFitData.length > 0) {
+          console.log('Setting activity data to Google Fit data');
+          setActivityData([...googleFitData]);  // Create a new array copy to ensure state update
+        } else {
+          setError('Google Fit activity data is not available. Please select another data source.');
+          setActivityData([]);
+        }
+        break;
+        
+      case 'appleHealth':
+        if (appleHealthData && appleHealthData.length > 0) {
+          setActivityData(appleHealthData);
+          console.log('Using Apple Health activity data');
+        } else {
+          setError('Apple Health activity data is not available. Please select another data source.');
+          setActivityData([]);
+        }
+        break;
+        
+      case 'combined':
+        // Combine all available data and sort by timestamp
+        const combinedData = [
+          ...(fitbitData || []),
+          ...(googleFitData || []),
+          ...(appleHealthData || [])
+        ].sort((a, b) => {
+          const aTime = a.timestamp || new Date(a.dateTime).getTime();
+          const bTime = b.timestamp || new Date(b.dateTime).getTime();
+          return aTime - bTime;
+        });
+        
+        if (combinedData.length > 0) {
+          setActivityData(combinedData);
+          console.log('Using combined activity data:', combinedData.length);
+        } else {
+          setError('No activity data available from any source.');
+          setActivityData([]);
+        }
+        break;
+        
+      case 'auto':
+      default:
+        if (debugMode) console.log('🔍 DEBUG: Using auto data source selection logic');
+        // Auto-select the best dataset based on data quality and completeness
+        if (googleFitData && Array.isArray(googleFitData) && googleFitData.length > 0) {
+          if (debugMode) console.log('🔍 DEBUG: Using Google Fit data (auto)');
+          console.log('Auto-selected Google Fit activity data with length:', googleFitData.length);
+          setActivityData([...googleFitData]); // Create a new array copy to ensure state update
+        } else if (fitbitData && Array.isArray(fitbitData) && fitbitData.length > 0) {
+          if (debugMode) console.log('🔍 DEBUG: Using Fitbit data (auto)');
+          setActivityData([...fitbitData]);
+          console.log('Auto-selected Fitbit activity data');
+        } else if (appleHealthData && Array.isArray(appleHealthData) && appleHealthData.length > 0) {
+          if (debugMode) console.log('🔍 DEBUG: Using Apple Health data (auto)');
+          setActivityData([...appleHealthData]);
+          console.log('Auto-selected Apple Health activity data');
+        } else {
+          // No data available from any source, use mock data
+          if (debugMode) console.log('🔍 DEBUG: No data available, using mock data');
+          console.log('No activity data available from any source, using mock data.');
+          const mockData = generateMockActivityData(period);
+          setActivityData(mockData.data);
+        }
+        
+        // Safety check - make sure loading is set to false here
+        if (debugMode) console.log('🔍 DEBUG: Setting loading to false (after auto source selection)');
+        setLoading(false);
+        break;
+    }
   };
   
   // Calculate statistics
@@ -456,145 +786,342 @@ const ActivityTab = () => {
       totalDistance
     };
   };
-
-  if (!isAuthenticated) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <Box sx={{ p: 2 }}>
-          <Paper
-            elevation={3}
-            sx={{
-              p: 4,
-              borderRadius: 4,
-              textAlign: 'center',
-              background: 'linear-gradient(145deg, #f5f5f5, #ffffff)',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
-            }}
-          >
-            <Typography variant="h5" color="primary" gutterBottom>
-              <DirectionsRunIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
-              Activity Tracking
-            </Typography>
-            <Typography variant="subtitle1" color="text.secondary" gutterBottom sx={{ mt: 2 }}>
-              Please connect your Fitbit account to view activity data.
-            </Typography>
-          </Paper>
-        </Box>
-      </motion.div>
-    );
-  }
   
+  // Render date label based on period
+  const dateLabel = useMemo(() => {
+    if (!date) return '';
+    
+    switch (period) {
+      case 'day':
+        return format(date, 'EEEE, MMMM d, yyyy');
+      case 'week':
+        const weekStart = startOfWeek(date);
+        const weekEnd = endOfWeek(date);
+        return `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`;
+      case 'month':
+        return format(date, 'MMMM yyyy');
+      default:
+        return format(date, 'MMMM d, yyyy');
+    }
+  }, [date, period]);
+
+  // Check if we're using mock data
+  const isMockData = useMemo(() => {
+    return activityData && activityData.length > 0 && (
+      !fitbitData && !googleFitData && !appleHealthData ||
+      activityData[0].time?.includes('AM') || 
+      activityData[0].time?.includes('PM') ||
+      activityData.some(item => item.activityLevel === 'Very Active' || item.activityLevel === 'Active')
+    );
+  }, [activityData, fitbitData, googleFitData, appleHealthData]);
+
+  // Data source display component
+  const DataSourceIndicator = () => {
+    let sourceLabel = 'No Data';
+    let color = 'default';
+    
+    if (activeDataSource === 'fitbit') {
+      sourceLabel = 'Fitbit';
+      color = 'primary';
+    } else if (activeDataSource === 'googleFit') {
+      sourceLabel = 'Google Fit';
+      color = 'info';
+    } else if (activeDataSource === 'appleHealth') {
+      sourceLabel = 'Apple Health';
+      color = 'success';
+    } else if (activeDataSource === 'combined') {
+      sourceLabel = 'All Sources';
+      color = 'secondary';
+    } else if (activeDataSource === 'auto') {
+      if (googleFitData && googleFitData.length > 0) {
+        sourceLabel = 'Google Fit (Auto)';
+        color = 'info';
+      } else if (fitbitData && fitbitData.length > 0) {
+        sourceLabel = 'Fitbit (Auto)';
+        color = 'primary';
+      } else if (appleHealthData && appleHealthData.length > 0) {
+        sourceLabel = 'Apple Health (Auto)';
+        color = 'success';
+      } else {
+        sourceLabel = 'Demo Data';
+        color = 'default';
+      }
+    }
+    
+    return (
+      <Chip
+        size="small"
+        icon={<DevicesIcon />}
+        label={sourceLabel}
+        color={color}
+        variant="outlined"
+        onClick={() => setShowDataSourceDialog(true)}
+        sx={{ ml: 1, borderRadius: 2 }}
+      />
+    );
+  };
+
+  // Simple data source dialog component
+  const DataSourceDialog = ({ open, onClose }) => {
+    return (
+      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          Select Activity Data Source
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" paragraph>
+            Choose which connected service to use for activity data. Available sources are detected automatically.
+          </Typography>
+          
+          <List>
+            <ListItem button 
+              selected={activeDataSource === 'auto'} 
+              onClick={() => { handleDataSourceChange('auto'); onClose(); }}
+              disabled={!dataSourcesAvailable.fitbit && !dataSourcesAvailable.googleFit && !dataSourcesAvailable.appleHealth}
+            >
+              <ListItemIcon>
+                <AutoAwesomeIcon color={activeDataSource === 'auto' ? 'primary' : 'inherit'} />
+              </ListItemIcon>
+              <ListItemText 
+                primary="Automatic (Recommended)" 
+                secondary="Select the best data source based on available data"
+              />
+            </ListItem>
+            
+            <ListItem button 
+              selected={activeDataSource === 'fitbit'} 
+              onClick={() => { handleDataSourceChange('fitbit'); onClose(); }}
+              disabled={!dataSourcesAvailable.fitbit}
+            >
+              <ListItemIcon>
+                <DevicesIcon color={activeDataSource === 'fitbit' ? 'primary' : 'inherit'} />
+              </ListItemIcon>
+              <ListItemText 
+                primary="Fitbit" 
+                secondary={dataSourcesAvailable.fitbit ? "Connected" : "Not connected"}
+              />
+            </ListItem>
+            
+            <ListItem button 
+              selected={activeDataSource === 'googleFit'} 
+              onClick={() => { handleDataSourceChange('googleFit'); onClose(); }}
+              disabled={!dataSourcesAvailable.googleFit}
+            >
+              <ListItemIcon>
+                <DevicesIcon color={activeDataSource === 'googleFit' ? 'primary' : 'inherit'} />
+              </ListItemIcon>
+              <ListItemText 
+                primary="Google Fit" 
+                secondary={dataSourcesAvailable.googleFit ? "Connected" : "Not connected"}
+              />
+            </ListItem>
+            
+            <ListItem button 
+              selected={activeDataSource === 'appleHealth'} 
+              onClick={() => { handleDataSourceChange('appleHealth'); onClose(); }}
+              disabled={!dataSourcesAvailable.appleHealth}
+            >
+              <ListItemIcon>
+                <DevicesIcon color={activeDataSource === 'appleHealth' ? 'primary' : 'inherit'} />
+              </ListItemIcon>
+              <ListItemText 
+                primary="Apple Health" 
+                secondary={dataSourcesAvailable.appleHealth ? "Connected" : "Not connected"}
+              />
+            </ListItem>
+            
+            <ListItem button 
+              selected={activeDataSource === 'combined'} 
+              onClick={() => { handleDataSourceChange('combined'); onClose(); }}
+              disabled={(!dataSourcesAvailable.fitbit && !dataSourcesAvailable.googleFit && !dataSourcesAvailable.appleHealth) || 
+                        (dataSourcesAvailable.fitbit && !dataSourcesAvailable.googleFit && !dataSourcesAvailable.appleHealth) ||
+                        (!dataSourcesAvailable.fitbit && dataSourcesAvailable.googleFit && !dataSourcesAvailable.appleHealth) ||
+                        (!dataSourcesAvailable.fitbit && !dataSourcesAvailable.googleFit && dataSourcesAvailable.appleHealth)}
+            >
+              <ListItemIcon>
+                <DevicesIcon color={activeDataSource === 'combined' ? 'primary' : 'inherit'} />
+              </ListItemIcon>
+              <ListItemText 
+                primary="Combined Sources" 
+                secondary="Merge data from all connected services"
+              />
+            </ListItem>
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    );
+  };
+
   const { totalSteps, totalCalories, totalActiveMinutes, totalDistance } = getStats();
 
-  // Determine if we're using mock data
-  const isMockData = activityData && activityData.length > 0 && (
-    activityData[0].time?.includes('AM') || 
-    activityData[0].time?.includes('PM') ||
-    activityData.some(item => item.activityLevel === 'Very Active' || item.activityLevel === 'Active')
-  );
-  
   return (
-    <Box sx={{ p: 2 }}>
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <Card sx={{ 
-          borderRadius: 4, 
-          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-          overflow: 'hidden',
-          mb: 3
-        }}>
-          <Box sx={{ 
-            background: 'linear-gradient(135deg, #009688, #4caf50)', 
-            py: 2.5, 
-            px: 3,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
+    <Box sx={{ p: { xs: 1, sm: 2 } }}>
+      {/* Data Source Dialog */}
+      <DataSourceDialog
+        open={showDataSourceDialog}
+        onClose={() => setShowDataSourceDialog(false)}
+      />
+      
+      {/* Main content */}
+      <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
+        {/* Header section with title and controls */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <GlassCard sx={{ 
+            mb: 3,
+            overflow: 'visible'
           }}>
-            <Typography 
-              variant="h5" 
-              component="h2" 
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 1,
-                fontWeight: 'bold',
-                color: 'white'
-              }}
-            >
-              <DirectionsRunIcon sx={{ filter: 'drop-shadow(0 2px 4px rgba(255,255,255,0.3))' }} /> 
-              Activity Tracking
-            </Typography>
+            <Box sx={{ 
+              background: 'linear-gradient(135deg, #009688, #4caf50, #8bc34a)', 
+              py: { xs: 2, md: 2.5 }, 
+              px: { xs: 2, md: 3 },
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              {/* Decorative elements */}
+              <Box sx={{
+                position: 'absolute',
+                width: '300px',
+                height: '300px',
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%)',
+                top: '-150px',
+                right: '-100px',
+                zIndex: 0
+              }} />
               
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <FormControl 
-                size="small" 
-                sx={{ 
-                  minWidth: 120, 
-                  bgcolor: 'rgba(255,255,255,0.1)',
-                  borderRadius: 2,
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
-                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.8)' },
-                  '& .MuiSelect-select': { color: 'white' },
-                  '& .MuiSvgIcon-root': { color: 'white' }
-                }}
-              >
-                <InputLabel>Period</InputLabel>
-                <Select
-                  value={period}
-                  label="Period"
-                  onChange={handlePeriodChange}
-                >
-                  <MenuItem value="day" sx={{ display: 'flex', gap: 1 }}>
-                    <CalendarTodayIcon fontSize="small" /> 1 Day
-                  </MenuItem>
-                  <MenuItem value="week" sx={{ display: 'flex', gap: 1 }}>
-                    <CalendarTodayIcon fontSize="small" /> 1 Week
-                  </MenuItem>
-                  <MenuItem value="month" sx={{ display: 'flex', gap: 1 }}>
-                    <CalendarTodayIcon fontSize="small" /> 1 Month
-                  </MenuItem>
-                </Select>
-              </FormControl>
-              
-              <TextField
-                label="Date"
-                type="date"
-                size="small"
-                value={date ? format(date, 'yyyy-MM-dd') : ''}
-                onChange={(e) => handleDateChange(new Date(e.target.value))}
-                InputLabelProps={{ shrink: true }}
-                sx={{ 
-                  bgcolor: 'rgba(255,255,255,0.1)', 
-                  borderRadius: 2,
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
-                  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.8)' },
-                  '& .MuiInputBase-input': { color: 'white' }
-                }}
-              />
-              
-              <Tooltip title="Refresh Data">
-                <IconButton
-                  onClick={handleRefresh}
-                  sx={{ 
-                    bgcolor: 'rgba(255,255,255,0.2)',
-                    color: 'white',
-                    '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }
-                  }}
-                >
-                  {isRefreshing ? <SyncIcon className="rotating-icon" /> : <RefreshIcon />}
-                </IconButton>
-              </Tooltip>
+              <Box sx={{
+                position: 'absolute',
+                width: '200px',
+                height: '200px',
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 70%)',
+                bottom: '-100px',
+                left: '10%',
+                zIndex: 0
+              }} />
+            
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={12} md={8}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2 }, position: 'relative', zIndex: 1 }}>
+                    <Avatar
+                      sx={{
+                        width: { xs: 48, md: 56 },
+                        height: { xs: 48, md: 56 },
+                        background: 'linear-gradient(135deg, #00695c, #4caf50)',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+                      }}
+                    >
+                      <DirectionsRunIcon fontSize="large" />
+                    </Avatar>
+                    
+                    <Box>
+                      <AnimatedGradientText 
+                        variant={isSmallScreen ? "h5" : "h4"} 
+                        gradient="linear-gradient(90deg, #fff, #e8f5e9, #fff)"
+                        fontWeight="bold"
+                      >
+                        Activity Analytics
+                      </AnimatedGradientText>
+                      
+                      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                        <Typography variant="subtitle1" color="white" sx={{ opacity: 0.9 }}>
+                          {dateLabel}
+                        </Typography>
+                        <DataSourceIndicator />
+                      </Box>
+                    </Box>
+                  </Box>
+                </Grid>
+                
+                <Grid item xs={12} md={4}>
+                  <Box sx={{ display: 'flex', gap: { xs: 1, md: 2 }, justifyContent: { xs: 'flex-start', md: 'flex-end' }, flexWrap: 'wrap', position: 'relative', zIndex: 1 }}>
+                    {/* Period selector */}
+                    <FormControl 
+                      size="small" 
+                      sx={{ 
+                        minWidth: 120, 
+                        bgcolor: 'rgba(255,255,255,0.15)',
+                        borderRadius: 2,
+                        '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
+                        '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.8)' },
+                        '& .MuiSelect-select': { color: 'white' },
+                        '& .MuiSvgIcon-root': { color: 'white' }
+                      }}
+                    >
+                      <InputLabel>Period</InputLabel>
+                      <Select
+                        value={period}
+                        label="Period"
+                        onChange={handlePeriodChange}
+                      >
+                        {TIME_INTERVALS.map(interval => (
+                          <MenuItem key={interval.value} value={interval.value}>
+                            {interval.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    
+                    {/* Date picker */}
+                    <TextField
+                      label="Date"
+                      type="date"
+                      size="small"
+                      value={formattedDate}
+                      onChange={(e) => handleDateChange(new Date(e.target.value))}
+                      InputLabelProps={{ shrink: true }}
+                      sx={{ 
+                        bgcolor: 'rgba(255,255,255,0.15)', 
+                        borderRadius: 2,
+                        '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
+                        '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.8)' },
+                        '& .MuiInputBase-input': { color: 'white' }
+                      }}
+                    />
+                    
+                    {/* Refresh button */}
+                    <Tooltip title="Refresh Data">
+                      <IconButton
+                        onClick={handleRefresh}
+                        sx={{ 
+                          bgcolor: 'rgba(255,255,255,0.2)',
+                          color: 'white',
+                          '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }
+                        }}
+                      >
+                        {isRefreshing ? <SyncIcon className="rotating-icon" /> : <RefreshIcon />}
+                      </IconButton>
+                    </Tooltip>
+                    
+                    {/* Diagnostic button */}
+                    <Tooltip title="Debug Information">
+                      <IconButton
+                        onClick={handleOpenDiagnosticsPanel}
+                        sx={{ 
+                          bgcolor: 'rgba(255,255,255,0.2)',
+                          color: 'white',
+                          '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }
+                        }}
+                      >
+                        <InfoIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </Grid>
+              </Grid>
             </Box>
-          </Box>
-          
+          </GlassCard>
+        </motion.div>
+        
+        {/* Main content card */}
+        <Card elevation={3} sx={{ borderRadius: 3, overflow: 'hidden' }}>
           <CardContent sx={{ p: 0 }}>
             {loading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', p: 8, flexDirection: 'column', alignItems: 'center', gap: 2 }}>
@@ -603,83 +1130,71 @@ const ActivityTab = () => {
                   Loading activity data...
                 </Typography>
               </Box>
-            ) : error ? (
-              <Box sx={{ p: 4, textAlign: 'center' }}>
-                <Typography color="error" variant="h6" gutterBottom>
-                  {error}
-                </Typography>
-                
-                {/* Debug panel to show token scopes */}
-                <Paper 
-                  sx={{ 
-                    p: 2, 
-                    my: 3, 
-                    mx: 'auto',
-                    maxWidth: 600,
-                    bgcolor: alpha(theme.palette.info.light, 0.1),
-                    border: `1px dashed ${theme.palette.info.main}`
-                  }}
-                >
-                  <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <InfoIcon color="info" /> Token Scopes Debug
+            ) : error || !activityData || activityData.length === 0 ? (
+              <Box>
+                <Box sx={{ p: 4, textAlign: 'center' }}>
+                  <Typography color={error ? "error" : "text.secondary"} variant="h6" gutterBottom>
+                    {error || "No activity data available for the selected period."}
                   </Typography>
-                  <Typography variant="body2" align="left">
-                    Current scopes: {tokenScopes.length > 0 ? tokenScopes.join(', ') : 'No scopes found'}
-                  </Typography>
-                  <Typography variant="body2" color="error" sx={{ mt: 1 }} align="left">
-                    Has 'activity' scope: {tokenScopes.includes('activity') ? 'Yes' : 'No - this is required for activity data'}
-                  </Typography>
-                  <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1 }}>
-                    <Button 
-                      variant="outlined" 
-                      color="info"
-                      onClick={() => authService.debugSession().then(data => console.log('Session debug:', data))}
-                      size="small"
-                    >
-                      Debug Session (Check Console)
-                    </Button>
-                  </Box>
-                </Paper>
-                
-                <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
-                  <Button 
-                    variant="outlined" 
-                    onClick={handleRefresh} 
-                    startIcon={<RefreshIcon />}
-                  >
-                    Try Again
-                  </Button>
                   
-                  <Button 
-                    variant="contained" 
-                    color="primary"
-                    onClick={() => {
-                      authService.logout().then(() => {
-                        // After logging out, redirect to Fitbit auth
-                        setTimeout(() => authService.login(), 500);
-                      }).catch(err => {
-                        console.error('Error during reauth flow:', err);
-                        alert('Error during reauthentication: ' + err.message);
-                      });
+                  {/* Debug panel to show token scopes */}
+                  <Paper 
+                    sx={{ 
+                      p: 2, 
+                      my: 3, 
+                      mx: 'auto',
+                      maxWidth: 600,
+                      bgcolor: alpha(theme.palette.info.light, 0.1),
+                      border: `1px dashed ${theme.palette.info.main}`
                     }}
                   >
-                    Re-authenticate (Fix Permissions)
-                  </Button>
+                    <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <InfoIcon color="info" /> Token Scopes Debug
+                    </Typography>
+                    <Typography variant="body2" align="left">
+                      Current scopes: {tokenScopes.length > 0 ? tokenScopes.join(', ') : 'No scopes found'}
+                    </Typography>
+                    <Typography variant="body2" color="error" sx={{ mt: 1 }} align="left">
+                      Has 'activity' scope: {tokenScopes.includes('activity') ? 'Yes' : 'No - this is required for activity data'}
+                    </Typography>
+                    <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1 }}>
+                      <Button 
+                        variant="outlined" 
+                        color="info"
+                        onClick={() => authService.debugSession().then(data => console.log('Session debug:', data))}
+                        size="small"
+                      >
+                        Debug Session (Check Console)
+                      </Button>
+                    </Box>
+                  </Paper>
+                  
+                  <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
+                    <Button 
+                      variant="outlined" 
+                      onClick={handleRefresh} 
+                      startIcon={<RefreshIcon />}
+                    >
+                      Try Again
+                    </Button>
+                    
+                    <Button 
+                      variant="contained" 
+                      color="primary"
+                      onClick={() => {
+                        authService.logout().then(() => {
+                          // After logging out, redirect to Fitbit auth
+                          setTimeout(() => authService.login(), 500);
+                        }).catch(err => {
+                          console.error('Error during reauth flow:', err);
+                          alert('Error during reauthentication: ' + err.message);
+                        });
+                      }}
+                    >
+                      Re-authenticate (Fix Permissions)
+                    </Button>
+                  </Box>
                 </Box>
-              </Box>
-            ) : !activityData || activityData.length === 0 ? (
-              <Box sx={{ p: 4, textAlign: 'center' }}>
-                <Typography color="text.secondary">
-                  No activity data available for the selected period.
-                </Typography>
-                <Button 
-                  variant="outlined" 
-                  onClick={handleRefresh}
-                  startIcon={<RefreshIcon />}
-                  sx={{ mt: 2 }}
-                >
-                  Refresh
-                </Button>
               </Box>
             ) : (
               <Box>
@@ -724,21 +1239,34 @@ const ActivityTab = () => {
                 </Box>
                 
                 <Box sx={{ mt: 2, position: 'relative' }}>
-                  <ActivityChart data={activityData} period={period} />
+                  <ActivityChart 
+                    data={activityData} 
+                    period={period}
+                    dataSource={activeDataSource} 
+                    fitbitData={fitbitData}
+                    googleFitData={googleFitData}
+                    appleHealthData={appleHealthData}
+                    tokenScopes={tokenScopes}
+                    isAuthenticated={isAuthenticated}
+                    date={date}
+                    availableSources={dataSourcesAvailable}
+                    onDataSourceChange={handleDataSourceChange}
+                  />
                   {isMockData && (
-                    <Typography 
-                      variant="caption" 
+                    <Box 
                       sx={{ 
                         position: 'absolute', 
                         bottom: 8, 
                         right: 8, 
-                        color: 'rgba(76, 175, 80, 0.25)', 
                         fontSize: '10px',
-                        fontStyle: 'italic'
+                        fontStyle: 'italic',
+                        opacity: 0.3,
+                        color: theme.palette.primary.main,
+                        fontWeight: 'bold'
                       }}
                     >
-                      ⊕
-                    </Typography>
+                      Demo Data
+                    </Box>
                   )}
                 </Box>
                 
@@ -1031,7 +1559,38 @@ const ActivityTab = () => {
             )}
           </CardContent>
         </Card>
-      </motion.div>
+      </Box>
+      
+      {/* DiagnosticsPanel component */}
+      <DiagnosticsPanel
+        isOpen={showDiagnosticsPanel}
+        onClose={handleCloseDiagnosticsPanel}
+        tokenScopes={tokenScopes}
+        isAuthenticated={isAuthenticated}
+        currentTab="activity"
+        period={period}
+        date={date}
+        useMockData={isMockData}
+        dataSource={activeDataSource}
+        connectedServices={dataSourcesAvailable}
+        onRefresh={handleRefresh}
+      />
+      
+      {/* Snackbar for alerts */}
+      <Snackbar
+        open={alertMessage !== null}
+        autoHideDuration={6000}
+        onClose={() => setAlertMessage(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setAlertMessage(null)} 
+          severity={alertMessage?.type || 'info'} 
+          sx={{ width: '100%' }}
+        >
+          {alertMessage?.text}
+        </Alert>
+      </Snackbar>
       
       {/* Add CSS for the rotating icon */}
       <style>{`

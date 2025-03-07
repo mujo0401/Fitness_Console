@@ -24,12 +24,18 @@ from flask_session_fix import apply_session_fix
 
 # Load environment variables based on environment
 env = os.environ.get('FLASK_ENV', 'development')
+
+# First try to load from the standard .env file
+load_dotenv()
+print("Loading from standard .env file")
+
+# Then try environment-specific files for any overrides
 if env == 'production':
-    load_dotenv('.env.production')
-    print("Loading PRODUCTION environment")
+    load_dotenv('.env.production', override=True)
+    print("Loading PRODUCTION environment overrides")
 else:
-    load_dotenv('.env.development')
-    print("Loading DEVELOPMENT environment")
+    load_dotenv('.env.development', override=True)
+    print("Loading DEVELOPMENT environment overrides")
 
 
 
@@ -125,11 +131,11 @@ CORS(app,
 
      supports_credentials=True, 
 
-     origins=allowed_origins,
+     origins=allowed_origins,  # Use the defined origins instead of '*'
 
      allow_headers=["Content-Type", "Authorization"],
 
-     methods=["GET", "POST", "OPTIONS"])
+     methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"])
 
 
 
@@ -168,25 +174,69 @@ app.register_blueprint(apple_fitness.bp, url_prefix='/api/apple-fitness')
 app.register_blueprint(google_fit.google_fit_bp, url_prefix='/api/google-fit')
 
 app.register_blueprint(spoonacular_bp, url_prefix='/api/spoonacular')
-app.register_blueprint(youtube_music_bp)
+app.register_blueprint(youtube_music_bp, url_prefix='/api/youtube-music')
 
+# Create a test blueprint to verify routing
+from flask import Blueprint
+test_bp = Blueprint('test', __name__, url_prefix='/api/test-music')
+
+@test_bp.route('/search', methods=['GET'])
+def test_search():
+    return jsonify({"message": "Test search route is working", "query": request.args.get('q', '')})
+    
+app.register_blueprint(test_bp)
+
+# Log all registered routes for debugging
+print("Registered routes:")
+for rule in app.url_map.iter_rules():
+    print(f"{rule.endpoint}: {rule.rule}")
 
 # Route for checking API status
 
 @app.route('/api/status', methods=['GET'])
-
 def status():
-
     return jsonify({
-
         'status': 'online',
-
         'version': '1.0.0',
-
         'session_active': 'oauth_token' in session,
-
         'session_keys': list(session.keys()) if session else []
+    })
 
+@app.route('/api/routes', methods=['GET'])
+def list_routes():
+    routes = []
+    for rule in app.url_map.iter_rules():
+        routes.append({
+            'endpoint': rule.endpoint,
+            'methods': [method for method in rule.methods if method not in ('HEAD', 'OPTIONS')],
+            'rule': str(rule)
+        })
+    return jsonify(routes)
+    
+# Direct music search test route
+@app.route('/api/direct-music/search', methods=['GET'])
+def direct_music_search():
+    query = request.args.get('q', '')
+    # Return mock response
+    return jsonify({
+        "results": [
+            {
+                "id": "direct_search_1",
+                "title": f"Song about {query}",
+                "artist": "Direct API Test",
+                "duration": 240,
+                "thumbnail": "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+                "videoId": "direct_search_1"
+            },
+            {
+                "id": "direct_search_2",
+                "title": f"Another song with {query}",
+                "artist": "Test Artist",
+                "duration": 180,
+                "thumbnail": "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+                "videoId": "direct_search_2"
+            }
+        ]
     })
 
 
