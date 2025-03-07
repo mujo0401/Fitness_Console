@@ -67,17 +67,17 @@ export const AuthProvider = ({ children }) => {
           updatedConnectedServices.fitbit = true;
           console.log('Fitbit is connected');
           
-          // Get user profile if not already set
-          if (!user) {
-            try {
-              const profileResponse = await fitbitService.getProfile();
-              console.log('Fitbit profile response:', profileResponse);
-              if (profileResponse && profileResponse.user) {
-                setUser(profileResponse.user);
-              }
-            } catch (profileError) {
-              console.error('Error fetching Fitbit profile:', profileError);
+          // Get user profile if not already set or if we want to prefer Fitbit profile data
+          try {
+            const profileResponse = await fitbitService.getProfile();
+            console.log('Fitbit profile response:', profileResponse);
+            if (profileResponse && profileResponse.user) {
+              // Fitbit profile has more detailed health information
+              setUser(profileResponse.user);
+              console.log('Setting Fitbit user profile data');
             }
+          } catch (profileError) {
+            console.error('Error fetching Fitbit profile:', profileError);
           }
           
           // Check for fitbit token scopes
@@ -112,13 +112,14 @@ export const AuthProvider = ({ children }) => {
           updatedConnectedServices.appleFitness = true;
           console.log('Apple Fitness is connected');
           
-          // Get Apple Fitness profile if user not set and Fitbit not connected
-          if (!user && !updatedConnectedServices.fitbit) {
+          // Get Apple Fitness profile if Fitbit not connected
+          if (!updatedConnectedServices.fitbit) {
             try {
               const profileResponse = await appleFitnessService.getProfile();
               console.log('Apple Fitness profile response:', profileResponse);
               if (profileResponse && profileResponse.user) {
                 setUser(profileResponse.user);
+                console.log('Setting Apple Fitness user profile data');
               }
             } catch (profileError) {
               console.error('Error fetching Apple Fitness profile:', profileError);
@@ -138,13 +139,23 @@ export const AuthProvider = ({ children }) => {
           updatedConnectedServices.googleFit = true;
           console.log('Google Fit is connected');
           
-          // Get Google Fit profile if user not set and no other fitness service is connected
-          if (!user && !updatedConnectedServices.fitbit && !updatedConnectedServices.appleFitness) {
+          // Get Google Fit profile if no higher priority fitness service is connected
+          if (!updatedConnectedServices.fitbit && !updatedConnectedServices.appleFitness) {
             try {
               const profileResponse = await googleFitService.getProfile();
               console.log('Google Fit profile response:', profileResponse);
               if (profileResponse && profileResponse.user) {
-                setUser(profileResponse.user);
+                // Google's profile often has the user's photo and display name
+                const currentUser = user || {};
+                const googleUser = {
+                  ...currentUser,
+                  displayName: profileResponse.displayName || currentUser.displayName,
+                  fullName: profileResponse.displayName || currentUser.fullName,
+                  avatar: profileResponse.picture || currentUser.avatar,
+                  email: profileResponse.email || currentUser.email
+                };
+                setUser(googleUser);
+                console.log('Setting Google Fit user profile data');
               }
             } catch (profileError) {
               console.error('Error fetching Google Fit profile:', profileError);
@@ -163,6 +174,26 @@ export const AuthProvider = ({ children }) => {
         if (youtubeMusicResponse.data && youtubeMusicResponse.data.connected) {
           updatedConnectedServices.youtubeMusic = true;
           console.log('YouTube Music is connected');
+          
+          // If no other profile is set yet, try to extract any profile data from YouTube response
+          if (!user && !updatedConnectedServices.fitbit && 
+              !updatedConnectedServices.appleFitness && !updatedConnectedServices.googleFit) {
+            try {
+              // YouTube music API might return basic profile info
+              if (youtubeMusicResponse.data.profile) {
+                console.log('YouTube Music profile data:', youtubeMusicResponse.data.profile);
+                setUser({
+                  displayName: youtubeMusicResponse.data.profile.name || 'Music User',
+                  fullName: youtubeMusicResponse.data.profile.name, 
+                  email: youtubeMusicResponse.data.profile.email,
+                  avatar: youtubeMusicResponse.data.profile.picture
+                });
+                console.log('Setting YouTube Music user profile as fallback');
+              }
+            } catch (profileError) {
+              console.error('Error processing YouTube Music profile:', profileError);
+            }
+          }
         } else {
           console.log('YouTube Music is not connected');
         }
