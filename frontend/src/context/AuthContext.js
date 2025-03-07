@@ -27,10 +27,10 @@ export const AuthProvider = ({ children }) => {
   const [tokenScopes, setTokenScopes] = useState([]);
 
   // Check if user is authenticated
-  const checkAuthStatus = useCallback(async () => {
+  const checkAuthStatus = useCallback(async (forceReconnect = false) => {
     setIsLoading(true);
     try {
-      console.log('Checking authentication status...');
+      console.log(`Checking authentication status (forceReconnect=${forceReconnect})...`);
       
       // Initialize connected services object
       let updatedConnectedServices = {
@@ -40,7 +40,24 @@ export const AuthProvider = ({ children }) => {
         youtubeMusic: false
       };
       
-      // Separate authentication check for each service
+      // Try using the consolidated connection check
+      if (forceReconnect) {
+        try {
+          console.log("Force reconnecting all services");
+          const allConnected = await checkConnection(true);
+          console.log(`Force reconnect result: ${allConnected}`);
+          
+          // If successful, we're done because checkConnection updated all state
+          if (allConnected) {
+            setIsLoading(false);
+            return;
+          }
+        } catch (error) {
+          console.error("Force reconnect failed:", error);
+        }
+      }
+      
+      // Separate authentication check for each service (fallback to individual checks)
       // This is the main change - we now check each service independently
       
       // First check Fitbit
@@ -156,14 +173,18 @@ export const AuthProvider = ({ children }) => {
       // Update the connected services state
       setConnectedServices(updatedConnectedServices);
       
-      // Consider the user authenticated if ANY service is connected
-      const isAnyServiceConnected = Object.values(updatedConnectedServices).some(connected => connected);
+      // Consider the user authenticated if ANY fitness service is connected
+      // YouTube Music alone does not count for authentication
+      const isFitnessServiceConnected = 
+        updatedConnectedServices.fitbit || 
+        updatedConnectedServices.appleFitness || 
+        updatedConnectedServices.googleFit;
       
-      if (isAnyServiceConnected) {
+      if (isFitnessServiceConnected) {
         setIsAuthenticated(true);
-        console.log('User is authenticated with at least one service');
+        console.log('User is authenticated with at least one fitness service');
       } else {
-        console.log('User is not authenticated with any service');
+        console.log('User is not authenticated with any fitness service');
         setIsAuthenticated(false);
         setUser(null);
         setTokenScopes([]);
@@ -393,8 +414,12 @@ export const AuthProvider = ({ children }) => {
       // Update the authentication status after updating the connection state
       // We need to use a callback to access the updated state
       setConnectedServices(updatedConnections => {
-        const isAnyServiceConnected = Object.values(updatedConnections).some(connected => connected);
-        setIsAuthenticated(isAnyServiceConnected);
+        // Only consider fitness services for authentication status
+        const isFitnessServiceConnected = 
+          updatedConnections.fitbit || 
+          updatedConnections.appleFitness || 
+          updatedConnections.googleFit;
+        setIsAuthenticated(isFitnessServiceConnected);
         return updatedConnections;
       });
       
@@ -468,11 +493,25 @@ export const AuthProvider = ({ children }) => {
 
   // Check all connections status
   // Check YouTube Music connection status
-  const checkYouTubeMusicConnection = useCallback(async () => {
+  const checkYouTubeMusicConnection = useCallback(async (forceReconnect = false) => {
     try {
-      const response = await axios.get('/api/youtube-music/status');
+      // If we're on the Music page or there's a connected=true parameter, force reconnect
+      const url = forceReconnect 
+        ? '/api/youtube-music/status?force_reconnect=true'
+        : '/api/youtube-music/status';
+        
+      console.log(`Checking YouTube Music connection status (forceReconnect: ${forceReconnect})`);
+      const response = await axios.get(url);
       console.log('YouTube Music connection status check result:', response.data);
-      setConnectedServices(prev => ({...prev, youtubeMusic: response.data.connected}));
+      
+      if (response.data.connected) {
+        console.log('Setting YouTube Music connection to TRUE');
+        setConnectedServices(prev => ({...prev, youtubeMusic: true}));
+      } else {
+        console.log('Setting YouTube Music connection to FALSE');
+        setConnectedServices(prev => ({...prev, youtubeMusic: false}));
+      }
+      
       return response.data.connected;
     } catch (error) {
       console.error('YouTube Music connection check failed:', error);
@@ -481,7 +520,39 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const checkConnection = useCallback(async () => {
+  const checkConnection = useCallback(async (forceReconnect = false) => {
+    try {
+      // First try to use the consolidated endpoint
+      console.log(`Checking all connections with forceReconnect=${forceReconnect}`);
+      const url = forceReconnect 
+        ? '/api/auth/connections?force_reconnect=true'
+        : '/api/auth/connections';
+        
+      const response = await axios.get(url);
+      console.log('Connection status response:', response.data);
+      
+      if (response.data.connected) {
+        // Update connection states from the unified endpoint
+        setConnectedServices({
+          fitbit: response.data.connected.fitbit || false,
+          appleFitness: false, // Apple fitness not supported in backend yet
+          googleFit: response.data.connected.google_fit || false,
+          youtubeMusic: response.data.connected.youtube_music || false
+        });
+        
+        const anyConnected = response.data.connected.fitbit || 
+                            response.data.connected.google_fit || 
+                            response.data.connected.youtube_music;
+                            
+        setIsAuthenticated(anyConnected);
+        return anyConnected;
+      }
+    } catch (error) {
+      console.error('Error using consolidated connection endpoint:', error);
+      console.log('Falling back to individual checks...');
+    }
+    
+    // Fall back to individual checks if the consolidated endpoint fails
     const fitbitConnected = await checkFitbitConnection();
     const appleConnected = await checkAppleFitnessConnection();
     const googleFitConnected = await checkGoogleFitConnection();
