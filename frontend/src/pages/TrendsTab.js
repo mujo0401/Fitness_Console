@@ -573,317 +573,99 @@ const TrendsTab = () => {
                       </Typography>
                     </Box>
 
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <Paper elevation={2} sx={{ p: 3, height: '100%', borderRadius: 2 }}>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#673ab7', display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                    <BedtimeIcon /> Sleep Optimization Insights
-                  </Typography>
-                  <Box>
-                    <Typography variant="subtitle2" fontWeight="medium" sx={{ mb: 1 }}>
-                      Ideal Sleep Window Detected
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Chip 
-                        label="10:45 PM - 6:30 AM" 
-                        sx={{ 
-                          bgcolor: alpha('#673ab7', 0.1), 
-                          color: '#673ab7', 
-                          px: 2, 
-                          fontWeight: 'medium' 
-                        }} 
-                      />
-                      <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                        7.75 hours
-                      </Typography>
-                    </Box>
-                    <Typography variant="body2" paragraph>
-                      When you sleep within this window, you average 22% more deep sleep and 14% more REM sleep. Your morning recovery scores are typically 15-20 points higher.
-                    </Typography>
-                    
-                    <Typography variant="subtitle2" fontWeight="medium" sx={{ mt: 3, mb: 1 }}>
-                      Sleep Quality Factors
-                    </Typography>
-                    <Box sx={{ mb: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 12, height: 12, bgcolor: '#4caf50', borderRadius: '50%' }} />
-                        <Typography variant="body2" fontWeight="medium">
-                          Positive Impact:
-                        </Typography>
+                    <Box sx={{ mb: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Avatar sx={{ width: 28, height: 28, bgcolor: alpha('#4caf50', 0.1) }}>
+                            <DirectionsRunIcon sx={{ fontSize: 16, color: '#4caf50' }} />
+                          </Avatar>
+                          <Typography variant="body2" fontWeight="medium">Activity Level</Typography>
+                        </Box>
+                        <Typography variant="body2" fontWeight="bold">76/100</Typography>
                       </Box>
-                      <Typography variant="body2" sx={{ ml: 3 }}>
-                        Exercise before 7 PM, consistent sleep schedule, bedroom temperature below 70°F
+                      <LinearProgress 
+                        variant="determinate" 
+                        value={76} 
+                        sx={{ 
+                          height: 8, 
+                          borderRadius: 4,
+                          bgcolor: alpha('#4caf50', 0.2),
+                          '& .MuiLinearProgress-bar': { 
+                            bgcolor: '#4caf50',
+                            backgroundImage: 'linear-gradient(90deg, #4caf50, #8bc34a)' 
+                          }
+                        }}
+                      />
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                        <TrendingUpIcon sx={{ fontSize: 14, color: theme.palette.success.main }} /> 
+                        Improved 12% this month
                       </Typography>
                     </Box>
+                    
+                    <Box sx={{ mb: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Avatar sx={{ width: 28, height: 28, bgcolor: alpha('#f44336', 0.1) }}>
+                            <FavoriteIcon sx={{ fontSize: 16, color: '#f44336' }} />
+                          </Avatar>
+                          <Typography variant="body2" fontWeight="medium">Heart Health</Typography>
+                        </Box>
+                        <Typography variant="body2" fontWeight="bold">83/100</Typography>
+                      </Box>
+                      <LinearProgress 
+                        variant="determinate" 
+                        value={83} 
+                        sx={{ 
+                          height: 8, 
+                          borderRadius: 4,
+                          bgcolor: alpha('#f44336', 0.2),
+                          '& .MuiLinearProgress-bar': { 
+                            bgcolor: '#f44336',
+                            backgroundImage: 'linear-gradient(90deg, #f44336, #ff9800)' 
+                          }
+                        }}
+                      />
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                        <TrendingUpIcon sx={{ fontSize: 14, color: theme.palette.success.main }} /> 
+                        Improved 8% this month
+                      </Typography>
+                    </Box>
+                    
                     <Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 12, height: 12, bgcolor: '#f44336', borderRadius: '50%' }} />
-                        <Typography variant="body2" fontWeight="medium">
-                          Negative Impact:
-                        </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Avatar sx={{ width: 28, height: 28, bgcolor: alpha('#2196f3', 0.1) }}>
+                            <BoltIcon sx={{ fontSize: 16, color: '#2196f3' }} />
+                          </Avatar>
+                          <Typography variant="body2" fontWeight="medium">Recovery</Typography>
+                        </Box>
+                        <Typography variant="body2" fontWeight="bold">90/100</Typography>
                       </Box>
-                      <Typography variant="body2" sx={{ ml: 3 }}>
-                        Screen time after 9 PM, caffeine after 2 PM, alcohol consumption
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Paper>
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <Paper elevation={2} sx={{ p: 3, height: '100%', borderRadius: 2 }}>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#f44336', display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                    <FavoriteIcon /> Heart Health Analysis
-                  </Typography>
-                  <Box>
-                    <Typography variant="subtitle2" fontWeight="medium" sx={{ mb: 1 }}>
-                      Resting Heart Rate Trend
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Typography variant="h4" color="#f44336" fontWeight="bold">
-                        62
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                        BPM (3-month average)
-                      </Typography>
-                      <Chip 
-                        label="-3 BPM" 
-                        size="small"
+                      <LinearProgress 
+                        variant="determinate" 
+                        value={90} 
                         sx={{ 
-                          ml: 2,
-                          bgcolor: alpha('#4caf50', 0.1), 
-                          color: '#4caf50',
-                          fontWeight: 'medium' 
-                        }} 
+                          height: 8, 
+                          borderRadius: 4,
+                          bgcolor: alpha('#2196f3', 0.2),
+                          '& .MuiLinearProgress-bar': { 
+                            bgcolor: '#2196f3',
+                            backgroundImage: 'linear-gradient(90deg, #2196f3, #03a9f4)' 
+                          }
+                        }}
                       />
-                    </Box>
-                    <Typography variant="body2" paragraph>
-                      Your resting heart rate has decreased by 3 BPM over the past 3 months, indicating improved cardiovascular efficiency and fitness.
-                    </Typography>
-                    
-                    <Typography variant="subtitle2" fontWeight="medium" sx={{ mt: 3, mb: 1 }}>
-                      Heart Rate Variability (HRV)
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <Typography variant="h5" fontWeight="bold">
-                        42
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                        <TrendingUpIcon sx={{ fontSize: 14, color: theme.palette.success.main }} /> 
+                        Improved 5% this month
                       </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                        ms (30-day average)
-                      </Typography>
-                      <Chip 
-                        label="+5 ms" 
-                        size="small"
-                        sx={{ 
-                          ml: 2,
-                          bgcolor: alpha('#4caf50', 0.1), 
-                          color: '#4caf50',
-                          fontWeight: 'medium' 
-                        }} 
-                      />
                     </Box>
-                    <Typography variant="body2">
-                      Your increasing HRV suggests improved stress resilience and autonomic nervous system balance. This correlates with your improved recovery scores.
-                    </Typography>
-                  </Box>
-                </Paper>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#4caf50', display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                    <DirectionsRunIcon /> Activity Pattern Optimization
-                  </Typography>
-                  <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
-                      <Box>
-                        <Typography variant="subtitle2" fontWeight="medium" sx={{ mb: 1 }}>
-                          Peak Performance Times
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                          <Chip 
-                            label="Cardio: 6:30-8:00 AM" 
-                            sx={{ bgcolor: alpha('#2196f3', 0.1), color: '#2196f3' }} 
-                          />
-                          <Chip 
-                            label="Strength: 4:00-6:00 PM" 
-                            sx={{ bgcolor: alpha('#f44336', 0.1), color: '#f44336' }} 
-                          />
-                          <Chip 
-                            label="Flexibility: 7:30-9:00 PM" 
-                            sx={{ bgcolor: alpha('#673ab7', 0.1), color: '#673ab7' }} 
-                          />
-                        </Box>
-                        <Typography variant="body2" paragraph>
-                          Based on your heart rate variability, body temperature, and historical performance data, these time windows align with your body's natural rhythms for different types of exercise.
-                        </Typography>
-                      </Box>
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                      <Box>
-                        <Typography variant="subtitle2" fontWeight="medium" sx={{ mb: 1 }}>
-                          Weekly Activity Balance
-                        </Typography>
-                        <Box sx={{ mb: 2 }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                            <Typography variant="body2">Cardiovascular</Typography>
-                            <Typography variant="body2" fontWeight="medium">135 mins/week</Typography>
-                          </Box>
-                          <LinearProgress 
-                            variant="determinate" 
-                            value={90} 
-                            sx={{ 
-                              height: 8, 
-                              borderRadius: 4,
-                              bgcolor: alpha('#2196f3', 0.2),
-                              '& .MuiLinearProgress-bar': { bgcolor: '#2196f3' }
-                            }}
-                          />
-                          <Typography variant="caption" color="text.secondary">
-                            Target: 150 mins/week
-                          </Typography>
-                        </Box>
-                        <Box sx={{ mb: 2 }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                            <Typography variant="body2">Strength Training</Typography>
-                            <Typography variant="body2" fontWeight="medium">80 mins/week</Typography>
-                          </Box>
-                          <LinearProgress 
-                            variant="determinate" 
-                            value={67} 
-                            sx={{ 
-                              height: 8, 
-                              borderRadius: 4,
-                              bgcolor: alpha('#f44336', 0.2),
-                              '& .MuiLinearProgress-bar': { bgcolor: '#f44336' }
-                            }}
-                          />
-                          <Typography variant="caption" color="text.secondary">
-                            Target: 120 mins/week
-                          </Typography>
-                        </Box>
-                        <Box>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                            <Typography variant="body2">Flexibility/Mobility</Typography>
-                            <Typography variant="body2" fontWeight="medium">40 mins/week</Typography>
-                          </Box>
-                          <LinearProgress 
-                            variant="determinate" 
-                            value={53} 
-                            sx={{ 
-                              height: 8, 
-                              borderRadius: 4,
-                              bgcolor: alpha('#673ab7', 0.2),
-                              '& .MuiLinearProgress-bar': { bgcolor: '#673ab7' }
-                            }}
-                          />
-                          <Typography variant="caption" color="text.secondary">
-                            Target: 75 mins/week
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </Grid>
-                  </Grid>
-                </Paper>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <Paper elevation={3} sx={{ p: 3, borderRadius: 2, bgcolor: alpha('#ff9800', 0.05) }}>
-                  <Typography variant="h6" sx={{ color: '#ff9800', fontWeight: 'bold', mb: 2 }}>
-                    AI-Generated Health Insights
-                  </Typography>
-                  <Box sx={{ mb: 3 }}>
-                    <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
-                      Highest Impact Actions
-                    </Typography>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} md={4}>
-                        <Box sx={{ p: 2, bgcolor: 'white', borderRadius: 2, height: '100%', border: '1px solid rgba(0,0,0,0.05)' }}>
-                          <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="#4caf50">
-                            Increase Strength Training
-                          </Typography>
-                          <Typography variant="body2">
-                            Adding one more strength session per week would optimize your muscle recovery pattern and improve metabolic health markers. Your recovery data suggests you can handle this increased load.
-                          </Typography>
-                          <Typography variant="body2" sx={{ mt: 1, color: '#4caf50', fontWeight: 'medium' }}>
-                            Estimated impact: +4.5 health score points
-                          </Typography>
-                        </Box>
-                      </Grid>
-                      <Grid item xs={12} md={4}>
-                        <Box sx={{ p: 2, bgcolor: 'white', borderRadius: 2, height: '100%', border: '1px solid rgba(0,0,0,0.05)' }}>
-                          <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="#673ab7">
-                            Standardize Sleep Schedule
-                          </Typography>
-                          <Typography variant="body2">
-                            Your weekend sleep timing varies by over 2 hours from weekdays. Reducing this variation to under 1 hour would significantly improve your circadian rhythm and deep sleep quantity.
-                          </Typography>
-                          <Typography variant="body2" sx={{ mt: 1, color: '#673ab7', fontWeight: 'medium' }}>
-                            Estimated impact: +3.8 health score points
-                          </Typography>
-                        </Box>
-                      </Grid>
-                      <Grid item xs={12} md={4}>
-                        <Box sx={{ p: 2, bgcolor: 'white', borderRadius: 2, height: '100%', border: '1px solid rgba(0,0,0,0.05)' }}>
-                          <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="#2196f3">
-                            Reduce Sedentary Periods
-                          </Typography>
-                          <Typography variant="body2">
-                            You currently have 3-4 hour blocks of continuous sitting. Breaking these up with 5-minute movement breaks every 50 minutes would significantly improve glucose regulation and circulation.
-                          </Typography>
-                          <Typography variant="body2" sx={{ mt: 1, color: '#2196f3', fontWeight: 'medium' }}>
-                            Estimated impact: +3.2 health score points
-                          </Typography>
-                        </Box>
-                      </Grid>
-                    </Grid>
-                  </Box>
-                  
-                  <Box>
-                    <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
-                      Behavioral Pattern Recognition
-                    </Typography>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} md={6}>
-                        <Box sx={{ p: 2, bgcolor: 'white', borderRadius: 2, height: '100%', border: '1px solid rgba(0,0,0,0.05)' }}>
-                          <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="#ff9800">
-                            Stress Impact Detection
-                          </Typography>
-                          <Typography variant="body2" paragraph>
-                            We've detected a pattern where high-stress days (identified by elevated daytime heart rate and reduced HRV) are followed by disrupted sleep and reduced activity the next day.
-                          </Typography>
-                          <Typography variant="subtitle2" color="text.secondary">
-                            Recommendation:
-                          </Typography>
-                          <Typography variant="body2">
-                            On high-stress days, prioritize a 15-minute relaxation routine before bed (breathing exercises or gentle stretching) to break this cycle.
-                          </Typography>
-                        </Box>
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <Box sx={{ p: 2, bgcolor: 'white', borderRadius: 2, height: '100%', border: '1px solid rgba(0,0,0,0.05)' }}>
-                          <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="#ff9800">
-                            Workout Recovery Optimization
-                          </Typography>
-                          <Typography variant="body2" paragraph>
-                            Your high-intensity workouts (HR {'>'} 85% max) show optimal adaptations when followed by an active recovery day rather than complete rest or another high-intensity session.
-                          </Typography>
-                          <Typography variant="subtitle2" color="text.secondary">
-                            Recommendation:
-                          </Typography>
-                          <Typography variant="body2">
-                            Implement a structured hard/easy training pattern with light activity (walking, yoga, swimming) on recovery days rather than complete inactivity.
-                          </Typography>
-                        </Box>
-                      </Grid>
-                    </Grid>
-                  </Box>
-                </Paper>
+                  </CardContent>
+                </Card>
               </Grid>
             </Grid>
-          </CardContent>
-        </Card>
-      </motion.div>
+          )}
+        </motion.div>
+      </AnimatePresence>
     </Box>
   );
 };
