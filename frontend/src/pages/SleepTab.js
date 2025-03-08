@@ -418,13 +418,13 @@ const SleepTab = () => {
         promiseLabels.push('appleHealth');
       }
       
-      // If no service is connected, use mock data
+      // If no service is connected, use empty data
       if (promises.length === 0) {
-        if (debugMode) console.log('🔍 DEBUG: No fitness services connected. Using mock data.');
-        console.log('No fitness services connected. Using mock data.');
-        const mockData = generateMockSleepData(period);
-        setSleepData(mockData.data);
-        setFitbitData(mockData.data);
+        if (debugMode) console.log('🔍 DEBUG: No fitness services connected. Using empty data.');
+        console.log('No fitness services connected. Using empty data.');
+        const emptyData = generateEmptySleepData(period);
+        setSleepData(emptyData.data);
+        setFitbitData(emptyData.data);
         
         // Ensure loading is set to false 
         if (debugMode) console.log('🔍 DEBUG: Setting loading false (no services connected)');
@@ -532,11 +532,11 @@ const SleepTab = () => {
       console.error('Error fetching sleep data:', error);
       setError('Failed to fetch sleep data. Please try again.');
       
-      // Use mock data as fallback
-      if (debugMode) console.log('🔍 DEBUG: Generating mock data as fallback');
-      const mockData = generateMockSleepData(period);
-      setSleepData(mockData.data);
-      setFitbitData(mockData.data);
+      // Use empty data as fallback
+      if (debugMode) console.log('🔍 DEBUG: Generating empty data as fallback');
+      const emptyData = generateEmptySleepData(period);
+      setSleepData(emptyData.data);
+      setFitbitData(emptyData.data);
     } finally {
       if (debugMode) console.log('🔍 DEBUG: In finally block, setting loading false');
       setLoading(false);
@@ -627,11 +627,11 @@ const SleepTab = () => {
           setSleepData([...appleHealthData]);
           console.log('Auto-selected Apple Health sleep data');
         } else {
-          // No data available from any source, use mock data
-          if (debugMode) console.log('🔍 DEBUG: No data available, using mock data');
-          console.log('No sleep data available from any source, using mock data.');
-          const mockData = generateMockSleepData(period);
-          setSleepData(mockData.data);
+          // No data available from any source, use empty data
+          if (debugMode) console.log('🔍 DEBUG: No data available, using empty data');
+          console.log('No sleep data available from any source, using empty data.');
+          const emptyData = generateEmptySleepData(period);
+          setSleepData(emptyData.data);
         }
         
         // Safety check - make sure loading is set to false here
@@ -641,58 +641,37 @@ const SleepTab = () => {
     }
   };
   
-  // Generate mock sleep data for demonstration
-  const generateMockSleepData = (dataPeriod) => {
-    console.log(`🔄 Generating mock sleep data for period: ${dataPeriod}`);
-    const mockData = [];
+  // Generate empty sleep data when API calls fail
+  const generateEmptySleepData = (dataPeriod) => {
+    console.log(`🔄 Generating empty sleep data for period: ${dataPeriod}`);
+    const emptyData = [];
     
     if (dataPeriod === 'day') {
-      // Generate a single day's sleep data
+      // Generate a single day's empty sleep data
       const sleepDate = format(date, 'yyyy-MM-dd');
-      
-      // Random sleep efficiency (85-98%)
-      const efficiency = 85 + Math.floor(Math.random() * 13);
-      
-      // Random sleep duration (6-9 hours in minutes)
-      const durationMinutes = 360 + Math.floor(Math.random() * 180);
-      
-      // Random sleep stages (percentages)
-      const deepPercent = 15 + Math.floor(Math.random() * 10);
-      const remPercent = 20 + Math.floor(Math.random() * 15);
-      const lightPercent = 100 - deepPercent - remPercent;
-      
-      // Convert percentages to minutes
-      const deepMinutes = Math.round((deepPercent / 100) * durationMinutes);
-      const remMinutes = Math.round((remPercent / 100) * durationMinutes);
-      const lightMinutes = Math.round((lightPercent / 100) * durationMinutes);
-      
-      // Random time awake during night (0-30 minutes)
-      const awakeMinutes = Math.floor(Math.random() * 30);
-      
-      // Random sleep score (60-95)
-      const score = 60 + Math.floor(Math.random() * 35);
       
       // Add timestamp (unix seconds)
       const timestamp = Math.floor(new Date(sleepDate).getTime() / 1000);
       
-      mockData.push({
+      emptyData.push({
         date: sleepDate,
-        startTime: '10:30 PM',
-        endTime: '6:45 AM',
-        durationMinutes: durationMinutes,
-        efficiency: efficiency,
-        deepSleepMinutes: deepMinutes,
-        lightSleepMinutes: lightMinutes,
-        remSleepMinutes: remMinutes,
-        awakeDuringNight: awakeMinutes,
-        deepSleepPercentage: deepPercent,
-        lightSleepPercentage: lightPercent,
-        remSleepPercentage: remPercent,
-        score: score,
-        timestamp: timestamp
+        startTime: '00:00 AM',
+        endTime: '00:00 AM',
+        durationMinutes: 0,
+        efficiency: 0,
+        deepSleepMinutes: 0,
+        lightSleepMinutes: 0,
+        remSleepMinutes: 0,
+        awakeDuringNight: 0,
+        deepSleepPercentage: 0,
+        lightSleepPercentage: 0,
+        remSleepPercentage: 0,
+        score: 0,
+        timestamp: timestamp,
+        placeholder: true
       });
     } else {
-      // Generate multiple days of sleep data
+      // Generate multiple days of empty sleep data
       const days = dataPeriod === 'week' ? 7 : 30;
       
       for (let i = 0; i < days; i++) {
@@ -700,60 +679,34 @@ const SleepTab = () => {
         day.setDate(day.getDate() - i);
         const sleepDate = format(day, 'yyyy-MM-dd');
         
-        // Weekend vs. weekday variations
-        const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-        
-        // Random sleep efficiency (85-98%)
-        const efficiency = 85 + Math.floor(Math.random() * 13);
-        
-        // Random sleep duration (longer on weekends)
-        const durationMinutes = isWeekend 
-          ? 420 + Math.floor(Math.random() * 120) // 7-9 hours on weekends
-          : 360 + Math.floor(Math.random() * 120); // 6-8 hours on weekdays
-        
-        // Random sleep stages (percentages)
-        const deepPercent = 15 + Math.floor(Math.random() * 10);
-        const remPercent = 20 + Math.floor(Math.random() * 15);
-        const lightPercent = 100 - deepPercent - remPercent;
-        
-        // Convert percentages to minutes
-        const deepMinutes = Math.round((deepPercent / 100) * durationMinutes);
-        const remMinutes = Math.round((remPercent / 100) * durationMinutes);
-        const lightMinutes = Math.round((lightPercent / 100) * durationMinutes);
-        
-        // Random time awake during night (0-30 minutes)
-        const awakeMinutes = Math.floor(Math.random() * 30);
-        
-        // Random sleep score (60-95)
-        const score = 60 + Math.floor(Math.random() * 35);
-        
         // Add timestamp (unix seconds)
         const timestamp = Math.floor(day.getTime() / 1000);
         
-        mockData.push({
+        emptyData.push({
           date: sleepDate,
-          durationMinutes: durationMinutes,
-          efficiency: efficiency,
-          deepSleepMinutes: deepMinutes,
-          lightSleepMinutes: lightMinutes,
-          remSleepMinutes: remMinutes,
-          awakeDuringNight: awakeMinutes,
-          deepSleepPercentage: deepPercent,
-          lightSleepPercentage: lightPercent,
-          remSleepPercentage: remPercent,
-          score: score,
-          timestamp: timestamp
+          durationMinutes: 0,
+          efficiency: 0,
+          deepSleepMinutes: 0,
+          lightSleepMinutes: 0,
+          remSleepMinutes: 0,
+          awakeDuringNight: 0,
+          deepSleepPercentage: 0,
+          lightSleepPercentage: 0,
+          remSleepPercentage: 0,
+          score: 0,
+          timestamp: timestamp,
+          placeholder: true
         });
       }
       
       // Sort by date
-      mockData.sort((a, b) => new Date(a.date) - new Date(b.date));
+      emptyData.sort((a, b) => new Date(a.date) - new Date(b.date));
     }
     
-    console.log(`✅ Generated ${mockData.length} mock sleep data points`);
+    console.log(`✅ Generated ${emptyData.length} empty sleep data points`);
     
     return {
-      data: mockData,
+      data: emptyData,
       period: dataPeriod,
       start_date: format(date, 'yyyy-MM-dd'),
       end_date: format(date, 'yyyy-MM-dd')

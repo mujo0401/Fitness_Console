@@ -194,7 +194,7 @@ const SleepChart = ({
       }
       
       // Create empty placeholder if no data available
-      console.log("No data available, creating placeholder");
+      console.log("No data available, creating placeholder with zeros");
       const placeholderData = [{
         date: format(new Date(), 'yyyy-MM-dd'),
         durationMinutes: 0,
@@ -204,7 +204,11 @@ const SleepChart = ({
         lightSleepMinutes: 0,
         remSleepMinutes: 0,
         awakeDuringNight: 0,
-        source: "none"
+        deepSleepPercentage: 0,
+        lightSleepPercentage: 0,
+        remSleepPercentage: 0,
+        source: "none",
+        placeholder: true
       }];
       setProcessedData(placeholderData);
       setSleepScore(0);
