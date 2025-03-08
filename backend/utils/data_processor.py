@@ -584,6 +584,7 @@ def process_activity_data(raw_data, period):
                     # Calculate other metrics based on steps count for this hour
                     steps_count = data['steps']
                     # Estimate calories based on steps (rough approximation)
+                    # Average person burns ~0.04 calories per step
                     calories = int(steps_count * 0.04)
                     # Estimate distance in miles based on steps (rough approximation: 2000 steps ≈ 1 mile)
                     distance = round(steps_count / 2000, 2)

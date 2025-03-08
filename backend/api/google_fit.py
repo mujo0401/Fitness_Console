@@ -726,7 +726,16 @@ def get_activity():
                                             day_data['steps'] += value['intVal']
                                             logger.info(f"Added {value['intVal']} steps, total now: {day_data['steps']}")
                                         elif 'calories' in dataset['dataSourceId'] and 'fpVal' in value:
-                                            day_data['calories'] += value['fpVal']
+                                            # Google Fit often reports total burned calories including BMR (basal metabolic rate)
+                                            # To get active calories only, we need to scale this value
+                                            calories_value = value['fpVal']
+                                            # If the value seems too large for the step count (typical range: ~40-50 calories per 1000 steps)
+                                            if calories_value > day_data['steps'] * 0.1 and day_data['steps'] > 0:
+                                                # Scale down to a more realistic value - max ~0.05 calories per step
+                                                scaled_calories = min(calories_value, day_data['steps'] * 0.05)
+                                                day_data['calories'] += scaled_calories
+                                            else:
+                                                day_data['calories'] += calories_value
                                             logger.info(f"Added {value['fpVal']} calories, total now: {day_data['calories']}")
                                         elif 'active_minutes' in dataset['dataSourceId'] and 'intVal' in value:
                                             day_data['activeMinutes'] += value['intVal']

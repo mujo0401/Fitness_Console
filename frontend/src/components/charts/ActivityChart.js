@@ -352,7 +352,7 @@ const ActivityChart = ({
       case 'distance':
         return {
           ...baseConfig,
-          maxYValue: Math.max(5, ...chartData.map(item => item.distance || 0)) * 1.1,
+          maxYValue: Math.max(3, ...chartData.map(item => item.distance || 0)) * 1.1,
           series: [
             {
               dataKey: "distance",
@@ -366,7 +366,7 @@ const ActivityChart = ({
           referenceAreas: [
             {
               y1: 0,
-              y2: 5,
+              y2: 3,
               fill: alpha(theme.palette.info.main, 0.05),
               label: { value: 'Goal: 3 miles', position: 'insideTopRight', fill: theme.palette.info.main }
             }
