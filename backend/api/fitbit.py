@@ -377,14 +377,33 @@ def get_heart_rate():
 @rate_limit()
 def get_sleep():
     """Get sleep data for a given time period"""
+    # Add detailed logging for sleep endpoint
+    current_app.logger.info("=== SLEEP ENDPOINT CALLED ===")
+    current_app.logger.info(f"Request args: {request.args}")
+    
     headers = get_fitbit_headers()
     
     if not headers:
+        current_app.logger.error("Not authenticated - missing headers")
         return jsonify({'error': 'Not authenticated'}), 401
     
     # Get query parameters
     period = request.args.get('period', 'day')  # day, week, month
     date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+    
+    # Add timestamp for cache busting
+    _ts = request.args.get('_ts', str(int(time.time())))
+    
+    current_app.logger.info(f"Sleep data requested for period: {period}, date: {date}, timestamp: {_ts}")
+    
+    # Verify token has required scopes for sleep data
+    token = session.get('oauth_token', {})
+    scopes = token.get('scope', '').split(' ') if token and 'scope' in token else []
+    current_app.logger.info(f"Token scopes available: {scopes}")
+    
+    if 'sleep' not in scopes:
+        current_app.logger.error("CRITICAL: The 'sleep' scope is missing from the OAuth token! This will prevent sleep data access.")
+        # We'll still try the request but log the warning
     
     # Calculate start and end dates based on period
     end_date = datetime.strptime(date, '%Y-%m-%d')
@@ -405,27 +424,65 @@ def get_sleep():
     
     # Make request to Fitbit API
     params = {'period': period, 'date': date}
-    if period == 'day':
-        url = f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/sleep/date/{date}.json"
-    else:
-        url = f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/sleep/date/{start_str}/{end_str}.json"
+    try:
+        if period == 'day':
+            url = f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/sleep/date/{date}.json"
+        else:
+            url = f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/sleep/date/{start_str}/{end_str}.json"
+        
+        sleep_data, status_code = fitbit_request(url, headers, params)
+        
+        current_app.logger.info(f"Sleep API status code: {status_code}")
+        
+        if status_code != 200:
+            current_app.logger.error(f"Failed to fetch sleep data: {sleep_data}")
+            return jsonify({
+                'data': [],  # Return empty array instead of error for frontend
+                'period': period,
+                'start_date': start_str,
+                'end_date': end_str,
+                'error': 'Failed to fetch sleep data',
+                'error_details': sleep_data if isinstance(sleep_data, str) else "API error"
+            })
+        
+        # Process the data
+        processed_data = process_sleep_data(sleep_data, period)
+        
+        # Log some info about the processed data
+        current_app.logger.info(f"Processed {len(processed_data)} sleep data points")
+        
+    except Exception as e:
+        current_app.logger.error(f"Exception in sleep data processing: {str(e)}")
+        processed_data = []
     
-    sleep_data, status_code = fitbit_request(url, headers, params)
-    
-    if status_code != 200:
-        return jsonify({
-            'error': 'Failed to fetch sleep data',
-            'details': sleep_data
-        }), status_code
-    
-    # Process the data
-    processed_data = process_sleep_data(sleep_data, period)
+    # CRITICAL FIX: If we have no data, don't return an empty array which triggers "No data found" message
+    # Instead, add a single day with zero values so the frontend displays the day with zeros
+    if not processed_data and period == 'day':
+        current_app.logger.info("Adding default zero-value sleep entry to prevent 'No data found' message")
+        processed_data = [{
+            'date': date,
+            'startTime': '00:00',
+            'endTime': '00:00',
+            'durationMinutes': 0,
+            'efficiency': 0,
+            'deepSleepMinutes': 0,
+            'lightSleepMinutes': 0,
+            'remSleepMinutes': 0,
+            'awakeDuringNight': 0,
+            'deepSleepPercentage': 0,
+            'lightSleepPercentage': 0,
+            'remSleepPercentage': 0,
+            'score': 0,
+            'is_placeholder': True  # Mark as placeholder so frontend knows this is synthetic data
+        }]
     
     return jsonify({
         'data': processed_data,
         'period': period,
         'start_date': start_str,
-        'end_date': end_str
+        'end_date': end_str,
+        'requested_date': date,
+        'timestamp': _ts
     })
 
 
@@ -433,14 +490,33 @@ def get_sleep():
 @rate_limit()
 def get_activity():
     """Get activity data for a given time period"""
+    # Critical debugging for activity data
+    current_app.logger.info("=== ACTIVITY ENDPOINT CALLED ===")
+    current_app.logger.info(f"Request args: {request.args}")
+    
     headers = get_fitbit_headers()
     
     if not headers:
+        current_app.logger.error("Not authenticated - missing headers")
         return jsonify({'error': 'Not authenticated'}), 401
     
-    # Get query parameters
+    # Get query parameters 
     period = request.args.get('period', 'day')  # day, week, month
     date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+    
+    # Add timestamp for cache busting
+    _ts = request.args.get('_ts', str(int(time.time())))
+    
+    current_app.logger.info(f"CRITICAL: Activity data requested for period: {period}, date: {date}, timestamp: {_ts}")
+    
+    # Verify token has required scopes for activity data
+    token = session.get('oauth_token', {})
+    scopes = token.get('scope', '').split(' ') if token and 'scope' in token else []
+    current_app.logger.info(f"Token scopes available: {scopes}")
+    
+    if 'activity' not in scopes:
+        current_app.logger.error("CRITICAL: The 'activity' scope is missing from the OAuth token! This will prevent activity data access.")
+        # Don't return error though - we'll still try to make the request in case this is a false alarm
     
     # Calculate start and end dates based on period
     end_date = datetime.strptime(date, '%Y-%m-%d')
@@ -463,48 +539,148 @@ def get_activity():
     activity_data = {}
     params = {'period': period, 'date': date}
     
-    if period == 'day':
-        # For a single day, get summary and intraday data
-        url = f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/date/{date}.json"
-        
-        # Add intraday steps data if available
-        steps_url = f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/steps/date/{date}/1d/15min.json"
-        steps_data, steps_status = fitbit_request(steps_url, headers, params)
-        
-        main_data, main_status = fitbit_request(url, headers, params)
-        
-        if main_status == 200:
-            activity_data = main_data
-            if steps_status == 200:
-                activity_data['activities-steps-intraday'] = steps_data.get('activities-steps-intraday', {})
-    else:
-        # For longer periods, get time series data
-        urls = {
-            'activities-steps': f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/steps/date/{start_str}/{end_str}.json",
-            'activities-calories': f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/calories/date/{start_str}/{end_str}.json",
-            'activities-distance': f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/distance/date/{start_str}/{end_str}.json",
-            'activities-floors': f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/floors/date/{start_str}/{end_str}.json",
-            'activities-minutesSedentary': f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/minutesSedentary/date/{start_str}/{end_str}.json",
-            'activities-minutesLightlyActive': f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/minutesLightlyActive/date/{start_str}/{end_str}.json",
-            'activities-minutesFairlyActive': f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/minutesFairlyActive/date/{start_str}/{end_str}.json",
-            'activities-minutesVeryActive': f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/minutesVeryActive/date/{start_str}/{end_str}.json"
+    try:
+        if period == 'day':
+            # For a single day, get summary and intraday data
+            url = f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/date/{date}.json"
+            
+            # Add intraday steps data if available - wrap in try/except to prevent crashes
+            try:
+                steps_url = f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/steps/date/{date}/1d/15min.json"
+                steps_data, steps_status = fitbit_request(steps_url, headers, params)
+                current_app.logger.info(f"Steps data status: {steps_status}")
+            except Exception as e:
+                current_app.logger.error(f"Error fetching steps data: {str(e)}")
+                steps_data, steps_status = {}, 500
+            
+            try:
+                main_data, main_status = fitbit_request(url, headers, params)
+                current_app.logger.info(f"Main activity data status: {main_status}")
+            except Exception as e:
+                current_app.logger.error(f"Error fetching main activity data: {str(e)}")
+                main_data, main_status = {}, 500
+            
+            if main_status == 200:
+                activity_data = main_data
+                if steps_status == 200:
+                    activity_data['activities-steps-intraday'] = steps_data.get('activities-steps-intraday', {})
+        elif period != 'day':
+            # For longer periods, get time series data
+            pass  # This will be handled outside the try block
+    except Exception as e:
+        current_app.logger.error(f"Error in activity data fetching: {str(e)}")
+        # Set activity_data to empty dict with basic structure to prevent processing errors
+        activity_data = {
+            'summary': {
+                'steps': 0,
+                'caloriesOut': 0,
+                'distances': [{'distance': 0}],
+                'floors': 0,
+                'fairlyActiveMinutes': 0,
+                'veryActiveMinutes': 0
+            }
         }
         
-        # Make API calls for each activity metric
-        for metric, url in urls.items():
-            metric_data, status_code = fitbit_request(url, headers, params)
-            if status_code == 200:
-                activity_data[metric] = metric_data.get(metric, [])
+    if period != 'day':
+        try:
+            urls = {
+                'activities-steps': f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/steps/date/{start_str}/{end_str}.json",
+                'activities-calories': f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/calories/date/{start_str}/{end_str}.json",
+                'activities-distance': f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/distance/date/{start_str}/{end_str}.json",
+                'activities-floors': f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/floors/date/{start_str}/{end_str}.json",
+                'activities-minutesSedentary': f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/minutesSedentary/date/{start_str}/{end_str}.json",
+                'activities-minutesLightlyActive': f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/minutesLightlyActive/date/{start_str}/{end_str}.json",
+                'activities-minutesFairlyActive': f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/minutesFairlyActive/date/{start_str}/{end_str}.json",
+                'activities-minutesVeryActive': f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/minutesVeryActive/date/{start_str}/{end_str}.json"
+            }
+            
+            # Make API calls for each activity metric - with error handling for each individual call
+            for metric, url in urls.items():
+                try:
+                    metric_data, status_code = fitbit_request(url, headers, params)
+                    current_app.logger.info(f"Metric {metric} status: {status_code}")
+                    if status_code == 200:
+                        activity_data[metric] = metric_data.get(metric, [])
+                except Exception as e:
+                    current_app.logger.error(f"Error fetching {metric} data: {str(e)}")
+                    # Continue with next metric instead of crashing
+                    activity_data[metric] = []
+        except Exception as e:
+            current_app.logger.error(f"Error fetching multi-day activity data: {str(e)}")
+    
+    # Log raw activity data for debugging
+    current_app.logger.info(f"Raw activity data received from Fitbit API")
+    if period == 'day':
+        if activity_data.get('summary'):
+            current_app.logger.info(f"Summary data: {activity_data.get('summary')}")
+        else:
+            current_app.logger.error("No summary data in activity response!")
+    else:
+        current_app.logger.info(f"Steps data: {len(activity_data.get('activities-steps', []))} points")
+        current_app.logger.info(f"Calories data: {len(activity_data.get('activities-calories', []))} points")
     
     # Process the data
     processed_data = process_activity_data(activity_data, period)
     
-    return jsonify({
+    # Log the processed data
+    current_app.logger.info(f"Processed data has {len(processed_data)} points")
+    if processed_data:
+        current_app.logger.info(f"First data point: {processed_data[0]}")
+        if any(item.get('steps', 0) > 0 for item in processed_data):
+            current_app.logger.info("Found steps data with non-zero values!")
+        else:
+            current_app.logger.warning("All steps data is zero!")
+            
+            # Additional debug info for troubleshooting zero values
+            current_app.logger.info(f"Raw data summary: {raw_data.get('summary', {})}")
+            
+            # Check token scopes to ensure activity data access
+            token = session.get('oauth_token', {})
+            scopes = token.get('scope', '').split(' ')
+            current_app.logger.info(f"Token scopes: {scopes}")
+            
+            if 'activity' not in scopes:
+                current_app.logger.error("CRITICAL: Missing 'activity' scope in token! This is required for activity data.")
+                
+            # Make a direct debug request to verify API access - use try/except to prevent 500 errors
+            try:
+                debug_url = f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/date/{date}.json"
+                debug_data, debug_status = fitbit_request(debug_url, headers, params)
+                current_app.logger.info(f"Debug API status: {debug_status}")
+                if debug_status == 200:
+                    current_app.logger.info(f"Debug API summary: {debug_data.get('summary', {})}")
+            except Exception as e:
+                current_app.logger.error(f"Error making debug request: {str(e)}")
+    else:
+        current_app.logger.warning("No processed data after processing!")
+    
+    # Add debug flag for tracing
+    response_data = {
         'data': processed_data,
         'period': period,
         'start_date': start_str,
-        'end_date': end_str
-    })
+        'end_date': end_str,
+        'requested_date': date,  # Add the explicitly requested date
+        'timestamp': _ts,  # Add the timestamp
+        '_debug': True  # Debug flag
+    }
+    
+    # CRITICAL FIX: If we have no data, don't return an empty array which triggers "No data found" message
+    # Instead, add a single day with zero values so the frontend displays the day with zeros
+    if not processed_data and period == 'day':
+        current_app.logger.info("Adding default zero-value entry to prevent 'No data found' message")
+        response_data['data'] = [{
+            'dateTime': date,
+            'date': date,
+            'steps': 0,
+            'calories': 0,
+            'distance': 0,
+            'floors': 0,
+            'activeMinutes': 0,
+            'is_placeholder': True  # Mark as placeholder so frontend knows this is synthetic data
+        }]
+    
+    return jsonify(response_data)
 
 
 @bp.route('/status', methods=['GET'])
