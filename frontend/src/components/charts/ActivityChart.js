@@ -356,7 +356,7 @@ const ActivityChart = ({
           series: [
             {
               dataKey: "distance",
-              name: "Distance (km)",
+              name: "Distance (miles)",
               color: theme.palette.info.main,
               strokeWidth: 2,
               // Add dots for distance line chart
@@ -368,7 +368,7 @@ const ActivityChart = ({
               y1: 0,
               y2: 5,
               fill: alpha(theme.palette.info.main, 0.05),
-              label: { value: 'Goal: 5 km', position: 'insideTopRight', fill: theme.palette.info.main }
+              label: { value: 'Goal: 3 miles', position: 'insideTopRight', fill: theme.palette.info.main }
             }
           ]
         };

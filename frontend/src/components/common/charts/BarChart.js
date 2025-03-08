@@ -29,8 +29,17 @@ const BarChart = ({
 }) => {
   const theme = useTheme();
   
-  // Simple debug logging
+  // Enhanced debug logging
   console.log(`BarChart rendering with ${data?.length || 0} data points`);
+  
+  // Handle empty data with fallback
+  if (!data || data.length === 0) {
+    console.warn(`BarChart received empty data - using fallback empty dataset`);
+    // Create a basic empty dataset to prevent rendering errors
+    data = [
+      { steps: 0, calories: 0, activeMinutes: 0, distance: 0, time: '12:00 AM' }
+    ];
+  }
   
   // Force direct dataKey references
   const processedSeries = series.map(s => ({
@@ -127,7 +136,7 @@ const BarChart = ({
               return (
                 <Bar
                   key={`bar-${index}`}
-                  dataKey={'avg'}
+                  dataKey={s.dataKey}
                   name={s.name || 'Heart Rate'}
                   fill={s.color || theme.palette.primary.main}
                   barSize={data.length > 50 ? 5 : 15}
