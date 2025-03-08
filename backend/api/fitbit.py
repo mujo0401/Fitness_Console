@@ -547,14 +547,16 @@ def get_activity():
             # Add intraday steps data if available - wrap in try/except to prevent crashes
             try:
                 steps_url = f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/steps/date/{date}/1d/15min.json"
-                steps_data, steps_status = fitbit_request(steps_url, headers, params)
+                # Don't pass params to avoid _date/date conflict
+                steps_data, steps_status = fitbit_request(steps_url, headers)
                 current_app.logger.info(f"Steps data status: {steps_status}")
             except Exception as e:
                 current_app.logger.error(f"Error fetching steps data: {str(e)}")
                 steps_data, steps_status = {}, 500
             
             try:
-                main_data, main_status = fitbit_request(url, headers, params)
+                # Don't pass params to avoid _date/date conflict
+                main_data, main_status = fitbit_request(url, headers)
                 current_app.logger.info(f"Main activity data status: {main_status}")
             except Exception as e:
                 current_app.logger.error(f"Error fetching main activity data: {str(e)}")
@@ -597,7 +599,8 @@ def get_activity():
             # Make API calls for each activity metric - with error handling for each individual call
             for metric, url in urls.items():
                 try:
-                    metric_data, status_code = fitbit_request(url, headers, params)
+                    # Don't pass the date params to avoid _date/date conflict
+                    metric_data, status_code = fitbit_request(url, headers)
                     current_app.logger.info(f"Metric {metric} status: {status_code}")
                     if status_code == 200:
                         activity_data[metric] = metric_data.get(metric, [])
@@ -645,7 +648,7 @@ def get_activity():
             # Make a direct debug request to verify API access - use try/except to prevent 500 errors
             try:
                 debug_url = f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/date/{date}.json"
-                debug_data, debug_status = fitbit_request(debug_url, headers, params)
+                debug_data, debug_status = fitbit_request(debug_url, headers)
                 current_app.logger.info(f"Debug API status: {debug_status}")
                 if debug_status == 200:
                     current_app.logger.info(f"Debug API summary: {debug_data.get('summary', {})}")

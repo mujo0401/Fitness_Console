@@ -653,16 +653,16 @@ def get_activity():
     body = {
         "aggregateBy": [
             {
-                "dataTypeName": "com.google.step_count.delta",
-                "dataSourceId": "derived:com.google.step_count.delta:com.google.android.gms:aggregated"
+                "dataTypeName": "com.google.step_count.delta"
+                # dataSourceId omitted to allow system to find any available source
             },
             {
-                "dataTypeName": "com.google.calories.expended",
-                "dataSourceId": "derived:com.google.calories.expended:com.google.android.gms:merge_calories_expended"
+                "dataTypeName": "com.google.calories.expended"
+                # dataSourceId omitted to allow system to find any available source
             },
             {
-                "dataTypeName": "com.google.active_minutes",
-                "dataSourceId": "derived:com.google.active_minutes:com.google.android.gms:merge_active_minutes"
+                "dataTypeName": "com.google.active_minutes"
+                # dataSourceId omitted to allow system to find any available source
             }
         ],
         "bucketByTime": {"durationMillis": 86400000},  # Daily buckets
@@ -806,10 +806,16 @@ def get_sleep():
     # Sleep API endpoint for sessions
     api_url = f"{current_app.config['GOOGLE_FIT_API_BASE_URL']}/users/me/sessions"
     
+    # Convert to UTC for RFC3339 format
+    from datetime import timezone
+    
     # Format dates according to Google API requirements
-    # Must be in RFC3339 format
-    start_time_str = datetime.fromtimestamp(start_time).strftime('%Y-%m-%dT%H:%M:%S.000Z')
-    end_time_str = datetime.fromtimestamp(end_time).strftime('%Y-%m-%dT%H:%M:%S.000Z')
+    # Must be in RFC3339 format in UTC
+    start_datetime = datetime.fromtimestamp(start_time).replace(tzinfo=timezone.utc)
+    end_datetime = datetime.fromtimestamp(end_time).replace(tzinfo=timezone.utc)
+    
+    start_time_str = start_datetime.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+    end_time_str = end_datetime.strftime('%Y-%m-%dT%H:%M:%S.000Z')
     
     logger.info(f"Fetching sleep data from {start_time_str} to {end_time_str}")
     
