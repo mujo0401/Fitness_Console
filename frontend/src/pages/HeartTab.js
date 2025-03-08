@@ -32,7 +32,7 @@ import { useAuth } from '../context/AuthContext';
 
 // Components
 import HeartRateChart from '../components/charts/HeartRateChart';
-import DiagnosticsPanel from '../components/DiagnosticsPanel';
+import DiagnosticsPanel from '../components/DiagnosticsPanel.js';
 import { GlassCard, AnimatedGradientText } from '../components/styled/CardComponents';
 
 // Refactored heart rate components

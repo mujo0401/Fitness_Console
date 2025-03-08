@@ -64,7 +64,7 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 
 import { activityService, fitbitService, googleFitService, appleFitnessService, authService } from '../services/api';
 import ActivityChart from '../components/charts/ActivityChart';
-import DiagnosticsPanel from '../components/DiagnosticsPanel';
+import DiagnosticsPanel from '../components/DiagnosticsPanel.js';
 import { GlassCard, AnimatedGradientText } from '../components/styled/CardComponents';
 import { useAuth } from '../context/AuthContext';
 
@@ -73,7 +73,8 @@ import RadialProgressChart from '../components/common/charts/RadialProgressChart
 import ActivityHeatmapCalendar from '../components/common/charts/ActivityHeatmapCalendar';
 import StepMountainVisualization from '../components/common/charts/StepMountainVisualization';
 import ActivityPulseWave from '../components/common/charts/ActivityPulseWave';
-import ActivityInsights from '../components/activity/ActivityInsights';
+// ActivityInsights import temporarily commented out
+// import ActivityInsights from '../components/activity/ActivityInsights';
 
 // Activity intensity levels
 const ACTIVITY_INTENSITY_LEVELS = [
@@ -1746,11 +1747,10 @@ const ActivityTab = () => {
                           <Typography variant="body2" color="text.secondary" paragraph>
                             AI-powered insights based on your activity patterns and goals.
                           </Typography>
-                          <ActivityInsights 
-                            data={activityData} 
-                            period={period}
-                            previousData={previousPeriodData}
-                          />
+                          {/* ActivityInsights temporarily commented out */}
+                          <Typography variant="body1">
+                            Activity insights are currently being rebuilt with enhanced functionality.
+                          </Typography>
                         </Card>
                       </Grid>
                     )}

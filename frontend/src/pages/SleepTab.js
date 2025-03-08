@@ -69,7 +69,7 @@ import { useAuth } from '../context/AuthContext';
 
 // Components
 import SleepChart from '../components/charts/SleepChart';
-import DiagnosticsPanel from '../components/DiagnosticsPanel';
+import DiagnosticsPanel from '../components/DiagnosticsPanel.js';
 import { GlassCard, AnimatedGradientText } from '../components/styled/CardComponents';
 
 // Sleep quality levels with colors
