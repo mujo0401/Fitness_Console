@@ -30,9 +30,14 @@ yarn-error.log
 .DS_Store
 .env
 .env.local
+.env.development
+.env.production
 .env.development.local
 .env.test.local
 .env.production.local
+backend/.env
+backend/.env.development
+backend/.env.production
 coverage/
 build/
 
