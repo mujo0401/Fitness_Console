@@ -662,21 +662,64 @@ const Header = () => {
       <Divider sx={{ mx: 2 }} />
       
       <Box sx={{ p: 2, textAlign: 'center' }}>
-        <Button 
-          fullWidth
-          variant="contained"
-          startIcon={<SyncIcon />}
-          onClick={handleServicesMenuClose}
-          disabled={!connectedServices.fitbit && !connectedServices.appleFitness && !connectedServices.googleFit}
-          sx={{ 
-            borderRadius: 30,
-            background: 'linear-gradient(45deg, #673ab7 0%, #9c27b0 100%)',
-            textTransform: 'none',
-            py: 1
-          }}
-        >
-          Sync Data Now
-        </Button>
+        <Stack spacing={2}>
+          <Button 
+            fullWidth
+            variant="contained"
+            startIcon={<SyncIcon />}
+            onClick={handleServicesMenuClose}
+            disabled={!connectedServices.fitbit && !connectedServices.appleFitness && !connectedServices.googleFit}
+            sx={{ 
+              borderRadius: 30,
+              background: 'linear-gradient(45deg, #673ab7 0%, #9c27b0 100%)',
+              textTransform: 'none',
+              py: 1
+            }}
+          >
+            Sync Data Now
+          </Button>
+          
+          <Button 
+            fullWidth
+            variant="outlined"
+            color="secondary"
+            startIcon={<LinkIcon />}
+            onClick={async () => {
+              // Reauthenticate all services
+              try {
+                // Handle YouTube Music differently - force connect directly
+                if (connectedServices.youtubeMusic) {
+                  console.log('Force reconnecting YouTube Music...');
+                  await fetch('/api/youtube-music/force-connect', {
+                    method: 'GET',
+                    credentials: 'include'
+                  });
+                  // No need to logout first
+                }
+                
+                // For other services, logout then login
+                if (connectedServices.fitbit) await logout('fitbit').then(() => loginFitbit());
+                if (connectedServices.appleFitness) await logout('apple').then(() => loginAppleFitness());
+                if (connectedServices.googleFit) await logout('google').then(() => loginGoogleFit());
+                
+                // Alert user of success
+                alert('Services reauthenticated successfully!');
+              } catch (error) {
+                console.error('Error during reauthentication:', error);
+                alert('Error during reauthentication. Please try again.');
+              }
+              
+              handleServicesMenuClose();
+            }}
+            sx={{ 
+              borderRadius: 30,
+              textTransform: 'none',
+              py: 1
+            }}
+          >
+            Reauthenticate All
+          </Button>
+        </Stack>
       </Box>
     </Menu>
   );

@@ -327,119 +327,217 @@ def search():
     # Add extensive logging
     logger.info("==== YouTube Music search called ====")
     logger.info(f"Request args: {request.args}")
-    logger.info(f"Session keys: {list(session.keys())}")
     logger.info(f"Connected: {session.get('youtube_music_connected')}")
     
-    # Mock mode is forcibly disabled for production
-    use_mock = False
-    logger.info(f"Mock mode: {use_mock}")
-    
-    # Temporarily bypass authentication for testing
-    logger.info("Bypassing authentication check for testing")
-    
-    # Auto-connect the user for testing if not connected
-    if not session.get('youtube_music_connected'):
-        logger.info("Auto-connecting to YouTube Music for testing")
-        session['youtube_music_connected'] = True
-        session['youtube_music_access_token'] = 'test_access_token'
-        session['youtube_music_refresh_token'] = 'test_refresh_token'
-        session['youtube_music_token_expiry'] = time.time() + 3600
-    
-    # Skip token refresh for testing - always consider token valid
-    logger.info("Skipping token refresh check for testing")
-    
     query = request.args.get('q')
+    page_token = request.args.get('pageToken', None)  # Get page token for pagination
     if not query:
         return jsonify({'error': 'Query parameter is required'}), 400
     
-    # Let's provide a simple working solution with hardcoded results for now
-    # This will at least make the API endpoint return something useful
-    logger.info(f"Serving hardcoded search results for: {query}")
+    # First, try to use the YouTube Data API to get real results
+    try:
+        # Get API key from environment variable
+        api_key = Config.YOUTUBE_API_KEY
+        logger.info(f"YouTube API Key present: {bool(api_key)}")
+        
+        if api_key:
+            # Use YouTube Data API to search
+            logger.info(f"Searching YouTube with API key for: {query}")
+            
+            # Build the YouTube search API URL
+            youtube_url = "https://www.googleapis.com/youtube/v3/search"
+            params = {
+                'part': 'snippet',
+                'q': query + ' music',  # Add 'music' to improve search relevance
+                'type': 'video',
+                'videoCategoryId': '10',  # Music category
+                'maxResults': 50,  # Increased from 10 to 50 (API max per page)
+                'relevanceLanguage': 'en',  # Prioritize English results
+                'videoEmbeddable': 'true',  # Only include embeddable videos
+                'videoSyndicated': 'true',  # Only include videos that can be played outside youtube.com
+                'key': api_key
+            }
+            
+            # Add page token if provided for pagination
+            if page_token:
+                params['pageToken'] = page_token
+            
+            # Make the request to YouTube API
+            response = requests.get(youtube_url, params=params)
+            youtube_data = response.json()
+            
+            logger.info(f"YouTube API response status: {response.status_code}")
+            
+            if response.status_code == 200 and 'items' in youtube_data:
+                logger.info(f"Found {len(youtube_data['items'])} YouTube results")
+                
+                # Process YouTube results into our format
+                results = []
+                
+                # Organize by "albums" (we'll group by channel)
+                channels = {}
+                
+                for item in youtube_data['items']:
+                    video_id = item['id']['videoId']
+                    title = item['snippet']['title']
+                    channel_title = item['snippet']['channelTitle']
+                    
+                    # Use actual video thumbnail instead of dummy image
+                    # Get highest quality thumbnail available
+                    if 'maxres' in item['snippet']['thumbnails']:
+                        thumbnail = item['snippet']['thumbnails']['maxres']['url']
+                    elif 'high' in item['snippet']['thumbnails']:
+                        thumbnail = item['snippet']['thumbnails']['high']['url']
+                    else:
+                        thumbnail = item['snippet']['thumbnails']['medium']['url']
+                    
+                    # Create album grouping by channel
+                    if channel_title not in channels:
+                        channels[channel_title] = {
+                            'albumName': f"{channel_title} Collection",
+                            'tracks': [],
+                            'channelId': item['snippet']['channelId']
+                        }
+                    
+                    # Create a track for this video
+                    track_id = f"yt_{video_id}"
+                    
+                    # Get a consistent color based on channel name (for fallback)
+                    colors = ['blue', 'red', 'green', 'yellow', 'purple', 'orange']
+                    color_idx = hash(channel_title) % len(colors)
+                    color = colors[color_idx]
+                    
+                    # Add to the channel's tracks
+                    track_num = len(channels[channel_title]['tracks']) + 1
+                    
+                    # Try to get the actual video duration
+                    video_details = get_video_details(video_id, api_key)
+                    duration = video_details.get('duration', 240)  # Fallback to 240 seconds if not available
+                    
+                    # Create track object
+                    track = {
+                        'id': track_id,
+                        'title': title,
+                        'artist': channel_title,
+                        'album': channels[channel_title]['albumName'],
+                        'duration': duration,
+                        'thumbnail': thumbnail,  # Use actual thumbnail
+                        'fallbackThumbnail': f"https://dummyimage.com/300x300/{color}/fff.png&text={channel_title.replace(' ', '+')}",
+                        'videoId': video_id,
+                        'albumIndex': list(channels.keys()).index(channel_title),
+                        'trackNumber': track_num
+                    }
+                    
+                    # Add to both the channel's tracks and overall results
+                    channels[channel_title]['tracks'].append(track)
+                    results.append(track)
+                
+                # Add pagination tokens if present
+                pagination = {}
+                if 'nextPageToken' in youtube_data:
+                    pagination['nextPageToken'] = youtube_data['nextPageToken']
+                if 'prevPageToken' in youtube_data:
+                    pagination['prevPageToken'] = youtube_data['prevPageToken']
+                
+                logger.info(f"Processed {len(results)} tracks from YouTube")
+                return jsonify({
+                    'results': results,
+                    'pagination': pagination,
+                    'source': 'youtube_api',
+                    'query': query
+                })
     
-    # Dictionary of sample songs for popular artists
-    popular_artists = {
-        "linkin park": [
-            {"id": "eVTXPUF4Oz4", "title": "Linkin Park - In The End", "artist": "Linkin Park", "videoId": "eVTXPUF4Oz4"},
-            {"id": "kXYiU_JCYtU", "title": "Linkin Park - Numb", "artist": "Linkin Park", "videoId": "kXYiU_JCYtU"},
-            {"id": "k2WcOJt-i8M", "title": "Linkin Park - What I've Done", "artist": "Linkin Park", "videoId": "k2WcOJt-i8M"},
-            {"id": "LYU-8IFcDPw", "title": "Linkin Park - Faint", "artist": "Linkin Park", "videoId": "LYU-8IFcDPw"},
-            {"id": "5dmQ3QWpy1Q", "title": "Linkin Park - Somewhere I Belong", "artist": "Linkin Park", "videoId": "5dmQ3QWpy1Q"}
-        ],
-        "metallica": [
-            {"id": "CD-E-LDc384", "title": "Metallica - Enter Sandman", "artist": "Metallica", "videoId": "CD-E-LDc384"},
-            {"id": "tAGnKpE4NCI", "title": "Metallica - Nothing Else Matters", "artist": "Metallica", "videoId": "tAGnKpE4NCI"},
-            {"id": "WM8bTdBs-cw", "title": "Metallica - One", "artist": "Metallica", "videoId": "WM8bTdBs-cw"},
-            {"id": "Ckom3gf57Yw", "title": "Metallica - The Unforgiven", "artist": "Metallica", "videoId": "Ckom3gf57Yw"},
-            {"id": "E0ozmU9cJDg", "title": "Metallica - Master of Puppets", "artist": "Metallica", "videoId": "E0ozmU9cJDg"}
-        ],
-        "breaking benjamin": [
-            {"id": "9zSoz8w-e4I", "title": "Breaking Benjamin - The Diary of Jane", "artist": "Breaking Benjamin", "videoId": "9zSoz8w-e4I"},
-            {"id": "DWaB4PXCwFU", "title": "Breaking Benjamin - I Will Not Bow", "artist": "Breaking Benjamin", "videoId": "DWaB4PXCwFU"},
-            {"id": "7qrRzNidzIc", "title": "Breaking Benjamin - Breath", "artist": "Breaking Benjamin", "videoId": "7qrRzNidzIc"},
-            {"id": "qMFpoBDGOGE", "title": "Breaking Benjamin - Dance With The Devil", "artist": "Breaking Benjamin", "videoId": "qMFpoBDGOGE"},
-            {"id": "dkWu65e-jE0", "title": "Breaking Benjamin - So Cold", "artist": "Breaking Benjamin", "videoId": "dkWu65e-jE0"}
-        ],
-        "imagine dragons": [
-            {"id": "7wtfhZwyrcc", "title": "Imagine Dragons - Believer", "artist": "Imagine Dragons", "videoId": "7wtfhZwyrcc"},
-            {"id": "ktvTqknDobU", "title": "Imagine Dragons - Radioactive", "artist": "Imagine Dragons", "videoId": "ktvTqknDobU"},
-            {"id": "fKopy74weus", "title": "Imagine Dragons - Thunder", "artist": "Imagine Dragons", "videoId": "fKopy74weus"},
-            {"id": "mWRsgZuwf_8", "title": "Imagine Dragons - Demons", "artist": "Imagine Dragons", "videoId": "mWRsgZuwf_8"},
-            {"id": "Y2NkuFxlGlc", "title": "Imagine Dragons - Enemy", "artist": "Imagine Dragons", "videoId": "Y2NkuFxlGlc"}
-        ],
-        "twenty one pilots": [
-            {"id": "pXRviuL6vMY", "title": "twenty one pilots - Stressed Out", "artist": "twenty one pilots", "videoId": "pXRviuL6vMY"},
-            {"id": "UOUBW8bkjQ4", "title": "twenty one pilots - Heathens", "artist": "twenty one pilots", "videoId": "UOUBW8bkjQ4"},
-            {"id": "UprcpdwuwCg", "title": "twenty one pilots - Ride", "artist": "twenty one pilots", "videoId": "UprcpdwuwCg"},
-            {"id": "yoOFQCpzLQA", "title": "twenty one pilots - Heavydirtysoul", "artist": "twenty one pilots", "videoId": "yoOFQCpzLQA"},
-            {"id": "92XVwY54h5k", "title": "twenty one pilots - Car Radio", "artist": "twenty one pilots", "videoId": "92XVwY54h5k"}
-        ]
-    }
+    except Exception as e:
+        logger.exception(f"Error using YouTube API: {str(e)}")
     
-    # Generate videos based on the query
+    # If we get here, either the API key didn't work or there was an error
+    # Fall back to generated results
+    logger.info(f"Falling back to generated results for: {query}")
+    
+    # Generate results directly from the query
     results = []
     
-    # Check if we have predefined results for this artist
-    query_lower = query.lower()
-    for artist, songs in popular_artists.items():
-        if artist in query_lower:
-            logger.info(f"Found predefined songs for {artist}")
-            # Use the predefined songs
-            for song in songs:
-                results.append({
-                    'id': song['id'],
-                    'title': song['title'],
-                    'artist': song['artist'],
-                    'duration': 240,  # Generic duration
-                    'thumbnail': f"https://i3.ytimg.com/vi/{song['videoId']}/mqdefault.jpg",
-                    'videoId': song['videoId']
-                })
-            break
+    # Create uniform, generic results for any query
+    logger.info(f"Generating generic results for: {query}")
     
-    # If no predefined songs, create some using the query
-    if not results:
-        logger.info(f"No predefined songs for {query}, generating generic ones")
-        # Generate generic songs
-        for i in range(5):
-            video_id = f"generic_{i}"
+    # Generate genre-based albums from the query
+    genres = ['Rock', 'Pop', 'Electronic', 'Classical', 'Jazz', 'Hip Hop', 'Metal', 'Alternative', 'R&B', 'Country']
+    colors = ['blue', 'red', 'green', 'yellow', 'purple', 'orange', '333', '555', '999', 'f0f']
+    artist_names = [
+        f"{query}",
+        f"The {query} Band", 
+        f"{query} & The Group",
+        f"DJ {query}",
+        f"{query} Experience",
+        f"{query} Ensemble",
+        f"{query}tones",
+        f"{query} Orchestra",
+        f"The {query} Project",
+        f"{query} Collective"
+    ]
+    
+    # Number of albums to generate - increased to get more content
+    album_count = 5  # Generate 5 albums regardless of query
+    
+    for album_idx in range(album_count):
+        # Choose a genre based on query and album index
+        genre = genres[album_idx % len(genres)]
+        album_name = f"{query} {genre} Collection"
+        artist_name = artist_names[album_idx % len(artist_names)]
+        
+        # Tracks per album (10-15)
+        track_count = 10 + (hash(query + str(album_idx)) % 6)  # Between 10-15 tracks
+        
+        # Generate tracks for this album
+        for track_idx in range(track_count):
+            track_num = track_idx + 1
+            color = colors[(album_idx + track_idx) % len(colors)]
+            
+            # Create more dynamic track titles
+            track_titles = [
+                f"{query} - {genre} Opus {track_num}",
+                f"{query} {genre} Journey Part {track_num}",
+                f"The {query} Experience Vol. {track_num}",
+                f"{query} - {genre} Evolution {track_num}",
+                f"{query} {genre} Remix {track_num}",
+            ]
+            
+            title_idx = (hash(query + str(album_idx) + str(track_idx))) % len(track_titles)
+            title = track_titles[title_idx]
+                
+            # Create unique ID for this track
+            track_id = f"demo_{query.lower().replace(' ', '')}_{album_idx}_{track_idx}"
+            
             results.append({
-                'id': video_id,
-                'title': f"{query} - Song {i+1}",
-                'artist': f"{query} Band",
-                'duration': 240,
-                'thumbnail': "https://i3.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg",
-                'videoId': video_id
+                'id': track_id,
+                'title': title,
+                'artist': artist_name,
+                'album': album_name,
+                'duration': 180 + (track_idx * 30),  # Varying durations
+                'thumbnail': f"https://dummyimage.com/300x300/{color}/fff.png&text={query.replace(' ', '+')}",
+                'videoId': track_id,  # Safe demo videoId
+                'albumIndex': album_idx,
+                'trackNumber': track_num
             })
     
-    logger.info(f"Returning {len(results)} results for query: {query}")
-    return jsonify({'results': results})
+    # Log the number of results generated
+    logger.info(f"Generated {len(results)} results for query: {query}")
+    
+    # Return with empty pagination object for consistency with YouTube API response
+    return jsonify({
+        'results': results,
+        'pagination': {},
+        'source': 'fallback',
+        'query': query
+    })
 
-def get_video_details(video_id, access_token=None):
+def get_video_details(video_id, api_key=None):
     """Get additional details for a YouTube video"""
     try:
         params = {
             'part': 'contentDetails,statistics',
             'id': video_id,
-            'key': Config.YOUTUBE_API_KEY
+            'key': api_key or Config.YOUTUBE_API_KEY
         }
         
         # API key is sufficient, no need for OAuth token
@@ -511,24 +609,24 @@ def get_playlists():
     """Get user's YouTube Music playlists"""
     logger.info("Playlists endpoint called")
     
-    # Return hardcoded playlists for all users
+    # Return hardcoded playlists for all users with placeholder images
     sample_playlists = [
         {
             'id': 'PL_workout',
             'title': 'Workout Favorites',
-            'thumbnail': 'https://i3.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg',
+            'thumbnail': 'https://dummyimage.com/300x300/red/fff.png&text=Workout',
             'trackCount': 15
         },
         {
             'id': 'PL_chill',
             'title': 'Chill Vibes',
-            'thumbnail': 'https://i3.ytimg.com/vi/L_jWHffIx5E/mqdefault.jpg',
+            'thumbnail': 'https://dummyimage.com/300x300/blue/fff.png&text=Chill',
             'trackCount': 12
         },
         {
             'id': 'PL_rock',
             'title': 'Rock Classics',
-            'thumbnail': 'https://i3.ytimg.com/vi/fJ9rUzIMcZQ/mqdefault.jpg',
+            'thumbnail': 'https://dummyimage.com/300x300/purple/fff.png&text=Rock',
             'trackCount': 20
         }
     ]
@@ -541,32 +639,37 @@ def get_playlist_tracks(playlist_id):
     """Get tracks in a YouTube Music playlist"""
     logger.info(f"Getting tracks for playlist: {playlist_id}")
     
-    # Return different sample tracks based on the playlist ID
+    # Return different sample tracks based on the playlist ID with placeholder images
+    colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange']
+    
     if playlist_id == 'PL_workout':
         sample_tracks = [
-            {'id': 'dQw4w9WgXcQ', 'title': 'Never Gonna Give You Up', 'artist': 'Rick Astley', 'videoId': 'dQw4w9WgXcQ', 'duration': 213},
-            {'id': 'btPJPFnesV4', 'title': 'Eye Of The Tiger', 'artist': 'Survivor', 'videoId': 'btPJPFnesV4', 'duration': 246}
+            {'id': 'demo_workout_1', 'title': 'High Energy Workout', 'artist': 'Workout Mix', 'album': 'Fitness Collection', 'videoId': 'demo_workout_1', 'duration': 213},
+            {'id': 'demo_workout_2', 'title': 'Power Training Set', 'artist': 'Fitness Tracks', 'album': 'Fitness Collection', 'videoId': 'demo_workout_2', 'duration': 246}
         ]
     elif playlist_id == 'PL_chill':
         sample_tracks = [
-            {'id': 'XXYlFuWEuKI', 'title': 'The Weeknd - Save Your Tears', 'artist': 'The Weeknd', 'videoId': 'XXYlFuWEuKI', 'duration': 215},
-            {'id': 'U3ASj1L6_sY', 'title': 'Billie Eilish - everything i wanted', 'artist': 'Billie Eilish', 'videoId': 'U3ASj1L6_sY', 'duration': 243}
+            {'id': 'demo_chill_1', 'title': 'Relaxation Theme', 'artist': 'Chill Vibes', 'album': 'Chill Collection', 'videoId': 'demo_chill_1', 'duration': 215},
+            {'id': 'demo_chill_2', 'title': 'Meditation Session', 'artist': 'Ambient Sounds', 'album': 'Chill Collection', 'videoId': 'demo_chill_2', 'duration': 243}
         ]
     elif playlist_id == 'PL_rock':
         sample_tracks = [
-            {'id': 'fJ9rUzIMcZQ', 'title': 'Queen - Bohemian Rhapsody', 'artist': 'Queen', 'videoId': 'fJ9rUzIMcZQ', 'duration': 355},
-            {'id': 'eVTXPUF4Oz4', 'title': 'Linkin Park - In The End', 'artist': 'Linkin Park', 'videoId': 'eVTXPUF4Oz4', 'duration': 216}
+            {'id': 'demo_rock_1', 'title': 'Rock Anthem', 'artist': 'Rock Classics', 'album': 'Rock Collection', 'videoId': 'demo_rock_1', 'duration': 235},
+            {'id': 'demo_rock_2', 'title': 'Guitar Solo Mix', 'artist': 'Rock Legends', 'album': 'Rock Collection', 'videoId': 'demo_rock_2', 'duration': 216}
         ]
     else:
         # Default tracks for any other playlist
         sample_tracks = [
-            {'id': 'dQw4w9WgXcQ', 'title': 'Default Song 1', 'artist': 'Various Artists', 'videoId': 'dQw4w9WgXcQ', 'duration': 240},
-            {'id': 'L_jWHffIx5E', 'title': 'Default Song 2', 'artist': 'Various Artists', 'videoId': 'L_jWHffIx5E', 'duration': 240}
+            {'id': 'demo_default_1', 'title': 'Demo Track 1', 'artist': 'Music Library', 'album': 'Demo Collection', 'videoId': 'demo_default_1', 'duration': 240},
+            {'id': 'demo_default_2', 'title': 'Demo Track 2', 'artist': 'Music Library', 'album': 'Demo Collection', 'videoId': 'demo_default_2', 'duration': 240}
         ]
     
-    # Add thumbnails to each track
-    for track in sample_tracks:
-        track['thumbnail'] = f"https://i3.ytimg.com/vi/{track['videoId']}/mqdefault.jpg"
+    # Add thumbnails to each track using appropriate placeholder images
+    for i, track in enumerate(sample_tracks):
+        # Get the playlist type from the ID (workout, chill, rock, etc.)
+        playlist_type = playlist_id.split('_')[-1] if '_' in playlist_id else 'music'
+        color = colors[i % len(colors)]
+        track['thumbnail'] = f"https://dummyimage.com/300x300/{color}/fff.png&text={playlist_type}"
     
     logger.info(f"Returning {len(sample_tracks)} tracks for playlist {playlist_id}")
     return jsonify({'tracks': sample_tracks, 'playlist_id': playlist_id})
@@ -576,13 +679,25 @@ def get_recommendations():
     """Get music recommendations based on user's listening history"""
     logger.info("Getting music recommendations")
     
-    # Return hardcoded recommendations
-    recommendations = [
-        {'id': 'eVTXPUF4Oz4', 'title': 'Linkin Park - In The End', 'artist': 'Linkin Park', 'videoId': 'eVTXPUF4Oz4', 'duration': 216, 'thumbnail': 'https://i.ytimg.com/vi/eVTXPUF4Oz4/hqdefault.jpg'},
-        {'id': 'kXYiU_JCYtU', 'title': 'Linkin Park - Numb', 'artist': 'Linkin Park', 'videoId': 'kXYiU_JCYtU', 'duration': 186, 'thumbnail': 'https://i.ytimg.com/vi/kXYiU_JCYtU/hqdefault.jpg'},
-        {'id': 'CD-E-LDc384', 'title': 'Metallica - Enter Sandman', 'artist': 'Metallica', 'videoId': 'CD-E-LDc384', 'duration': 332, 'thumbnail': 'https://i.ytimg.com/vi/CD-E-LDc384/hqdefault.jpg'},
-        {'id': '9zSoz8w-e4I', 'title': 'Breaking Benjamin - The Diary of Jane', 'artist': 'Breaking Benjamin', 'videoId': '9zSoz8w-e4I', 'duration': 204, 'thumbnail': 'https://i.ytimg.com/vi/9zSoz8w-e4I/hqdefault.jpg'}
-    ]
+    # Return recommendations with placeholder images
+    colors = ['blue', 'red', 'green', 'yellow', 'purple', 'orange']
+    recommendation_types = ['Rock', 'Electronic', 'Pop', 'Workout', 'Focus']
+    
+    recommendations = []
+    for i in range(5):
+        color = colors[i % len(colors)]
+        rec_type = recommendation_types[i % len(recommendation_types)]
+        
+        recommendations.append({
+            'id': f'demo_rec_{i}',
+            'title': f'{rec_type} Recommendation {i+1}',
+            'artist': f'Music Library',
+            'album': f'{rec_type} Collection',
+            'videoId': f'demo_rec_{i}',
+            'duration': 180 + (i * 30),
+            'thumbnail': f'https://dummyimage.com/300x300/{color}/fff.png&text={rec_type}'
+        })
+    
     
     logger.info(f"Returning {len(recommendations)} recommendations")
     return jsonify({'recommendations': recommendations})
@@ -592,25 +707,25 @@ def get_workout_playlists():
     """Get YouTube Music workout playlists"""
     logger.info("Getting workout playlists")
     
-    # Return hardcoded workout playlists
+    # Return hardcoded workout playlists with placeholder images
     workout_playlists = [
         {
             'id': 'PL_workout_cardio',
             'title': 'Cardio Workout Mix',
             'creator': 'Fitness Music',
-            'thumbnail': 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg'
+            'thumbnail': 'https://dummyimage.com/300x300/red/fff.png&text=Cardio'
         },
         {
             'id': 'PL_workout_strength',
             'title': 'Strength Training Beats',
             'creator': 'Gym Music',
-            'thumbnail': 'https://i.ytimg.com/vi/kXYiU_JCYtU/hqdefault.jpg'
+            'thumbnail': 'https://dummyimage.com/300x300/blue/fff.png&text=Strength'
         },
         {
             'id': 'PL_workout_hiit',
             'title': 'HIIT Workout Intensity',
             'creator': 'Workout Music',
-            'thumbnail': 'https://i.ytimg.com/vi/CD-E-LDc384/hqdefault.jpg'
+            'thumbnail': 'https://dummyimage.com/300x300/purple/fff.png&text=HIIT'
         }
     ]
     

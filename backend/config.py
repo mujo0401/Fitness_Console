@@ -7,10 +7,11 @@ class Config:
     SESSION_TYPE = 'filesystem'
     SESSION_PERMANENT = True
     SESSION_USE_SIGNER = True
-    SESSION_COOKIE_SECURE = True  
+    SESSION_COOKIE_SECURE = False  # Set to False for local development, True for production
     SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = None 
+    SESSION_COOKIE_SAMESITE = 'Lax'  # Fixed from None to prevent browser warnings
     PERMANENT_SESSION_LIFETIME = timedelta(days=30)
+    SESSION_COOKIE_PATH = '/'  # Ensure cookies are available across all paths
   
     # Fitbit API configuration
     FITBIT_CLIENT_ID = os.environ.get('FITBIT_CLIENT_ID', '')

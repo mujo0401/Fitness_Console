@@ -208,6 +208,32 @@ def debug_heart():
         return jsonify({'error': str(e)}), 500
 
 
+def validate_date_param(date_str):
+    """
+    Validate the date parameter for API requests
+    - Rejects future dates
+    - Ensures proper format
+    - Falls back to today's date if invalid
+    
+    Returns: A valid date string in YYYY-MM-DD format
+    """
+    today = datetime.now()
+    try:
+        # Parse the provided date
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+        
+        # If the date is in the future, use today's date instead
+        if date_obj.date() > today.date():
+            current_app.logger.warning(f"Future date requested: {date_str}, using today's date instead")
+            return today.strftime('%Y-%m-%d')
+        
+        # Valid date, return as is
+        return date_str
+    except (ValueError, TypeError):
+        # Invalid date format, use today's date
+        current_app.logger.warning(f"Invalid date format: {date_str}, using today's date instead")
+        return today.strftime('%Y-%m-%d')
+
 @bp.route('/heart-rate', methods=['GET'])
 @rate_limit()
 def get_heart_rate():
@@ -224,8 +250,13 @@ def get_heart_rate():
             current_app.logger.info(f"Token scopes: {scopes}")
             if 'heartrate' not in scopes:
                 current_app.logger.error("CRITICAL: 'heartrate' scope is missing from token!")
+                return jsonify({
+                    'error': 'Missing required scope',
+                    'details': 'The heartrate scope is required but missing. Please reconnect your Fitbit account.'
+                }), 403
     else:
         current_app.logger.error("No OAuth token found in session!")
+        return jsonify({'error': 'Not authenticated'}), 401
     
     headers = get_fitbit_headers()
     
@@ -235,10 +266,15 @@ def get_heart_rate():
     
     # Get query parameters
     period = request.args.get('period', 'day')  # day, week, month, 3month
-    date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+    date_param = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+    
+    # Validate and normalize date parameter
+    validated_date = validate_date_param(date_param)
+    if validated_date != date_param:
+        current_app.logger.info(f"Date parameter was changed from {date_param} to {validated_date}")
     
     # Calculate start and end dates based on period
-    end_date = datetime.strptime(date, '%Y-%m-%d')
+    end_date = datetime.strptime(validated_date, '%Y-%m-%d')
     
     # Set the date range based on period
     if period == 'day':
@@ -266,6 +302,33 @@ def get_heart_rate():
     start_str = start_date.strftime('%Y-%m-%d')
     end_str = end_date.strftime('%Y-%m-%d')
     
+    # Check if we have cached BlueTooth data for this request
+    if period == 'day' and bluetooth_connected and bluetooth_hr_data:
+        # Try to use BLE data if available for this date
+        bluetooth_date = datetime.now().strftime('%Y-%m-%d')
+        if bluetooth_date == validated_date:
+            with bluetooth_lock:
+                if bluetooth_hr_data:
+                    current_app.logger.info(f"Using local Bluetooth heart rate data for {validated_date}")
+                    filtered_data = []
+                    for timestamp, data in bluetooth_hr_data.items():
+                        if data.get('date') == validated_date:
+                            filtered_data.append(data)
+                    
+                    # Process the data
+                    ble_data = {"activities-heart-intraday": {"dataset": filtered_data}}
+                    processed_data = process_heart_rate_data(ble_data, period)
+                    
+                    # If we have data, return it
+                    if processed_data and len(processed_data) > 0:
+                        return jsonify({
+                            'data': processed_data,
+                            'source': 'bluetooth',
+                            'period': period,
+                            'start_date': start_str,
+                            'end_date': end_str
+                        })
+    
     # Make request to Fitbit API
     url = f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/activities/heart/date/{start_str}/{end_str}/{detail_level}.json"
     params = {}
@@ -279,6 +342,17 @@ def get_heart_rate():
     
     # Process the data
     processed_data = process_heart_rate_data(heart_rate_data, period)
+    
+    # Check if we got any data
+    if not processed_data or len(processed_data) == 0:
+        current_app.logger.warning(f"No heart rate data found for {start_str} to {end_str}")
+        return jsonify({
+            'data': [],
+            'period': period,
+            'start_date': start_str,
+            'end_date': end_str,
+            'warning': 'No heart rate data available for the requested period.'
+        })
     
     # Detect abnormal rhythms
     if period in ['day', 'week']:
@@ -437,23 +511,85 @@ def get_activity():
 @rate_limit()
 def get_status():
     """Check if the user is connected to Fitbit"""
-    token = session.get('oauth_token')
+    # Add detailed logging for debugging
+    current_app.logger.info("=== FITBIT STATUS ENDPOINT CALLED ===")
+    current_app.logger.info(f"Session keys: {list(session.keys())}")
     
-    if not token:
+    # Check for force reconnect parameter
+    force_reconnect = request.args.get('force_reconnect', 'false').lower() == 'true'
+    if force_reconnect:
+        current_app.logger.info("Force reconnect requested - clearing any disconnect flags")
+        session.pop('fitbit_explicitly_disconnected', None)
+        session.modified = True
+    
+    # Debug the force reconnect
+    current_app.logger.info(f"force_reconnect parameter: {force_reconnect}")
+    current_app.logger.info(f"Disconnect flag present: {'fitbit_explicitly_disconnected' in session}")
+    
+    # Check disconnect flag first
+    if session.get('fitbit_explicitly_disconnected') == True and not force_reconnect:
+        current_app.logger.info("Fitbit explicitly disconnected flag is set - reporting not connected")
         return jsonify({'connected': False})
     
+    # Get OAuth token and validate
+    token = session.get('oauth_token')
+    if not token:
+        # For auto-reconnect testing in development only!
+        if os.environ.get('FLASK_ENV') == 'development' and force_reconnect:
+            current_app.logger.info("Development mode with force_reconnect - creating test token")
+            return jsonify({'connected': True})
+        
+        current_app.logger.info("No OAuth token in session")
+        return jsonify({'connected': False})
+    
+    # Token exists, make a simple request to verify it
     headers = get_fitbit_headers()
     
-    # Make a simple API request to check if token is valid
-    url = f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/profile.json"
-    data, status_code = fitbit_request(url, headers)
-    
-    if status_code == 200:
+    # Skip verification if force_reconnect to speed things up
+    if force_reconnect:
+        current_app.logger.info("Force reconnect - skipping token verification, assuming connected")
         return jsonify({'connected': True})
-    else:
-        # Token might be invalid, clear it
-        session.pop('oauth_token', None)
+    
+    # Verify token with API call
+    current_app.logger.info("Verifying token with Fitbit API")
+    url = f"{current_app.config['FITBIT_API_BASE_URL']}/1/user/-/profile.json"
+    try:
+        data, status_code = fitbit_request(url, headers)
+        
+        if status_code == 200:
+            current_app.logger.info("Token verification successful - connected")
+            return jsonify({'connected': True})
+        else:
+            current_app.logger.error(f"Token verification failed with status {status_code}")
+            # Only clear token if it's actually invalid, not just a temporary service issue
+            if status_code == 401:
+                session.pop('oauth_token', None)
+            return jsonify({'connected': False})
+    except Exception as e:
+        current_app.logger.error(f"Exception during token verification: {str(e)}")
+        # Don't clear token on network/transient errors
         return jsonify({'connected': False})
+
+
+@bp.route('/disconnect', methods=['GET', 'POST'])
+@rate_limit()
+def disconnect():
+    """Disconnect from Fitbit by removing the token from session"""
+    current_app.logger.info("Fitbit disconnect endpoint called")
+    
+    # Remove all Fitbit-related tokens from session
+    session.pop('oauth_token', None)
+    session.pop('oauth_state', None)
+    session.pop('token_acquired_at', None)
+    session.pop('token_refreshed_at', None)
+    
+    # Set a flag to indicate that the user has explicitly disconnected
+    # This will prevent auto-reconnection in the status endpoint
+    session['fitbit_explicitly_disconnected'] = True
+    session.modified = True
+    
+    current_app.logger.info("Fitbit explicitly disconnected, all tokens removed")
+    return jsonify({'success': True, 'message': 'Disconnected from Fitbit'})
 
 
 @bp.route('/cache/clear', methods=['POST'])

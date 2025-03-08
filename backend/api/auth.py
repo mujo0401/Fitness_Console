@@ -73,18 +73,26 @@ def login():
                           'profile', 'settings', 'sleep', 'social', 'weight']
             # Only include valid scopes
             filtered_scopes = [s for s in scopes if s in valid_scopes]
-            # Add heartrate scope if explicitly requested
-            if 'heartrate' in scopes:
-                current_app.logger.info("Heartrate scope explicitly requested")
             
             # Combine with default scopes from config
             default_scopes = current_app.config['FITBIT_SCOPES']
             combined_scopes = list(set(default_scopes + filtered_scopes))
+            
+            # CRITICAL: Always ensure heartrate scope is included regardless of user input
+            if 'heartrate' not in combined_scopes:
+                current_app.logger.info("Adding critical heartrate scope which was missing")
+                combined_scopes.append('heartrate')
+                
             scope_string = ' '.join(combined_scopes)
             current_app.logger.info(f"Using custom scope set: {scope_string}")
         else:
-            # Use default scopes from config
-            scope_string = ' '.join(current_app.config['FITBIT_SCOPES'])
+            # Use default scopes from config with heartrate explicitly added
+            default_scopes = current_app.config['FITBIT_SCOPES']
+            if 'heartrate' not in default_scopes:
+                default_scopes.append('heartrate')
+                current_app.logger.info("Adding heartrate scope to default scopes")
+            
+            scope_string = ' '.join(default_scopes)
             current_app.logger.info(f"Using default scopes from config: {scope_string}")
             
         params = {
@@ -226,6 +234,11 @@ def callback():
         session['oauth_token'] = token_data
         session['token_acquired_at'] = time.time()  # Store when we received the token
         
+        # Clear any disconnect flags since we have a fresh authentication
+        if 'fitbit_explicitly_disconnected' in session:
+            current_app.logger.info("Clearing fitbit_explicitly_disconnected flag after successful authentication")
+            session.pop('fitbit_explicitly_disconnected', None)
+        
         # Force session save to prevent data loss
         current_app.logger.info("Forcing session save...")
         session.modified = True
@@ -333,10 +346,19 @@ def get_token():
 def logout():
     """Clear the user's session"""
     try:
-        session.pop('oauth_token', None)
-        session.pop('oauth_state', None)
-        session.pop('token_acquired_at', None)
-        session.pop('token_refreshed_at', None)
+        # Get any specific service to disconnect
+        service = request.args.get('service', None)
+        
+        if service == 'fitbit' or service is None:
+            # Remove Fitbit-specific tokens and set disconnect flag
+            session.pop('oauth_token', None)
+            session.pop('oauth_state', None)
+            session.pop('token_acquired_at', None)
+            session.pop('token_refreshed_at', None)
+            session['fitbit_explicitly_disconnected'] = True
+            current_app.logger.info("Fitbit tokens removed and explicitly disconnected")
+        
+        # Make sure session changes are saved
         session.modified = True
         
         current_app.logger.info("User logged out successfully")
@@ -372,4 +394,64 @@ def debug_session():
         return jsonify(session_data)
     except Exception as e:
         current_app.logger.error(f"Error in debug-session route: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/connections', methods=['GET'])
+def check_all_connections():
+    """Check and report on the status of all service connections"""
+    try:
+        # Check if force reconnect is requested
+        force_reconnect = request.args.get('force_reconnect', 'false').lower() == 'true'
+        
+        # List of disconnect flags to look for
+        disconnect_flags = [
+            'fitbit_explicitly_disconnected',
+            'google_fit_explicitly_disconnected',
+            'youtube_music_explicitly_disconnected'
+        ]
+        
+        # Connection tokens to check
+        connection_tokens = {
+            'fitbit': 'oauth_token' in session,
+            'google_fit': 'google_fit_token' in session,
+            'youtube_music': session.get('youtube_music_connected', False)
+        }
+        
+        # If forcing reconnect, clear disconnection flags
+        if force_reconnect:
+            for flag in disconnect_flags:
+                if flag in session:
+                    session.pop(flag)
+            session.modified = True
+            current_app.logger.info("Cleared all disconnection flags due to force_reconnect")
+        
+        # For each service, check if it's disconnected
+        disconnected = {
+            'fitbit': session.get('fitbit_explicitly_disconnected', False),
+            'google_fit': session.get('google_fit_explicitly_disconnected', False),
+            'youtube_music': session.get('youtube_music_explicitly_disconnected', False)
+        }
+        
+        # Check if services are connected (has token and not disconnected)
+        connected = {
+            'fitbit': connection_tokens['fitbit'] and not disconnected['fitbit'],
+            'google_fit': connection_tokens['google_fit'] and not disconnected['google_fit'],
+            'youtube_music': connection_tokens['youtube_music'] and not disconnected['youtube_music']
+        }
+        
+        # Add some extra diagnostic info
+        diagnostics = {
+            'session_keys': list(session.keys()),
+            'force_reconnect_applied': force_reconnect,
+            'environment': os.environ.get('FLASK_ENV', 'production')
+        }
+        
+        return jsonify({
+            'connected': connected,
+            'has_tokens': connection_tokens,
+            'disconnected_flags': disconnected,
+            'diagnostics': diagnostics
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error checking connections: {str(e)}")
         return jsonify({'error': str(e)}), 500

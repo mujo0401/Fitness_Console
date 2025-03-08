@@ -108,19 +108,7 @@ const useYouTubeSearch = (setAlertMessage, setAlertSeverity, setAlertOpen) => {
     
     // Search debouncing
     const timer = setTimeout(() => {
-      // Check if the search matches any rock bands first
-      const rockBandRegex = /breaking\s*benjamin|twenty\s*one\s*pilots|linkin\s*park|of\s*monsters\s*and\s*men|imagine\s*dragons|metallica/i;
-      
-      if (rockBandRegex.test(searchTerm)) {
-        const matchingSongs = searchRockCatalog(searchTerm);
-        
-        if (matchingSongs.length > 0) {
-          setFilteredSongs(matchingSongs);
-          return;
-        }
-      }
-      
-      // If no rock band matches, use YouTube API
+      // Always use the API for search
       performSearch(searchTerm);
     }, 500); // Debounce 500ms
     

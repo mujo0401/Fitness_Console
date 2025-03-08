@@ -37,9 +37,21 @@ const SongCard = ({ song, onToggleLike }) => {
         <Box className="song-card-media">
           <CardMedia
             component="img"
-            image={song.thumbnail}
+            image={song.thumbnail || song.fallbackThumbnail || `https://dummyimage.com/300x300/blue/fff.png&text=${encodeURIComponent(song.artist || 'Music')}`}
             alt={song.title}
             sx={{ aspectRatio: '16/9', objectFit: 'cover' }}
+            onError={(e) => {
+              // If primary thumbnail fails, try fallback or use a generated one
+              if (song.fallbackThumbnail && e.target.src !== song.fallbackThumbnail) {
+                e.target.src = song.fallbackThumbnail;
+              } else {
+                // Generate a simple colored placeholder
+                const colorIndex = (song.title?.charCodeAt(0) || 0) % 6;
+                const colors = ['blue', 'red', 'yellow', 'green', 'purple', 'orange'];
+                const color = colors[colorIndex];
+                e.target.src = `https://dummyimage.com/300x300/${color}/fff.png&text=${encodeURIComponent(song.artist || 'Music')}`;
+              }
+            }}
           />
           <Box className="song-card-overlay" />
           <Box 

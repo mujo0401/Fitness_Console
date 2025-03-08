@@ -6,146 +6,74 @@ export const MusicPlayerContext = createContext();
 // Custom hook to use the music player context
 export const useMusicPlayer = () => useContext(MusicPlayerContext);
 
-// Sample album data for popular rock bands
-const rockAlbums = {
-  breakingBenjamin: [
-    {
-      id: 'bb_phobia',
-      title: 'Phobia',
-      artist: 'Breaking Benjamin',
-      year: 2006,
-      coverArt: 'https://upload.wikimedia.org/wikipedia/en/thumb/7/7a/Breaking_Benjamin_-_Phobia.jpg/220px-Breaking_Benjamin_-_Phobia.jpg',
-      tracks: [
-        { id: 'bb_phobia_1', title: 'Intro', duration: 124, videoId: 'kEJ_AxWAvVM' },
-        { id: 'bb_phobia_2', title: 'The Diary of Jane', duration: 242, videoId: 'DWaB4PXCwFU' },
-        { id: 'bb_phobia_3', title: 'Breath', duration: 228, videoId: 'qQ3qJmgktS0' },
-        { id: 'bb_phobia_4', title: 'You', duration: 258, videoId: '-cKAN5Tp6_0' },
-        { id: 'bb_phobia_5', title: 'Evil Angel', duration: 242, videoId: '7FXE_c7Jc-k' },
-        { id: 'bb_phobia_6', title: 'Until The End', duration: 246, videoId: 'O3bfRBassAE' },
-        { id: 'bb_phobia_7', title: 'Dance With The Devil', duration: 230, videoId: 'lMSkC2PGyTs' },
-        { id: 'bb_phobia_8', title: 'Topless', duration: 210, videoId: 'UYnf1vfgm-Q' },
-        { id: 'bb_phobia_9', title: 'Here We Are', duration: 240, videoId: 'fNtIRvXeLQo' },
-        { id: 'bb_phobia_10', title: 'Unknown Soldier', duration: 226, videoId: 'KNTrhAxTjEc' },
-        { id: 'bb_phobia_11', title: 'Had Enough', duration: 218, videoId: '4bb8a6dLZh4' },
-        { id: 'bb_phobia_12', title: 'You Fight Me', duration: 222, videoId: 'zAZ77Ot-F8M' },
-        { id: 'bb_phobia_13', title: 'The Diary of Jane (Acoustic)', duration: 242, videoId: 'sXVpcgfxcCU' }
-      ]
-    },
-    {
-      id: 'bb_ember',
-      title: 'Ember',
-      artist: 'Breaking Benjamin',
-      year: 2018,
-      coverArt: 'https://upload.wikimedia.org/wikipedia/en/4/47/Breaking_Benjamin_-_Ember.jpg',
-      tracks: [
-        { id: 'bb_ember_1', title: 'Feed the Wolf', duration: 217, videoId: 'TN4Ccy6j5HQ' },
-        { id: 'bb_ember_2', title: 'Red Cold River', duration: 205, videoId: 'BXOH4IgRjM8' },
-        { id: 'bb_ember_3', title: 'Tourniquet', duration: 215, videoId: 'dAiHME-3C7c' },
-        { id: 'bb_ember_4', title: 'Psycho', duration: 211, videoId: 'BHtZMSB4TDY' },
-        { id: 'bb_ember_5', title: 'The Dark of You', duration: 228, videoId: 'p06dl4DG0HU' },
-        { id: 'bb_ember_6', title: 'Down', duration: 227, videoId: 'DChj8YN2i6c' },
-        { id: 'bb_ember_7', title: 'Torn in Two', duration: 242, videoId: 'GKRKquvv4wI' },
-        { id: 'bb_ember_8', title: 'Blood', duration: 238, videoId: 'k8P-G_ttZ_0' },
-        { id: 'bb_ember_9', title: 'Save Yourself', duration: 206, videoId: '_YvBKxF6iCU' },
-        { id: 'bb_ember_10', title: 'Close Your Eyes', duration: 188, videoId: 'DG1mgIh3qXg' },
-        { id: 'bb_ember_11', title: 'Vega', duration: 76, videoId: 'xdxZ2AfwJXs' },
-        { id: 'bb_ember_12', title: 'Save Yourself (Acoustic)', duration: 206, videoId: 'Hn7mBIdR8zI' }
-      ]
+// NON-COPYRIGHTED placeholder music catalog
+// Uses generated titles and images with no copyrighted content
+const generatePlaceholderCatalog = () => {
+  // Music genres to use for generic content
+  const genres = ['Rock', 'Electronic', 'Ambient', 'Instrumental', 'Jazz', 'Classical'];
+  const moods = ['Energetic', 'Relaxing', 'Focused', 'Upbeat', 'Calm', 'Intense'];
+  const artists = ['Demo Artist', 'Music Producer', 'Studio Band', 'Workout Mix', 'Instrumental Group', 'Sound Library'];
+  
+  // Generate catalog with non-copyrighted content
+  const catalog = {};
+  
+  // Generate a few generic artist entries
+  for (let i = 0; i < 4; i++) {
+    const artistId = `artist_${i}`;
+    const artistName = artists[i % artists.length];
+    
+    catalog[artistId] = [];
+    
+    // Each artist has 1-2 albums
+    for (let j = 0; j < 1 + (i % 2); j++) {
+      const albumId = `${artistId}_album_${j}`;
+      const genre = genres[(i + j) % genres.length];
+      const year = 2010 + (i * 2) + j;
+      
+      // Create album with non-copyrighted title and placeholder image
+      const album = {
+        id: albumId,
+        title: `${genre} ${moods[j % moods.length]} Collection`,
+        artist: artistName,
+        year: year,
+        // Generate a colorful placeholder image instead of using copyrighted album art
+        coverArt: `https://dummyimage.com/300x300/${getRandomColor()}/fff.png&text=${encodeURIComponent(genre)}`,
+        tracks: []
+      };
+      
+      // Generate non-copyrighted tracks
+      const trackCount = 8 + (i % 5);
+      for (let k = 0; k < trackCount; k++) {
+        const mood = moods[k % moods.length];
+        const trackNum = k + 1;
+        
+        // Create track with original, non-copyrighted title
+        album.tracks.push({
+          id: `${albumId}_track_${k}`,
+          title: `${mood} ${genre} Track ${trackNum}`,
+          duration: 180 + (k * 15), // 3-5 minute tracks
+          // Each track gets a random color for visualization
+          videoId: `demo${i}${j}${k}`, // Non-functional placeholder ID
+          bpm: 80 + (k * 5) // Varied BPM
+        });
+      }
+      
+      catalog[artistId].push(album);
     }
-  ],
-  twentyOnePilots: [
-    {
-      id: 'top_blurryface',
-      title: 'Blurryface',
-      artist: 'Twenty One Pilots',
-      year: 2015,
-      coverArt: 'https://upload.wikimedia.org/wikipedia/en/7/7d/Blurryface_by_Twenty_One_Pilots.png',
-      tracks: [
-        { id: 'top_blurryface_1', title: 'Heavydirtysoul', duration: 234, videoId: 'r_9Kf0D5BTs' },
-        { id: 'top_blurryface_2', title: 'Stressed Out', duration: 202, videoId: 'pXRviuL6vMY' },
-        { id: 'top_blurryface_3', title: 'Ride', duration: 214, videoId: 'Pw-0pbY9JeU' },
-        { id: 'top_blurryface_4', title: 'Fairly Local', duration: 210, videoId: 'HDI9inno86U' },
-        { id: 'top_blurryface_5', title: 'Tear in My Heart', duration: 180, videoId: 'nky4me4NP70' },
-        { id: 'top_blurryface_6', title: 'Lane Boy', duration: 257, videoId: 'ywvRgGAd2XI' },
-        { id: 'top_blurryface_7', title: 'The Judge', duration: 290, videoId: 'PbP-aIe51Ek' },
-        { id: 'top_blurryface_8', title: 'Doubt', duration: 192, videoId: 'MEiVnNNpJLA' },
-        { id: 'top_blurryface_9', title: 'Polarize', duration: 230, videoId: 'MiPBQJq49xk' },
-        { id: 'top_blurryface_10', title: 'We Don\'t Believe What\'s on TV', duration: 170, videoId: 'zZEumf7RowI' },
-        { id: 'top_blurryface_11', title: 'Message Man', duration: 200, videoId: 'iE_54CU7Fxk' },
-        { id: 'top_blurryface_12', title: 'Hometown', duration: 237, videoId: 'pJtlLzsDICo' },
-        { id: 'top_blurryface_13', title: 'Not Today', duration: 239, videoId: 'yqem6k_3pZ8' },
-        { id: 'top_blurryface_14', title: 'Goner', duration: 236, videoId: '3J5mE-J1WLk' }
-      ]
-    }
-  ],
-  linkinPark: [
-    {
-      id: 'lp_hybrid_theory',
-      title: 'Hybrid Theory',
-      artist: 'Linkin Park',
-      year: 2000,
-      coverArt: 'https://upload.wikimedia.org/wikipedia/en/2/2a/Linkin_Park_Hybrid_Theory_Album_Cover.jpg',
-      tracks: [
-        { id: 'lp_hybrid_1', title: 'Papercut', duration: 184, videoId: 'vjVkXlXsuu8' },
-        { id: 'lp_hybrid_2', title: 'One Step Closer', duration: 157, videoId: '4qlCC1GOwFw' },
-        { id: 'lp_hybrid_3', title: 'With You', duration: 203, videoId: 'M8UTS2yjXAc' },
-        { id: 'lp_hybrid_4', title: 'Points of Authority', duration: 200, videoId: 'jZSPAp8kCl4' },
-        { id: 'lp_hybrid_5', title: 'Crawling', duration: 209, videoId: 'Gd9OhYroLN0' },
-        { id: 'lp_hybrid_6', title: 'Runaway', duration: 184, videoId: '1NSyU3unPPk' },
-        { id: 'lp_hybrid_7', title: 'By Myself', duration: 187, videoId: 'sblR0eIRW-I' },
-        { id: 'lp_hybrid_8', title: 'In the End', duration: 216, videoId: 'eVTXPUF4Oz4' },
-        { id: 'lp_hybrid_9', title: 'A Place for My Head', duration: 184, videoId: '3t2WkCudwfY' },
-        { id: 'lp_hybrid_10', title: 'Forgotten', duration: 194, videoId: 'HNCgBuI2eJc' },
-        { id: 'lp_hybrid_11', title: 'Cure for the Itch', duration: 157, videoId: 'qqC5sdsHLq8' },
-        { id: 'lp_hybrid_12', title: 'Pushing Me Away', duration: 191, videoId: 'GBUJvCxewvU' }
-      ]
-    },
-    {
-      id: 'lp_meteora',
-      title: 'Meteora',
-      artist: 'Linkin Park',
-      year: 2003,
-      coverArt: 'https://upload.wikimedia.org/wikipedia/en/0/0c/Linkin_Park_Meteora_Album_Cover.jpg',
-      tracks: [
-        { id: 'lp_meteora_1', title: 'Foreword', duration: 13, videoId: 'xcJmE4c50K8' },
-        { id: 'lp_meteora_2', title: 'Don\'t Stay', duration: 187, videoId: 'oWfGOVWrueo' },
-        { id: 'lp_meteora_3', title: 'Somewhere I Belong', duration: 214, videoId: 'zsCD5XCu6CM' },
-        { id: 'lp_meteora_4', title: 'Lying from You', duration: 175, videoId: '_QdPW8JrYzQ' },
-        { id: 'lp_meteora_5', title: 'Hit the Floor', duration: 164, videoId: 'oMals9XXQY8' },
-        { id: 'lp_meteora_6', title: 'Easier to Run', duration: 204, videoId: 'U5zdmjVeQzE' },
-        { id: 'lp_meteora_7', title: 'Faint', duration: 162, videoId: 'LYU-8IFcDPw' },
-        { id: 'lp_meteora_8', title: 'Figure.09', duration: 197, videoId: 'LnwPVEa_IfE' },
-        { id: 'lp_meteora_9', title: 'Breaking the Habit', duration: 196, videoId: 'v2H4l9RpkwM' },
-        { id: 'lp_meteora_10', title: 'From the Inside', duration: 173, videoId: 'YLHpvjrFpe0' },
-        { id: 'lp_meteora_11', title: 'Nobody\'s Listening', duration: 179, videoId: 'QJ87793QXes' },
-        { id: 'lp_meteora_12', title: 'Session', duration: 144, videoId: 'J1KFZVGrZzY' },
-        { id: 'lp_meteora_13', title: 'Numb', duration: 187, videoId: 'kXYiU_JCYtU' }
-      ]
-    }
-  ],
-  ofMonstersAndMen: [
-    {
-      id: 'omam_myhead',
-      title: 'My Head Is An Animal',
-      artist: 'Of Monsters and Men',
-      year: 2011,
-      coverArt: 'https://upload.wikimedia.org/wikipedia/en/6/60/My_Head_Is_an_Animal.jpg',
-      tracks: [
-        { id: 'omam_myhead_1', title: 'Dirty Paws', duration: 244, videoId: 'mCHUw7ACS8o' },
-        { id: 'omam_myhead_2', title: 'King and Lionheart', duration: 252, videoId: 'A76a_LNIYwE' },
-        { id: 'omam_myhead_3', title: 'Mountain Sound', duration: 226, videoId: 'qt7ox1M_XG4' },
-        { id: 'omam_myhead_4', title: 'Slow and Steady', duration: 268, videoId: 'NezxBvxpKTw' },
-        { id: 'omam_myhead_5', title: 'From Finner', duration: 254, videoId: 'H8lRbYdElgw' },
-        { id: 'omam_myhead_6', title: 'Little Talks', duration: 266, videoId: 'ghb6eDopW8I' },
-        { id: 'omam_myhead_7', title: 'Six Weeks', duration: 307, videoId: 'I35XPs0fXFU' },
-        { id: 'omam_myhead_8', title: 'Love Love Love', duration: 204, videoId: 'beiPP_MGz6I' },
-        { id: 'omam_myhead_9', title: 'Your Bones', duration: 240, videoId: 'IgEXrHG4NMc' },
-        { id: 'omam_myhead_10', title: 'Sloom', duration: 216, videoId: 'ZuS0YGK8pkM' },
-        { id: 'omam_myhead_11', title: 'Lakehouse', duration: 290, videoId: 'Yk2x3TeRqa0' },
-        { id: 'omam_myhead_12', title: 'Yellow Light', duration: 349, videoId: 'vDrfJhXJbxQ' }
-      ]
-    }
-  ]
+  }
+  
+  return catalog;
+};
+
+// Helper to generate random colors for placeholder images
+const getRandomColor = () => {
+  const colors = [
+    '4285F4', '34A853', 'FBBC05', 'EA4335', // Primary colors
+    '673AB7', '3F51B5', '2196F3', '03A9F4', // Blues/Purples
+    '00BCD4', '009688', '4CAF50', '8BC34A', // Greens/Teals
+    'CDDC39', 'FFC107', 'FF9800', 'FF5722'  // Yellows/Oranges
+  ];
+  return colors[Math.floor(Math.random() * colors.length)];
 };
 
 // MusicPlayerProvider component
@@ -156,10 +84,10 @@ export const MusicPlayerProvider = ({ children }) => {
   const [volume, setVolume] = useState(80);
   const [muted, setMuted] = useState(false);
   const [queue, setQueue] = useState([]);
-  const [showMiniPlayer, setShowMiniPlayer] = useState(false);
+  const [showMiniPlayer, setShowMiniPlayer] = useState(true);
   const [repeatMode, setRepeatMode] = useState('none'); // 'none', 'all', 'one'
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
-  const [rockCatalog, setRockCatalog] = useState(rockAlbums);
+  const [rockCatalog, setRockCatalog] = useState(generatePlaceholderCatalog());
   
   const playerRef = useRef(null);
   const progressInterval = useRef(null);
@@ -206,18 +134,38 @@ export const MusicPlayerProvider = ({ children }) => {
     console.log('Initializing YouTube player in global context');
     
     try {
-      // Create hidden element if it doesn't exist
-      let playerElement = document.getElementById('global-youtube-player');
-      if (!playerElement) {
-        playerElement = document.createElement('div');
-        playerElement.id = 'global-youtube-player';
-        playerElement.style.display = 'none';
-        document.body.appendChild(playerElement);
+      // Clean up any existing player first
+      if (playerRef.current) {
+        try {
+          playerRef.current.destroy();
+          playerRef.current = null;
+        } catch (e) {
+          console.warn("Could not destroy previous player instance:", e);
+        }
       }
       
+      // Create hidden element if it doesn't exist or recreate it
+      let playerElement = document.getElementById('global-youtube-player');
+      if (playerElement) {
+        playerElement.remove(); // Remove any existing element
+      }
+      
+      // Create a fresh element
+      playerElement = document.createElement('div');
+      playerElement.id = 'global-youtube-player';
+      playerElement.style.position = 'absolute';
+      playerElement.style.top = '-9999px';
+      playerElement.style.left = '-9999px';
+      playerElement.style.width = '120px';
+      playerElement.style.height = '120px';
+      document.body.appendChild(playerElement);
+      
+      console.log("Created player element:", playerElement);
+      
+      // Don't use a placeholder video ID - load an empty player
       playerRef.current = new window.YT.Player('global-youtube-player', {
-        height: '0',
-        width: '0',
+        height: '120',
+        width: '120',
         playerVars: {
           'playsinline': 1,
           'controls': 0,
@@ -232,6 +180,8 @@ export const MusicPlayerProvider = ({ children }) => {
           'onStateChange': onPlayerStateChange,
           'onError': (event) => {
             console.error('YouTube player error:', event.data);
+            // Reset the player state on error
+            setIsPlaying(false);
           }
         }
       });
@@ -249,6 +199,11 @@ export const MusicPlayerProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Error initializing YouTube player:', error);
+      // Try again after a delay
+      setTimeout(() => {
+        console.log("Retrying YouTube player initialization...");
+        initializeYouTubePlayer();
+      }, 3000);
     }
   };
   
@@ -256,25 +211,64 @@ export const MusicPlayerProvider = ({ children }) => {
     console.log("YouTube player ready in global context");
     event.target.setVolume(volume);
     
+    // Ensure player is muted initially (will unmute when actually playing)
+    try {
+      event.target.mute();
+      // Immediately stop the placeholder video
+      event.target.stopVideo();
+    } catch (e) {
+      console.warn("Could not mute or stop player on init:", e);
+    }
+    
+    console.log("Player ready, waiting for user to select a song");
+    
     // Restore previous state if available
     if (window.musicPlayerState && window.musicPlayerState.currentSong) {
       const { videoId, currentTime, isPlaying } = window.musicPlayerState;
       
+      console.log("Restoring state with videoId:", videoId, "isPlaying:", isPlaying);
+      
       try {
-        playerRef.current.loadVideoById(videoId);
+        // Only try to load a video if it's a real YouTube ID
+        const isRealYouTubeId = videoId && 
+                               !videoId.startsWith('demo') && 
+                               !videoId.startsWith('track_') && 
+                               !videoId.startsWith('workout_demo');
         
-        if (currentTime) {
-          playerRef.current.seekTo(currentTime);
-        }
-        
-        if (isPlaying) {
-          setTimeout(() => {
-            playerRef.current.playVideo();
-            setIsPlaying(true);
-          }, 300);
+        if (isRealYouTubeId) {
+          console.log("Loading saved video:", videoId);
+          
+          // Unmute before loading
+          event.target.unMute();
+          // Load the video but don't autoplay yet
+          playerRef.current.cueVideoById(videoId);
+          
+          if (currentTime) {
+            console.log("Seeking to saved position:", currentTime);
+            playerRef.current.seekTo(currentTime);
+          }
+          
+          if (isPlaying) {
+            console.log("Auto-playing saved video after delay");
+            setTimeout(() => {
+              try {
+                playerRef.current.playVideo();
+                setIsPlaying(true);
+              } catch (e) {
+                console.error("Failed to auto-play saved video:", e);
+              }
+            }, 500);
+          } else {
+            console.log("Saved video ready but paused");
+            setIsPlaying(false);
+          }
         } else {
-          playerRef.current.pauseVideo();
-          setIsPlaying(false);
+          console.log("Saved video is a demo ID, not loading actual YouTube video");
+          playerRef.current.stopVideo();
+          // For demo tracks, we still set UI state
+          if (isPlaying) {
+            setIsPlaying(true);
+          }
         }
       } catch (error) {
         console.error('Error restoring player state:', error);
@@ -318,14 +312,54 @@ export const MusicPlayerProvider = ({ children }) => {
   const playSong = (song) => {
     if (!song) return;
     
+    console.log("Attempting to play song:", song);
     setCurrentSong(song);
     
     // If player is initialized, load and play the video
     if (playerRef.current) {
-      playerRef.current.loadVideoById(song.videoId);
-      playerRef.current.setVolume(muted ? 0 : volume);
-      setIsPlaying(true);
-      setShowMiniPlayer(true);
+      try {
+        // Check if this is a real YouTube video ID or a demo ID
+        const isRealYouTubeId = song.videoId && 
+                               !song.videoId.startsWith('demo') && 
+                               !song.videoId.startsWith('track_') && 
+                               !song.videoId.startsWith('workout_demo');
+        
+        console.log("Is real YouTube ID:", isRealYouTubeId, "VideoID:", song.videoId);
+        
+        if (isRealYouTubeId) {
+          // Load real YouTube video
+          console.log("Loading real YouTube video:", song.videoId);
+          playerRef.current.loadVideoById(song.videoId);
+          
+          // Force play after a short delay to ensure it starts
+          setTimeout(() => {
+            if (playerRef.current) {
+              console.log("Forcing playback to start");
+              playerRef.current.playVideo();
+            }
+          }, 500);
+        } else {
+          // For demo IDs, we'll show a visual player but not load a real video
+          // This simulates playback without requiring real videos
+          console.log("Playing demo track (no actual video loaded):", song.title);
+          // For demos, we'll just stop any currently playing video and show UI
+          playerRef.current.stopVideo();
+          
+          // For demo tracks, we still want to show the player as "playing"
+          setIsPlaying(true);
+        }
+        
+        playerRef.current.setVolume(muted ? 0 : volume);
+        setIsPlaying(true);
+        setShowMiniPlayer(true);
+      } catch (error) {
+        console.error("Error playing song:", error);
+        // Still set as playing for UI feedback even if real playback fails
+        setIsPlaying(true);
+        setShowMiniPlayer(true);
+      }
+    } else {
+      console.warn("YouTube player not initialized yet");
     }
     
     // Save player state
@@ -336,16 +370,57 @@ export const MusicPlayerProvider = ({ children }) => {
   const togglePlay = () => {
     if (!currentSong) return;
     
+    console.log("Toggle play called, current state:", isPlaying);
+    
     if (playerRef.current) {
-      if (isPlaying) {
-        playerRef.current.pauseVideo();
-      } else {
-        playerRef.current.playVideo();
+      try {
+        // Check if this is a real YouTube video ID or a demo ID
+        const isRealYouTubeId = currentSong.videoId && 
+                               !currentSong.videoId.startsWith('demo') && 
+                               !currentSong.videoId.startsWith('track_') && 
+                               !currentSong.videoId.startsWith('workout_demo');
+        
+        if (isPlaying) {
+          console.log("Pausing playback");
+          // Pausing works for both real and demo tracks
+          if (isRealYouTubeId) {
+            playerRef.current.pauseVideo();
+          }
+          setIsPlaying(false);
+        } else {
+          console.log("Resuming playback");
+          if (isRealYouTubeId) {
+            // First, make sure the video is loaded
+            const playerState = playerRef.current.getPlayerState();
+            console.log("Current player state:", playerState);
+            
+            // If video is not loaded or cued, reload it
+            if (playerState === -1 || playerState === 5) {
+              console.log("Video not loaded, loading video:", currentSong.videoId);
+              playerRef.current.loadVideoById(currentSong.videoId, currentTime);
+            } else {
+              // Otherwise just play it
+              console.log("Playing loaded video");
+              playerRef.current.playVideo();
+            }
+            
+            // Ensure volume is set correctly
+            playerRef.current.setVolume(muted ? 0 : volume);
+            playerRef.current.unMute();
+          }
+          setIsPlaying(true);
+        }
+        
+        // Save player state
+        savePlayerState();
+      } catch (error) {
+        console.error("Error during play/pause:", error);
+        // Toggle UI state anyway for better UX
+        setIsPlaying(!isPlaying);
       }
+    } else {
+      console.warn("Player not initialized, toggling UI only");
       setIsPlaying(!isPlaying);
-      
-      // Save player state
-      savePlayerState();
     }
   };
   

@@ -64,20 +64,21 @@ app.config.from_object(Config)
 app.secret_key = app.config['SECRET_KEY']
 
 # Set secure cookie settings
-
-app.config['SESSION_COOKIE_SECURE'] = True  # Must be True when SameSite=None for Chrome to accept the cookie
+if env == 'production':
+    app.config['SESSION_COOKIE_SECURE'] = True  # Must be True when SameSite=None for Chrome to accept the cookie
+else:
+    app.config['SESSION_COOKIE_SECURE'] = False  # For local development, set to False
 
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 
-app.config['SESSION_COOKIE_SAMESITE'] = None  # IMPORTANT: Must be None (not 'None') for cross-site cookies
+# Using Lax instead of None to prevent modern browser warnings about third-party cookies
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  
 
 app.config['SESSION_COOKIE_PATH'] = '/'
 
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)  # Extended for better testing
 
 app.config['SESSION_REFRESH_EACH_REQUEST'] = True
-
-
 
 # Configure server-side session
 
@@ -139,23 +140,32 @@ CORS(app,
 
 
 
-# Add CORS headers to all responses
+# Add CORS headers and force session save on all responses
 
 @app.after_request
 
 def after_request(response):
-
+    # Force session save on every request
+    session.modified = True
+    
+    # Add cache control headers for API responses to prevent caching
+    if request.path.startswith('/api/'):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    
+    # Add CORS headers
     origin = request.headers.get('Origin')
 
     if origin in allowed_origins:
-
         response.headers.set('Access-Control-Allow-Origin', origin)
 
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-
     response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS,PUT,DELETE')
-
     response.headers.add('Access-Control-Allow-Credentials', 'true')
+    
+    # Debug logging for session status
+    app.logger.debug(f"Session after request: {bool(session and 'oauth_token' in session)}")
 
     return response
 

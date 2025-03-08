@@ -1,99 +1,100 @@
 /**
  * Mock songs for development and testing
+ * Uses completely non-copyrighted, generated content with no references to actual music
  */
 export const mockSongs = [
   {
-    id: 'song1',
-    title: 'Power Up',
-    artist: 'Energy Crew',
-    album: 'Workout Sessions',
-    thumbnail: 'https://i3.ytimg.com/vi/eVTXPUF4Oz4/mqdefault.jpg',
+    id: 'demo_song1',
+    title: 'Energy Boost',
+    artist: 'Workout Mix',
+    album: 'Fitness Sessions',
+    thumbnail: 'https://dummyimage.com/300x300/blue/fff.png&text=Workout',
     duration: 212,
-    videoId: 'eVTXPUF4Oz4',
+    videoId: 'demo01', // Non-functional placeholder ID
     bpm: 145,
     tags: ['Workout', 'High Intensity'],
     liked: true
   },
   {
-    id: 'song2',
-    title: 'Run the Miles',
-    artist: 'Cardio Kings',
-    album: 'Marathon Mix',
-    thumbnail: 'https://i3.ytimg.com/vi/kXYiU_JCYtU/mqdefault.jpg',
+    id: 'demo_song2',
+    title: 'Cardio Rhythm',
+    artist: 'Running Tracks',
+    album: 'Fitness Collection',
+    thumbnail: 'https://dummyimage.com/300x300/red/fff.png&text=Running',
     duration: 198,
-    videoId: 'kXYiU_JCYtU',
+    videoId: 'demo02', // Non-functional placeholder ID
     bpm: 160,
     tags: ['Running', 'Cardio'],
     liked: false
   },
   {
-    id: 'song3',
-    title: 'Iron Heart',
-    artist: 'Muscle Squad',
-    album: 'Pump It Up',
-    thumbnail: 'https://i3.ytimg.com/vi/k2WcOJt-i8M/mqdefault.jpg',
+    id: 'demo_song3',
+    title: 'Power Lift',
+    artist: 'Gym Audio',
+    album: 'Strength Series',
+    thumbnail: 'https://dummyimage.com/300x300/yellow/fff.png&text=Strength',
     duration: 223,
-    videoId: 'k2WcOJt-i8M',
+    videoId: 'demo03', // Non-functional placeholder ID
     bpm: 125,
     tags: ['Strength', 'Workout'],
     liked: false
   },
   {
-    id: 'song4',
-    title: 'Interval Insanity',
-    artist: 'HIIT Heroes',
-    album: 'Peak Performance',
-    thumbnail: 'https://i3.ytimg.com/vi/LYU-8IFcDPw/mqdefault.jpg',
+    id: 'demo_song4',
+    title: 'Interval Training',
+    artist: 'Fitness Sounds',
+    album: 'High Intensity',
+    thumbnail: 'https://dummyimage.com/300x300/green/fff.png&text=HIIT',
     duration: 187,
-    videoId: 'LYU-8IFcDPw',
+    videoId: 'demo04', // Non-functional placeholder ID
     bpm: 155,
     tags: ['HIIT', 'High Intensity'],
     liked: true
   },
   {
-    id: 'song5',
-    title: 'Mindful Movement',
-    artist: 'Zen Flow',
-    album: 'Inner Balance',
-    thumbnail: 'https://i3.ytimg.com/vi/tAGnKpE4NCI/mqdefault.jpg',
+    id: 'demo_song5',
+    title: 'Meditation Moment',
+    artist: 'Calm Collective',
+    album: 'Recovery Series',
+    thumbnail: 'https://dummyimage.com/300x300/green/fff.png&text=Meditation',
     duration: 245,
-    videoId: 'tAGnKpE4NCI',
+    videoId: 'demo05', // Non-functional placeholder ID
     bpm: 90,
     tags: ['Chill', 'Recovery'],
     liked: false
   },
   {
-    id: 'song6',
-    title: 'Motivate',
-    artist: 'Goal Getters',
-    album: 'Push Your Limits',
-    thumbnail: 'https://i3.ytimg.com/vi/9zSoz8w-e4I/mqdefault.jpg',
+    id: 'demo_song6',
+    title: 'Motivation Beat',
+    artist: 'Focus Group',
+    album: 'Energy Series',
+    thumbnail: 'https://dummyimage.com/300x300/purple/fff.png&text=Motivation',
     duration: 210,
-    videoId: '9zSoz8w-e4I',
+    videoId: 'demo06', // Non-functional placeholder ID
     bpm: 138,
     tags: ['Motivation', 'Energy'],
     liked: true
   },
   {
-    id: 'song7',
-    title: 'Endurance',
-    artist: 'Marathon Minds',
-    album: 'Long Distance',
-    thumbnail: 'https://i3.ytimg.com/vi/CD-E-LDc384/mqdefault.jpg',
+    id: 'demo_song7',
+    title: 'Distance Runner',
+    artist: 'Tempo Tracks',
+    album: 'Cardio Collection',
+    thumbnail: 'https://dummyimage.com/300x300/blue/fff.png&text=Running',
     duration: 232,
-    videoId: 'CD-E-LDc384',
+    videoId: 'demo07', // Non-functional placeholder ID
     bpm: 165,
     tags: ['Running', 'Cardio'],
     liked: false
   },
   {
-    id: 'song8',
-    title: 'Cool Down',
-    artist: 'Recovery Rhythm',
-    album: 'After Burn',
-    thumbnail: 'https://i3.ytimg.com/vi/DWaB4PXCwFU/mqdefault.jpg',
+    id: 'demo_song8',
+    title: 'Recovery Session',
+    artist: 'Relaxation Sounds',
+    album: 'Cool Down Series',
+    thumbnail: 'https://dummyimage.com/300x300/blue/fff.png&text=Recovery',
     duration: 190,
-    videoId: 'DWaB4PXCwFU',
+    videoId: 'demo08', // Non-functional placeholder ID
     bpm: 85,
     tags: ['Recovery', 'Chill'],
     liked: false

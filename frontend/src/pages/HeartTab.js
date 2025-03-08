@@ -143,6 +143,12 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
       
       // Clear any error message since we have data
       setError('');
+      
+      // Explicitly update the activeDataSource to ensure rendering with Google Fit data
+      if (activeDataSource === 'auto') {
+        console.log("Setting active data source to googleFit");
+        setActiveDataSource('googleFit');
+      }
     }
   }, [googleFitData]);
   
@@ -151,8 +157,15 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
     console.log("Heart data updated:", heartData ? heartData.length : 0);
     if (heartData && heartData.length > 0) {
       console.log("Sample heart data:", heartData[0]);
+      
+      // Now the heart data is actually updated, call determineHeartRateDataToUse
+      // to ensure correct data source selection based on updated state
+      if (googleFitData && googleFitData.length > 0) {
+        console.log("Heart data updated with Google Fit data available, ensuring data source");
+        setActiveDataSource('googleFit');
+      }
     }
-  }, [heartData]);
+  }, [heartData, googleFitData]);
 
   // Effect to calculate advanced metrics and AI insights when heart data changes
   useEffect(() => {
@@ -534,6 +547,7 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
   
   // Determine which heart rate data to use based on settings and availability
   const determineHeartRateDataToUse = () => {
+    // Log the current state for debugging
     console.log("Determining heart rate data source:", {
       activeDataSource,
       googleFitDataLength: googleFitData ? googleFitData.length : 0,
@@ -541,16 +555,37 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
       appleHealthLength: appleHealthData ? appleHealthData.length : 0
     });
     
-    // Force checking googleFitData again to ensure it's up to date
+    // Prioritize Google Fit data if available, regardless of activeDataSource
+    // This ensures we always use Google Fit data when it exists to fix the rendering issue
     if (googleFitData && googleFitData.length > 0) {
-      console.log('Found Google Fit data in state:', googleFitData.length);
+      console.log('Found Google Fit data in state with length:', googleFitData.length);
+      console.log('Prioritizing Google Fit data for chart rendering');
+      
+      // The critical fix: set the active data source to Google Fit
+      // This addresses the race condition by explicitly making Google Fit the priority
+      if (activeDataSource === 'auto') {
+        console.log('Auto-selecting Google Fit data source');
+        setActiveDataSource('googleFit');
+      }
+      
+      // Force update the heart data with Google Fit data when available
+      // This ensures the chart gets the data regardless of timing issues
+      if (activeDataSource === 'googleFit' || activeDataSource === 'auto') {
+        // Use a new array to ensure React detects the change
+        console.log('Setting heart data with Google Fit data, length:', googleFitData.length);
+        setHeartData([...googleFitData]);
+        setError(''); // Clear any error since we have data
+        return; // Exit early - we've set the data
+      }
     }
     
+    // If we get here, either Google Fit data is not available or user explicitly chose another source
     switch (activeDataSource) {
       case 'fitbit':
         if (fitbitData && fitbitData.length > 0) {
-          setHeartData(fitbitData);
-          console.log('Using Fitbit data');
+          setHeartData([...fitbitData]);
+          console.log('Using Fitbit data, length:', fitbitData.length);
+          setError('');
         } else {
           setError('Fitbit data is not available. Please select another data source.');
           setHeartData([]);
@@ -558,9 +593,11 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
         break;
         
       case 'googleFit':
+        // This case should have been handled above, but keeping for completeness
         if (googleFitData && googleFitData.length > 0) {
-          console.log('Setting heart data to Google Fit data');
-          setHeartData([...googleFitData]);  // Create a new array copy to ensure state update
+          console.log('Setting heart data to Google Fit data, length:', googleFitData.length);
+          setHeartData([...googleFitData]);
+          setError('');
         } else {
           setError('Google Fit data is not available. Please select another data source.');
           setHeartData([]);
@@ -569,8 +606,9 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
         
       case 'appleHealth':
         if (appleHealthData && appleHealthData.length > 0) {
-          setHeartData(appleHealthData);
-          console.log('Using Apple Health data');
+          setHeartData([...appleHealthData]);
+          console.log('Using Apple Health data, length:', appleHealthData.length);
+          setError('');
         } else {
           setError('Apple Health data is not available. Please select another data source.');
           setHeartData([]);
@@ -591,7 +629,8 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
         
         if (combinedData.length > 0) {
           setHeartData(combinedData);
-          console.log('Using combined data:', combinedData.length);
+          console.log('Using combined data, length:', combinedData.length);
+          setError('');
         } else {
           setError('No heart rate data available from any source.');
           setHeartData([]);
@@ -611,25 +650,28 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
           appleHealth: appleHealthQuality
         });
         
-        // Use the highest quality dataset, prioritizing Google Fit if it has data 
+        // Always prioritize Google Fit data if available
         if (googleFitData && googleFitData.length > 0) {
           console.log('Auto-selected Google Fit data with length:', googleFitData.length);
-          console.log('Google Fit data sample:', googleFitData[0]);
-          setHeartData(prevData => {
-            // Force reset error state since we have data
-            setError('');
-            console.log('Force setting Google Fit data as heart data source');
-            return [...googleFitData]; // Create a new array copy to ensure state update
-          });
+          // Set active data source to Google Fit to ensure consistency
+          setActiveDataSource('googleFit');
+          setHeartData([...googleFitData]); 
+          setError('');
         } else if (fitbitQuality > appleHealthQuality && fitbitData && fitbitData.length > 0) {
           setHeartData([...fitbitData]);
           console.log('Auto-selected Fitbit data as highest quality');
+          setActiveDataSource('fitbit');
+          setError('');
         } else if (appleHealthData && appleHealthData.length > 0) {
           setHeartData([...appleHealthData]);
           console.log('Auto-selected Apple Health data');
+          setActiveDataSource('appleHealth');
+          setError('');
         } else if (fitbitData && fitbitData.length > 0) {
           setHeartData([...fitbitData]);
           console.log('Defaulting to Fitbit data');
+          setActiveDataSource('fitbit');
+          setError('');
         } else {
           // No data available from any source
           console.log('No heart rate data available from any source.');
@@ -746,8 +788,15 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
       return { avgHR: 0, maxHR: 0, minHR: 0, restingHR: 0 };
     }
     
+    // Check if we only have placeholder data for today
+    const hasOnlyPlaceholder = heartData.length === 1 && heartData[0].placeholder === true;
+    if (hasOnlyPlaceholder) {
+      console.log("Only placeholder data available for today");
+      return { avgHR: 0, maxHR: 0, minHR: 0, restingHR: 0 };
+    }
+    
     const values = heartData
-      .filter(item => (item.avg || item.value || 0) > 0)
+      .filter(item => (item.avg || item.value || 0) > 0 && !item.placeholder)
       .map(item => item.avg || item.value);
     
     if (values.length === 0) return { avgHR: 0, maxHR: 0, minHR: 0, restingHR: 0 };
@@ -1062,7 +1111,9 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
                       </Box>
                       
                       <Box sx={{ mt: 2 }}>
+                        {/* Chart rendering with key to force a complete re-render */}
                         <HeartRateChart 
+                          key={`heart-chart-${activeDataSource}-${period}-${date}`}
                           data={heartData}
                           fitbitData={fitbitData}
                           googleFitData={googleFitData}

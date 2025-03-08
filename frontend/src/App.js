@@ -6,10 +6,12 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { Box, GlobalStyles } from '@mui/material';
 import { useAuth } from './context/AuthContext';
 import { WorkoutPlanProvider } from './context/WorkoutPlanContext';
+import { MusicPlayerProvider } from './context/MusicPlayerContext';
 import Dashboard from './components/Dashboard';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import RateLimitNotification from './components/RateLimitNotification';
+import MiniPlayer from './components/music/MiniPlayer';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import './styles/App.css';
@@ -162,16 +164,34 @@ function App() {
   const { checkAuthStatus, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    // Check if user is authenticated on app load
-    checkAuthStatus();
+    // Check if user is authenticated on app load - and force reconnect to ensure services are available
+    checkAuthStatus(true); // Force reconnect on app load
     
     // Check for authentication callback in URL
     const urlParams = new URLSearchParams(window.location.search);
     const authStatus = urlParams.get('auth');
+    const musicConnected = urlParams.get('connected');
     
     if (authStatus === 'success') {
       // Clean URL after successful auth
       window.history.replaceState({}, document.title, '/');
+    }
+    
+    // Handle YouTube Music connection callback
+    if (musicConnected === 'true') {
+      // Force a connection status check for YouTube Music
+      try {
+        // Import directly to avoid circular dependencies
+        const axios = require('axios').default;
+        axios.get('/api/youtube-music/status?force_reconnect=true').catch(err => 
+          console.error('Error checking YouTube connection status:', err)
+        );
+      } catch (err) {
+        console.error('Error importing axios:', err);
+      }
+      
+      // Clean URL after processing
+      window.history.replaceState({}, document.title, '/music');
     }
   }, [checkAuthStatus]);
 
@@ -180,11 +200,12 @@ function App() {
       <CssBaseline />
       {googleFontStyles}
       <WorkoutPlanProvider>
-        <Router>
-          <Box sx={{ 
-            minHeight: '100vh', 
-            display: 'flex', 
-            flexDirection: 'column',
+        <MusicPlayerProvider>
+          <Router>
+            <Box sx={{ 
+              minHeight: '100vh', 
+              display: 'flex', 
+              flexDirection: 'column',
             backgroundImage: `
               radial-gradient(circle at 20% 30%, rgba(76, 175, 80, 0.05) 0%, rgba(0, 0, 0, 0) 40%),
               radial-gradient(circle at 80% 10%, rgba(33, 150, 243, 0.05) 0%, rgba(0, 0, 0, 0) 50%),
@@ -228,8 +249,10 @@ function App() {
             </Box>
             <Footer />
             <RateLimitNotification />
+            <MiniPlayer />
           </Box>
         </Router>
+      </MusicPlayerProvider>
       </WorkoutPlanProvider>
     </ThemeProvider>
   );

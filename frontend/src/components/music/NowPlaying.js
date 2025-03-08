@@ -121,12 +121,24 @@ const NowPlaying = ({ onToggleLike }) => {
             {currentSong ? (
               <Box 
                 component="img"
-                src={currentSong.thumbnail}
+                src={currentSong.thumbnail || currentSong.fallbackThumbnail || `https://dummyimage.com/300x300/blue/fff.png&text=${encodeURIComponent(currentSong.artist || 'Music')}`}
                 alt={currentSong.title}
                 sx={{ 
                   width: '100%',
                   height: '100%',
                   objectFit: 'cover',
+                }}
+                onError={(e) => {
+                  // If primary thumbnail fails, try fallback or use a generated one
+                  if (currentSong.fallbackThumbnail && e.target.src !== currentSong.fallbackThumbnail) {
+                    e.target.src = currentSong.fallbackThumbnail;
+                  } else {
+                    // Generate a simple colored placeholder
+                    const colorIndex = (currentSong.title?.charCodeAt(0) || 0) % 6;
+                    const colors = ['blue', 'red', 'yellow', 'green', 'purple', 'orange'];
+                    const color = colors[colorIndex];
+                    e.target.src = `https://dummyimage.com/300x300/${color}/fff.png&text=${encodeURIComponent(currentSong.artist || 'Music')}`;
+                  }
                 }}
               />
             ) : (

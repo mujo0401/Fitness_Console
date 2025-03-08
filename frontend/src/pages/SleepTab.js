@@ -35,7 +35,9 @@ import {
   ListItemText
 } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { isValid, format, subDays, addDays, addWeeks, subWeeks, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
+import { isValid, format, subDays, addDays, addWeeks, subWeeks, addMonths, subMonths, startOfWeek, endOfWeek, isAfter } from 'date-fns';
+import { LocalizationProvider, StaticDatePicker } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 // Icons
 import BedtimeIcon from '@mui/icons-material/Bedtime';
@@ -57,6 +59,9 @@ import WavesIcon from '@mui/icons-material/Waves';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import TimelineIcon from '@mui/icons-material/Timeline';
 
 // Services 
 import { sleepService, fitbitService, googleFitService, appleFitnessService, authService } from '../services/api';
@@ -113,9 +118,9 @@ const SLEEP_QUALITY_LEVELS = [
 
 // Time interval options
 const TIME_INTERVALS = [
-  { value: 'day', label: '1 Day' },
-  { value: 'week', label: '1 Week' },
-  { value: 'month', label: '1 Month' }
+  { value: 'day', label: 'Day', icon: <CalendarTodayIcon fontSize="small" /> },
+  { value: 'week', label: 'Week', icon: <TimelineIcon fontSize="small" /> },
+  { value: 'month', label: 'Month', icon: <HistoryIcon fontSize="small" /> }
 ];
 
 // Get sleep quality level based on score
@@ -184,6 +189,7 @@ const SleepTab = () => {
   const [googleFitData, setGoogleFitData] = useState(null);
   const [appleHealthData, setAppleHealthData] = useState(null);
   const [activeDataSource, setActiveDataSource] = useState('auto');
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [dataSourcesAvailable, setDataSourcesAvailable] = useState({
     fitbit: false,
     googleFit: false,
@@ -219,12 +225,32 @@ const SleepTab = () => {
       // Fix timezone issues by using the date parts directly
       setDate(newDate);
       setFormattedDate(format(newDate, 'yyyy-MM-dd'));
+      setShowDatePicker(false);
     }
   };
 
   // Handle period change
   const handlePeriodChange = (event) => {
     setPeriod(event.target.value);
+  };
+  
+  // Handle quick date navigation
+  const handleQuickDateChange = (direction) => {
+    let newDate;
+    switch (period) {
+      case 'day':
+        newDate = direction === 'next' ? addDays(date, 1) : subDays(date, 1);
+        break;
+      case 'week':
+        newDate = direction === 'next' ? addWeeks(date, 1) : subWeeks(date, 1);
+        break;
+      case 'month':
+        newDate = direction === 'next' ? addMonths(date, 1) : subMonths(date, 1);
+        break;
+      default:
+        newDate = direction === 'next' ? addDays(date, 1) : subDays(date, 1);
+    }
+    handleDateChange(newDate);
   };
 
   // Handle refresh button click
@@ -982,6 +1008,26 @@ const SleepTab = () => {
 
   return (
     <Box sx={{ p: { xs: 1, sm: 2 } }}>
+      {/* Date Picker Dialog */}
+      <Dialog
+        open={showDatePicker}
+        onClose={() => setShowDatePicker(false)}
+        maxWidth="xs"
+        PaperProps={{ sx: { borderRadius: 4, p: 2 } }}
+      >
+        <DialogContent>
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <StaticDatePicker
+              displayStaticWrapperAs="desktop"
+              value={date}
+              onChange={handleDateChange}
+              renderInput={(params) => <TextField {...params} />}
+              maxDate={new Date()}
+            />
+          </LocalizationProvider>
+        </DialogContent>
+      </Dialog>
+      
       {/* Data Source Dialog */}
       <DataSourceDialog
         open={showDataSourceDialog}
@@ -1045,19 +1091,73 @@ const SleepTab = () => {
                     </Avatar>
                     
                     <Box>
-                      <AnimatedGradientText 
+                      <Typography 
                         variant={isSmallScreen ? "h5" : "h4"} 
-                        gradient="linear-gradient(90deg, #fff, #F3E5F5, #fff)"
-                        fontWeight="bold"
+                        sx={{ 
+                          fontWeight: 'bold',
+                          color: 'white'
+                        }}
                       >
                         Sleep Analytics
-                      </AnimatedGradientText>
+                      </Typography>
                       
-                      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-                        <Typography variant="subtitle1" color="white" sx={{ opacity: 0.9 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                        <Typography variant="subtitle1" color="white" fontWeight="medium">
                           {dateLabel}
                         </Typography>
-                        <DataSourceIndicator />
+                        
+                        <IconButton 
+                          size="small" 
+                          onClick={() => setShowDatePicker(prev => !prev)}
+                          sx={{ color: 'white', opacity: 0.8, ml: 0.5 }}
+                        >
+                          <CalendarTodayIcon fontSize="small" />
+                        </IconButton>
+                        
+                        <Box sx={{ display: 'flex', gap: 0.5, ml: 2 }}>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleQuickDateChange('prev')}
+                            sx={{ color: 'white', opacity: 0.8, p: 0.5 }}
+                          >
+                            <TrendingDownIcon fontSize="small" />
+                          </IconButton>
+                          
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleQuickDateChange('next')}
+                            sx={{ color: 'white', opacity: 0.8, p: 0.5 }}
+                            disabled={isAfter(date, new Date())}
+                          >
+                            <TrendingUpIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                        
+                        <FormControl 
+                          size="small" 
+                          sx={{ 
+                            minWidth: 120, 
+                            bgcolor: 'rgba(255,255,255,0.1)',
+                            borderRadius: 2,
+                            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
+                            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.8)' },
+                            '& .MuiSelect-select': { color: 'white' },
+                            '& .MuiSvgIcon-root': { color: 'white' }
+                          }}
+                        >
+                          <InputLabel>Period</InputLabel>
+                          <Select
+                            value={period}
+                            label="Period"
+                            onChange={handlePeriodChange}
+                          >
+                            {TIME_INTERVALS.map(interval => (
+                              <MenuItem key={interval.value} value={interval.value} sx={{ display: 'flex', gap: 1 }}>
+                                {interval.icon} {interval.label}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
                       </Box>
                     </Box>
                   </Box>
@@ -1065,49 +1165,25 @@ const SleepTab = () => {
                 
                 <Grid item xs={12} md={4}>
                   <Box sx={{ display: 'flex', gap: { xs: 1, md: 2 }, justifyContent: { xs: 'flex-start', md: 'flex-end' }, flexWrap: 'wrap', position: 'relative', zIndex: 1 }}>
-                    {/* Period selector */}
-                    <FormControl 
-                      size="small" 
+                    {/* Data source button */}
+                    <Button
+                      variant="contained"
+                      startIcon={<DevicesIcon />}
+                      onClick={() => setShowDataSourceDialog(true)}
+                      size="small"
                       sx={{ 
-                        minWidth: 120, 
                         bgcolor: 'rgba(255,255,255,0.15)',
+                        color: 'white',
                         borderRadius: 2,
-                        '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
-                        '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.8)' },
-                        '& .MuiSelect-select': { color: 'white' },
-                        '& .MuiSvgIcon-root': { color: 'white' }
+                        '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' }
                       }}
                     >
-                      <InputLabel>Period</InputLabel>
-                      <Select
-                        value={period}
-                        label="Period"
-                        onChange={handlePeriodChange}
-                      >
-                        {TIME_INTERVALS.map(interval => (
-                          <MenuItem key={interval.value} value={interval.value}>
-                            {interval.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                    
-                    {/* Date picker */}
-                    <TextField
-                      label="Date"
-                      type="date"
-                      size="small"
-                      value={formattedDate}
-                      onChange={(e) => handleDateChange(new Date(e.target.value))}
-                      InputLabelProps={{ shrink: true }}
-                      sx={{ 
-                        bgcolor: 'rgba(255,255,255,0.15)', 
-                        borderRadius: 2,
-                        '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
-                        '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.8)' },
-                        '& .MuiInputBase-input': { color: 'white' }
-                      }}
-                    />
+                      {activeDataSource === 'auto' && 'Auto'}
+                      {activeDataSource === 'fitbit' && 'Fitbit'}
+                      {activeDataSource === 'googleFit' && 'Google Fit'}
+                      {activeDataSource === 'appleHealth' && 'Apple Health'}
+                      {activeDataSource === 'combined' && 'All Sources'}
+                    </Button>
                     
                     {/* Refresh button */}
                     <Tooltip title="Refresh Data">

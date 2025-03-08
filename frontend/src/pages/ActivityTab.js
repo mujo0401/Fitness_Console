@@ -32,10 +32,14 @@ import {
   List,
   ListItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  Tab,
+  Tabs
 } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format, isValid, subDays, addDays, subWeeks, addWeeks, subMonths, addMonths, startOfWeek, endOfWeek } from 'date-fns';
+import { format, isValid, subDays, addDays, subWeeks, addWeeks, subMonths, addMonths, startOfWeek, endOfWeek, isAfter } from 'date-fns';
+import { LocalizationProvider, StaticDatePicker } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
@@ -46,18 +50,30 @@ import SyncIcon from '@mui/icons-material/Sync';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
+import DevicesIcon from '@mui/icons-material/Devices';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import TerrainIcon from '@mui/icons-material/Terrain';
 import InfoIcon from '@mui/icons-material/Info';
-import DevicesIcon from '@mui/icons-material/Devices';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
+import TimelineIcon from '@mui/icons-material/Timeline';
+import WavesIcon from '@mui/icons-material/Waves';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 
 import { activityService, fitbitService, googleFitService, appleFitnessService, authService } from '../services/api';
 import ActivityChart from '../components/charts/ActivityChart';
 import DiagnosticsPanel from '../components/DiagnosticsPanel';
 import { GlassCard, AnimatedGradientText } from '../components/styled/CardComponents';
 import { useAuth } from '../context/AuthContext';
+
+// Enhanced Visualization Components
+import RadialProgressChart from '../components/common/charts/RadialProgressChart';
+import ActivityHeatmapCalendar from '../components/common/charts/ActivityHeatmapCalendar';
+import StepMountainVisualization from '../components/common/charts/StepMountainVisualization';
+import ActivityPulseWave from '../components/common/charts/ActivityPulseWave';
+import ActivityInsights from '../components/activity/ActivityInsights';
 
 // Activity intensity levels
 const ACTIVITY_INTENSITY_LEVELS = [
@@ -100,10 +116,278 @@ const ACTIVITY_INTENSITY_LEVELS = [
 
 // Time interval options
 const TIME_INTERVALS = [
-  { value: 'day', label: '1 Day' },
-  { value: 'week', label: '1 Week' },
-  { value: 'month', label: '1 Month' }
+  { value: 'day', label: 'Day', icon: <CalendarTodayIcon fontSize="small" /> },
+  { value: 'week', label: 'Week', icon: <TimelineIcon fontSize="small" /> },
+  { value: 'month', label: 'Month', icon: <AssessmentIcon fontSize="small" /> },
+  { value: '3month', label: '3 Months', icon: <HistoryIcon fontSize="small" /> }
 ];
+
+// Date Navigator component for handling date navigation
+const DateNavigator = ({ 
+  date, 
+  onDateChange, 
+  period, 
+  onPeriodChange, 
+  showDatePicker,
+  setShowDatePicker 
+}) => {
+  // Render date label based on period
+  const renderDateLabel = () => {
+    if (!date) return '';
+    
+    switch (period) {
+      case 'day':
+        return format(date, 'EEEE, MMMM d, yyyy');
+      case 'week':
+        const weekStart = startOfWeek(date);
+        const weekEnd = endOfWeek(date);
+        return `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`;
+      case 'month':
+        return format(date, 'MMMM yyyy');
+      case '3month':
+        const monthStart = date;
+        const monthEnd = addMonths(date, 2);
+        return `${format(monthStart, 'MMM')} - ${format(monthEnd, 'MMM yyyy')}`;
+      default:
+        return format(date, 'MMMM d, yyyy');
+    }
+  };
+
+  // Handle date change with proper formatting
+  const handleDateChange = (newDate) => {
+    if (newDate && isValid(newDate)) {
+      onDateChange(newDate);
+      setShowDatePicker(false);
+    }
+  };
+
+  // Handle quick date navigation
+  const handleQuickDateChange = (direction) => {
+    let newDate;
+    switch (period) {
+      case 'day':
+        newDate = direction === 'next' ? addDays(date, 1) : subDays(date, 1);
+        break;
+      case 'week':
+        newDate = direction === 'next' ? addWeeks(date, 1) : subWeeks(date, 1);
+        break;
+      case 'month':
+        newDate = direction === 'next' ? addMonths(date, 1) : subMonths(date, 1);
+        break;
+      case '3month':
+        newDate = direction === 'next' ? addMonths(date, 3) : subMonths(date, 3);
+        break;
+      default:
+        newDate = direction === 'next' ? addDays(date, 1) : subDays(date, 1);
+    }
+    onDateChange(newDate);
+  };
+
+  return (
+    <>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+        <Typography variant="subtitle1" color="white" fontWeight="medium">
+          {renderDateLabel()}
+        </Typography>
+        
+        <IconButton 
+          size="small" 
+          onClick={() => setShowDatePicker(prev => !prev)}
+          sx={{ color: 'white', opacity: 0.8, ml: 0.5 }}
+        >
+          <CalendarTodayIcon fontSize="small" />
+        </IconButton>
+        
+        <Box sx={{ display: 'flex', gap: 0.5, ml: 2 }}>
+          <IconButton 
+            size="small" 
+            onClick={() => handleQuickDateChange('prev')}
+            sx={{ color: 'white', opacity: 0.8, p: 0.5 }}
+          >
+            <TrendingDownIcon fontSize="small" />
+          </IconButton>
+          
+          <IconButton 
+            size="small" 
+            onClick={() => handleQuickDateChange('next')}
+            sx={{ color: 'white', opacity: 0.8, p: 0.5 }}
+            disabled={isAfter(date, new Date())}
+          >
+            <TrendingUpIcon fontSize="small" />
+          </IconButton>
+        </Box>
+
+        <FormControl 
+          size="small" 
+          sx={{ 
+            minWidth: 120, 
+            bgcolor: 'rgba(255,255,255,0.1)',
+            borderRadius: 2,
+            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
+            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.8)' },
+            '& .MuiSelect-select': { color: 'white' },
+            '& .MuiSvgIcon-root': { color: 'white' }
+          }}
+        >
+          <InputLabel>Period</InputLabel>
+          <Select
+            value={period}
+            label="Period"
+            onChange={onPeriodChange}
+          >
+            {TIME_INTERVALS.map(interval => (
+              <MenuItem key={interval.value} value={interval.value} sx={{ display: 'flex', gap: 1 }}>
+                {interval.icon} {interval.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
+
+      {/* Date Picker Popover */}
+      <Dialog
+        open={showDatePicker}
+        onClose={() => setShowDatePicker(false)}
+        maxWidth="xs"
+        PaperProps={{ sx: { borderRadius: 4, p: 2 } }}
+      >
+        <DialogContent>
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <StaticDatePicker
+              displayStaticWrapperAs="desktop"
+              value={date}
+              onChange={handleDateChange}
+              renderInput={(params) => <TextField {...params} />}
+              maxDate={new Date()}
+            />
+          </LocalizationProvider>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
+// Data Source Dialog component
+const DataSourceDialog = ({ 
+  open, 
+  onClose, 
+  dataSourcesAvailable, 
+  activeDataSource, 
+  onDataSourceChange 
+}) => {
+  return (
+    <Dialog 
+      open={open} 
+      onClose={onClose}
+      maxWidth="sm"
+      PaperProps={{
+        sx: { borderRadius: 3 }
+      }}
+    >
+      <DialogTitle>Select Data Source</DialogTitle>
+      <DialogContent>
+        <List>
+          <ListItem 
+            button 
+            selected={activeDataSource === 'auto'}
+            onClick={() => {
+              onDataSourceChange('auto');
+              onClose();
+            }}
+          >
+            <ListItemIcon>
+              <AutoAwesomeIcon color="primary" />
+            </ListItemIcon>
+            <ListItemText 
+              primary="Auto (Recommended)" 
+              secondary="Automatically selects the best available data source"
+            />
+          </ListItem>
+          
+          <ListItem 
+            button 
+            selected={activeDataSource === 'fitbit'}
+            disabled={!dataSourcesAvailable.fitbit}
+            onClick={() => {
+              if (dataSourcesAvailable.fitbit) {
+                onDataSourceChange('fitbit');
+                onClose();
+              }
+            }}
+          >
+            <ListItemIcon>
+              <DevicesIcon color={dataSourcesAvailable.fitbit ? "info" : "disabled"} />
+            </ListItemIcon>
+            <ListItemText 
+              primary="Fitbit" 
+              secondary={dataSourcesAvailable.fitbit ? "Use Fitbit data" : "Not connected"}
+            />
+          </ListItem>
+          
+          <ListItem 
+            button 
+            selected={activeDataSource === 'googleFit'}
+            disabled={!dataSourcesAvailable.googleFit}
+            onClick={() => {
+              if (dataSourcesAvailable.googleFit) {
+                onDataSourceChange('googleFit');
+                onClose();
+              }
+            }}
+          >
+            <ListItemIcon>
+              <DevicesIcon color={dataSourcesAvailable.googleFit ? "success" : "disabled"} />
+            </ListItemIcon>
+            <ListItemText 
+              primary="Google Fit" 
+              secondary={dataSourcesAvailable.googleFit ? "Use Google Fit data" : "Not connected"}
+            />
+          </ListItem>
+          
+          <ListItem 
+            button 
+            selected={activeDataSource === 'appleHealth'}
+            disabled={!dataSourcesAvailable.appleHealth}
+            onClick={() => {
+              if (dataSourcesAvailable.appleHealth) {
+                onDataSourceChange('appleHealth');
+                onClose();
+              }
+            }}
+          >
+            <ListItemIcon>
+              <HealthAndSafetyIcon color={dataSourcesAvailable.appleHealth ? "error" : "disabled"} />
+            </ListItemIcon>
+            <ListItemText 
+              primary="Apple Health" 
+              secondary={dataSourcesAvailable.appleHealth ? "Use Apple Health data" : "Not connected"}
+            />
+          </ListItem>
+          
+          <ListItem 
+            button 
+            selected={activeDataSource === 'combined'}
+            onClick={() => {
+              onDataSourceChange('combined');
+              onClose();
+            }}
+          >
+            <ListItemIcon>
+              <WavesIcon color="primary" />
+            </ListItemIcon>
+            <ListItemText 
+              primary="Combined View" 
+              secondary="Display data from all available sources"
+            />
+          </ListItem>
+        </List>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
 
 // Statistic card component
 const StatCard = ({ title, value, unit, color, icon }) => {
@@ -168,24 +452,29 @@ const ActivityTab = () => {
   const [period, setPeriod] = useState('day');
   const [date, setDate] = useState(new Date());
   const [formattedDate, setFormattedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [activityData, setActivityData] = useState(null);
-  const [fitbitData, setFitbitData] = useState(null);
-  const [googleFitData, setGoogleFitData] = useState(null);
-  const [appleHealthData, setAppleHealthData] = useState(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showDataSourceDialog, setShowDataSourceDialog] = useState(false);
   const [activeDataSource, setActiveDataSource] = useState('auto');
   const [dataSourcesAvailable, setDataSourcesAvailable] = useState({
     fitbit: false,
     googleFit: false,
     appleHealth: false
   });
+  const [activityData, setActivityData] = useState(null);
+  const [fitbitData, setFitbitData] = useState(null);
+  const [googleFitData, setGoogleFitData] = useState(null);
+  const [appleHealthData, setAppleHealthData] = useState(null);
   
   // UI state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showDataSourceDialog, setShowDataSourceDialog] = useState(false);
   const [showDiagnosticsPanel, setShowDiagnosticsPanel] = useState(false);
   const [alertMessage, setAlertMessage] = useState(null);
+  
+  // Enhanced visualizations state
+  const [activeView, setActiveView] = useState('standard');
+  const [previousPeriodData, setPreviousPeriodData] = useState([]);
   
   // Debug mode for loading issues
   const [debugMode, setDebugMode] = useState(true);
@@ -195,6 +484,9 @@ const ActivityTab = () => {
     if (isAuthenticated) {
       if (debugMode) console.log('🔍 DEBUG: Starting activity data fetch with params:', { period, formattedDate, activeDataSource });
       fetchAllActivityData();
+      
+      // Also fetch previous period data for comparison
+      fetchPreviousPeriodData();
     } else {
       if (debugMode) console.log('🔍 DEBUG: Not authenticated, setting loading false');
       setLoading(false);
@@ -214,6 +506,90 @@ const ActivityTab = () => {
   const handlePeriodChange = (event) => {
     setPeriod(event.target.value);
   };
+  
+  // This function is already defined at line 497, so removing this duplicate declaration
+  
+  // Handle data source change
+  const handleDataSourceChange = (source) => {
+    setActiveDataSource(source);
+    
+    // Set appropriate data based on source selection
+    switch (source) {
+      case 'fitbit':
+        if (fitbitData && fitbitData.length > 0) {
+          setActivityData([...fitbitData]);
+          setError('');
+        } else {
+          setError('Fitbit data is not available. Please select another data source.');
+          setActivityData([]);
+        }
+        break;
+        
+      case 'googleFit':
+        if (googleFitData && googleFitData.length > 0) {
+          setActivityData([...googleFitData]);
+          setError('');
+        } else {
+          setError('Google Fit data is not available. Please select another data source.');
+          setActivityData([]);
+        }
+        break;
+        
+      case 'appleHealth':
+        if (appleHealthData && appleHealthData.length > 0) {
+          setActivityData([...appleHealthData]);
+          setError('');
+        } else {
+          setError('Apple Health data is not available. Please select another data source.');
+          setActivityData([]);
+        }
+        break;
+        
+      case 'combined':
+        // Combine all available data
+        const combinedData = [
+          ...(fitbitData || []),
+          ...(googleFitData || []),
+          ...(appleHealthData || [])
+        ];
+        
+        if (combinedData.length > 0) {
+          setActivityData(combinedData);
+          setError('');
+        } else {
+          setError('No activity data available from any source.');
+          setActivityData([]);
+        }
+        break;
+        
+      case 'auto':
+      default:
+        // Auto-select data source based on availability
+        if (googleFitData && googleFitData.length > 0) {
+          setActivityData([...googleFitData]);
+          setError('');
+        } else if (fitbitData && fitbitData.length > 0) {
+          setActivityData([...fitbitData]);
+          setError('');
+        } else if (appleHealthData && appleHealthData.length > 0) {
+          setActivityData([...appleHealthData]);
+          setError('');
+        } else {
+          setError('No activity data available from any source.');
+          setActivityData([]);
+        }
+        break;
+    }
+  };
+  
+  // Handle data source dialog
+  const handleOpenDataSourceDialog = () => {
+    setShowDataSourceDialog(true);
+  };
+  
+  const handleCloseDataSourceDialog = () => {
+    setShowDataSourceDialog(false);
+  };
 
   // Handle refresh button click
   const handleRefresh = () => {
@@ -221,16 +597,57 @@ const ActivityTab = () => {
     fetchAllActivityData().finally(() => {
       setTimeout(() => setIsRefreshing(false), 500);
     });
+    fetchPreviousPeriodData();
+  };
+  
+  // Fetch data from previous period for comparison
+  const fetchPreviousPeriodData = async () => {
+    if (!isAuthenticated) return;
+    
+    try {
+      // Calculate previous period date based on current period
+      let previousDate = new Date(date);
+      
+      if (period === 'day') {
+        previousDate = subDays(previousDate, 1);
+      } else if (period === 'week') {
+        previousDate = subWeeks(previousDate, 1);
+      } else if (period === 'month') {
+        previousDate = subMonths(previousDate, 1);
+      }
+      
+      const formattedPrevDate = format(previousDate, 'yyyy-MM-dd');
+      
+      // Fetch data from the previous period using the same source as current
+      let response;
+      
+      if (activeDataSource === 'fitbit' || activeDataSource === 'auto') {
+        response = await activityService.getActivityData(period, formattedPrevDate);
+      } else if (activeDataSource === 'googleFit') {
+        response = await googleFitService.getActivityData(period, formattedPrevDate);
+      } else if (activeDataSource === 'appleHealth') {
+        response = await appleFitnessService.getActivityData(period, formattedPrevDate);
+      }
+      
+      // Process response
+      if (response && response.data) {
+        setPreviousPeriodData(response.data);
+      } else if (Array.isArray(response)) {
+        setPreviousPeriodData(response);
+      } else {
+        // If no data available, generate mock data for comparison
+        const mockPrevData = generateMockActivityData(period, previousDate).data;
+        setPreviousPeriodData(mockPrevData);
+      }
+    } catch (error) {
+      console.log('Error fetching previous period data:', error);
+      // Generate mock data as fallback
+      const mockPrevData = generateMockActivityData(period, new Date(date.getTime() - 86400000)).data;
+      setPreviousPeriodData(mockPrevData);
+    }
   };
 
-  // Handle data source change
-  const handleDataSourceChange = (source) => {
-    console.log(`Changing data source to: ${source}`);
-    setActiveDataSource(source);
-    
-    // After changing data source, refresh processed data
-    determineActivityDataToUse();
-  };
+  // We already have handleDataSourceChange at line 519, so removing this duplicate declaration
 
   // Handle diagnostics panel
   const handleOpenDiagnosticsPanel = () => {
@@ -491,9 +908,10 @@ const ActivityTab = () => {
   };
   
   // Generate mock activity data for demonstration
-  const generateMockActivityData = (dataPeriod) => {
+  const generateMockActivityData = (dataPeriod, mockDate = null) => {
     console.log(`🔄 Generating mock activity data for period: ${dataPeriod}`);
     const mockData = [];
+    const targetDate = mockDate || date;
     
     if (dataPeriod === 'day') {
       // Generate hourly activity data for a day
@@ -567,7 +985,7 @@ const ActivityTab = () => {
         const ampm = hour < 12 ? 'AM' : 'PM';
 
         mockData.push({
-          dateTime: format(date, 'yyyy-MM-dd'),
+          dateTime: format(targetDate, 'yyyy-MM-dd'),
           time: `${hour12}:00 ${ampm}`,
           steps: steps,
           distance: parseFloat(distance),
@@ -583,7 +1001,7 @@ const ActivityTab = () => {
       const days = dataPeriod === 'week' ? 7 : 30;
       
       for (let i = 0; i < days; i++) {
-        const day = new Date(date);
+        const day = new Date(targetDate);
         day.setDate(day.getDate() - i);
         const dateStr = format(day, 'yyyy-MM-dd');
         
@@ -646,8 +1064,8 @@ const ActivityTab = () => {
     return {
       data: mockData,
       period: dataPeriod,
-      start_date: format(date, 'yyyy-MM-dd'),
-      end_date: format(date, 'yyyy-MM-dd')
+      start_date: format(targetDate, 'yyyy-MM-dd'),
+      end_date: format(targetDate, 'yyyy-MM-dd')
     };
   };
   
@@ -1022,69 +1440,50 @@ const ActivityTab = () => {
                     </Avatar>
                     
                     <Box>
-                      <AnimatedGradientText 
+                      <Typography 
                         variant={isSmallScreen ? "h5" : "h4"} 
-                        gradient="linear-gradient(90deg, #fff, #e8f5e9, #fff)"
-                        fontWeight="bold"
+                        sx={{ 
+                          fontWeight: 'bold',
+                          color: 'white'
+                        }}
                       >
                         Activity Analytics
-                      </AnimatedGradientText>
+                      </Typography>
                       
-                      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-                        <Typography variant="subtitle1" color="white" sx={{ opacity: 0.9 }}>
-                          {dateLabel}
-                        </Typography>
-                        <DataSourceIndicator />
-                      </Box>
+                      <DateNavigator
+                        date={date}
+                        onDateChange={handleDateChange}
+                        period={period}
+                        onPeriodChange={handlePeriodChange}
+                        TIME_INTERVALS={TIME_INTERVALS}
+                        showDatePicker={showDatePicker}
+                        setShowDatePicker={setShowDatePicker}
+                      />
                     </Box>
                   </Box>
                 </Grid>
                 
                 <Grid item xs={12} md={4}>
                   <Box sx={{ display: 'flex', gap: { xs: 1, md: 2 }, justifyContent: { xs: 'flex-start', md: 'flex-end' }, flexWrap: 'wrap', position: 'relative', zIndex: 1 }}>
-                    {/* Period selector */}
-                    <FormControl 
-                      size="small" 
+                    {/* Data source button */}
+                    <Button
+                      variant="contained"
+                      startIcon={<DevicesIcon />}
+                      onClick={handleOpenDataSourceDialog}
+                      size="small"
                       sx={{ 
-                        minWidth: 120, 
                         bgcolor: 'rgba(255,255,255,0.15)',
+                        color: 'white',
                         borderRadius: 2,
-                        '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
-                        '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.8)' },
-                        '& .MuiSelect-select': { color: 'white' },
-                        '& .MuiSvgIcon-root': { color: 'white' }
+                        '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' }
                       }}
                     >
-                      <InputLabel>Period</InputLabel>
-                      <Select
-                        value={period}
-                        label="Period"
-                        onChange={handlePeriodChange}
-                      >
-                        {TIME_INTERVALS.map(interval => (
-                          <MenuItem key={interval.value} value={interval.value}>
-                            {interval.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                    
-                    {/* Date picker */}
-                    <TextField
-                      label="Date"
-                      type="date"
-                      size="small"
-                      value={formattedDate}
-                      onChange={(e) => handleDateChange(new Date(e.target.value))}
-                      InputLabelProps={{ shrink: true }}
-                      sx={{ 
-                        bgcolor: 'rgba(255,255,255,0.15)', 
-                        borderRadius: 2,
-                        '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
-                        '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.8)' },
-                        '& .MuiInputBase-input': { color: 'white' }
-                      }}
-                    />
+                      {activeDataSource === 'auto' && 'Auto'}
+                      {activeDataSource === 'fitbit' && 'Fitbit'}
+                      {activeDataSource === 'googleFit' && 'Google Fit'}
+                      {activeDataSource === 'appleHealth' && 'Apple Health'}
+                      {activeDataSource === 'combined' && 'All Sources'}
+                    </Button>
                     
                     {/* Refresh button */}
                     <Tooltip title="Refresh Data">
@@ -1118,6 +1517,15 @@ const ActivityTab = () => {
               </Grid>
             </Box>
           </GlassCard>
+          
+          {/* Data Source Dialog */}
+          <DataSourceDialog
+            open={showDataSourceDialog}
+            onClose={handleCloseDataSourceDialog}
+            dataSourcesAvailable={dataSourcesAvailable}
+            activeDataSource={activeDataSource}
+            onDataSourceChange={handleDataSourceChange}
+          />
         </motion.div>
         
         {/* Main content card */}
@@ -1198,77 +1606,239 @@ const ActivityTab = () => {
               </Box>
             ) : (
               <Box>
+                {/* View mode selection tabs */}
+                <Paper 
+                  elevation={2} 
+                  sx={{ 
+                    mx: 3, 
+                    mb: 2, 
+                    borderRadius: 2, 
+                    background: 'linear-gradient(145deg, #ffffff, #f9f9f9)' 
+                  }}
+                >
+                  <Tabs
+                    value={activeView}
+                    onChange={(e, newValue) => setActiveView(newValue)}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    allowScrollButtonsMobile
+                  >
+                    <Tab 
+                      value="standard" 
+                      label="Standard" 
+                      icon={<AssessmentIcon />} 
+                      iconPosition="start"
+                    />
+                    <Tab 
+                      value="enhanced" 
+                      label="Enhanced" 
+                      icon={<AutoAwesomeIcon />} 
+                      iconPosition="start"
+                    />
+                    <Tab 
+                      value="insights" 
+                      label="Insights" 
+                      icon={<TimelineIcon />} 
+                      iconPosition="start"
+                    />
+                  </Tabs>
+                </Paper>
+                
+                {/* Stats display */}
                 <Box sx={{ px: 3, py: 2 }}>
                   <Grid container spacing={3}>
-                    <Grid item xs={12} sm={6} md={3}>
-                      <StatCard 
-                        title="Steps" 
-                        value={totalSteps.toLocaleString()} 
-                        color="#4caf50"
-                        icon={<DirectionsRunIcon />}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                      <StatCard 
-                        title="Active Minutes" 
-                        value={totalActiveMinutes} 
-                        unit="min"
-                        color="#009688"
-                        icon={<AccessTimeIcon />}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                      <StatCard 
-                        title="Calories" 
-                        value={totalCalories.toLocaleString()} 
-                        unit="kcal"
-                        color="#ff9800"
-                        icon={<LocalFireDepartmentIcon />}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                      <StatCard 
-                        title="Distance" 
-                        value={totalDistance} 
-                        unit="km"
-                        color="#2196f3"
-                        icon={<TerrainIcon />}
-                      />
-                    </Grid>
+                    {activeView === 'standard' ? (
+                      // Standard view stat cards
+                      <>
+                        <Grid item xs={12} sm={6} md={3}>
+                          <StatCard 
+                            title="Steps" 
+                            value={totalSteps.toLocaleString()} 
+                            color="#4caf50"
+                            icon={<DirectionsRunIcon />}
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={6} md={3}>
+                          <StatCard 
+                            title="Active Minutes" 
+                            value={totalActiveMinutes} 
+                            unit="min"
+                            color="#009688"
+                            icon={<AccessTimeIcon />}
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={6} md={3}>
+                          <StatCard 
+                            title="Calories" 
+                            value={totalCalories.toLocaleString()} 
+                            unit="kcal"
+                            color="#ff9800"
+                            icon={<LocalFireDepartmentIcon />}
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={6} md={3}>
+                          <StatCard 
+                            title="Distance" 
+                            value={totalDistance} 
+                            unit="km"
+                            color="#2196f3"
+                            icon={<TerrainIcon />}
+                          />
+                        </Grid>
+                      </>
+                    ) : activeView === 'enhanced' ? (
+                      // Enhanced view with radial progress and heatmap
+                      <>
+                        <Grid item xs={12} md={6}>
+                          <Card elevation={3} sx={{ borderRadius: 3, p: 2, height: '100%' }}>
+                            <Typography variant="subtitle1" fontWeight="bold" mb={2}>
+                              Daily Steps Goal
+                            </Typography>
+                            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                              <RadialProgressChart 
+                                value={totalSteps} 
+                                maxValue={10000}
+                                title="Daily Steps"
+                                icon={<DirectionsRunIcon fontSize="large" />}
+                                milestones={[
+                                  { value: 5000, label: "5K" },
+                                  { value: 7500, label: "7.5K" },
+                                  { value: 10000, label: "Goal" }
+                                ]}
+                                colors={{ 
+                                  start: theme.palette.success.light, 
+                                  end: theme.palette.success.dark 
+                                }}
+                              />
+                            </Box>
+                          </Card>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <Card elevation={3} sx={{ borderRadius: 3, p: 2, height: '100%' }}>
+                            <Typography variant="subtitle1" fontWeight="bold" mb={1}>
+                              Monthly Activity Heatmap
+                            </Typography>
+                            <ActivityHeatmapCalendar 
+                              data={period === 'month' ? activityData : []} 
+                              currentDate={date}
+                              onDateClick={(date) => handleDateChange(date)}
+                              valueKey="steps"
+                              colorScale={{
+                                0: alpha(theme.palette.grey[200], 0.5),
+                                1: alpha(theme.palette.primary.light, 0.3),
+                                2500: alpha(theme.palette.primary.light, 0.5),
+                                5000: alpha(theme.palette.primary.main, 0.6),
+                                7500: alpha(theme.palette.primary.main, 0.8),
+                                10000: theme.palette.primary.dark
+                              }}
+                            />
+                          </Card>
+                        </Grid>
+                      </>
+                    ) : (
+                      // Insights view with detailed analysis
+                      <Grid item xs={12}>
+                        <Card elevation={3} sx={{ borderRadius: 3, p: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                            <AutoAwesomeIcon color="primary" sx={{ mr: 1 }} />
+                            <Typography variant="h6">Activity Analysis</Typography>
+                          </Box>
+                          <Typography variant="body2" color="text.secondary" paragraph>
+                            AI-powered insights based on your activity patterns and goals.
+                          </Typography>
+                          <ActivityInsights 
+                            data={activityData} 
+                            period={period}
+                            previousData={previousPeriodData}
+                          />
+                        </Card>
+                      </Grid>
+                    )}
                   </Grid>
                 </Box>
                 
-                <Box sx={{ mt: 2, position: 'relative' }}>
-                  <ActivityChart 
-                    data={activityData} 
-                    period={period}
-                    dataSource={activeDataSource} 
-                    fitbitData={fitbitData}
-                    googleFitData={googleFitData}
-                    appleHealthData={appleHealthData}
-                    tokenScopes={tokenScopes}
-                    isAuthenticated={isAuthenticated}
-                    date={date}
-                    availableSources={dataSourcesAvailable}
-                    onDataSourceChange={handleDataSourceChange}
-                  />
-                  {isMockData && (
-                    <Box 
-                      sx={{ 
-                        position: 'absolute', 
-                        bottom: 8, 
-                        right: 8, 
-                        fontSize: '10px',
-                        fontStyle: 'italic',
-                        opacity: 0.3,
-                        color: theme.palette.primary.main,
-                        fontWeight: 'bold'
-                      }}
-                    >
-                      Demo Data
-                    </Box>
-                  )}
-                </Box>
+                {/* Main content area - different for each view */}
+                {activeView === 'standard' ? (
+                  // Standard view with regular charts
+                  <Box sx={{ mt: 2, position: 'relative' }}>
+                    <ActivityChart 
+                      data={activityData} 
+                      period={period}
+                      dataSource={activeDataSource} 
+                      fitbitData={fitbitData}
+                      googleFitData={googleFitData}
+                      appleHealthData={appleHealthData}
+                      tokenScopes={tokenScopes}
+                      isAuthenticated={isAuthenticated}
+                      date={date}
+                      availableSources={dataSourcesAvailable}
+                      onDataSourceChange={handleDataSourceChange}
+                    />
+                    {isMockData && (
+                      <Box 
+                        sx={{ 
+                          position: 'absolute', 
+                          bottom: 8, 
+                          right: 8, 
+                          fontSize: '10px',
+                          fontStyle: 'italic',
+                          opacity: 0.3,
+                          color: theme.palette.primary.main,
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        Demo Data
+                      </Box>
+                    )}
+                  </Box>
+                ) : activeView === 'enhanced' ? (
+                  // Enhanced view with mountain visualization and pulse wave
+                  <Box sx={{ mt: 2 }}>
+                    <Grid container spacing={3}>
+                      <Grid item xs={12}>
+                        <Card elevation={3} sx={{ borderRadius: 3, p: 2 }}>
+                          <Typography variant="subtitle1" fontWeight="bold" mb={1}>
+                            Step Mountain Visualization
+                          </Typography>
+                          <StepMountainVisualization 
+                            data={activityData} 
+                            height={220}
+                            maxSteps={15000}
+                            milestones={[
+                              { value: 10000, label: "Daily Goal" },
+                              { value: 15000, label: "Active" }
+                            ]}
+                          />
+                        </Card>
+                      </Grid>
+                    
+                      {period === 'day' && (
+                        <Grid item xs={12}>
+                          <Card elevation={3} sx={{ borderRadius: 3, p: 2 }}>
+                            <Typography variant="subtitle1" fontWeight="bold" mb={1}>
+                              Activity Pulse Wave
+                            </Typography>
+                            <ActivityPulseWave 
+                              data={activityData} 
+                              height={180}
+                              showHeartRate={true}
+                              colors={{
+                                steps: theme.palette.primary.main,
+                                heart: theme.palette.error.main,
+                                background: alpha(theme.palette.primary.light, 0.05)
+                              }}
+                            />
+                          </Card>
+                        </Grid>
+                      )}
+                    </Grid>
+                  </Box>
+                ) : (
+                  // Insights view - empty here as the content is in the top section
+                  <Box sx={{ mt: 2 }}>
+                    {/* Additional insights content can go here */}
+                  </Box>
+                )}
                 
                 <Box sx={{ px: 3, pb: 3 }}>
                   <Grid container spacing={3}>

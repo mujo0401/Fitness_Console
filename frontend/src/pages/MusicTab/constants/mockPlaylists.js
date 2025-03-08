@@ -1,11 +1,12 @@
 /**
  * Mock playlists for development and testing
+ * Using completely non-copyrighted placeholder content
  */
 export const mockPlaylists = [
   {
     id: 'playlist1',
     title: 'Ultimate Workout Mix',
-    thumbnail: 'https://i3.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg',
+    thumbnail: 'https://dummyimage.com/300x300/red/fff.png&text=Workout',
     description: 'High-energy tracks to power through any workout',
     trackCount: 24,
     tags: ['Workout', 'High Intensity', 'Motivation'],
@@ -15,7 +16,7 @@ export const mockPlaylists = [
   {
     id: 'playlist2',
     title: 'Running Essentials',
-    thumbnail: 'https://i3.ytimg.com/vi/9bZkp7q19f0/mqdefault.jpg',
+    thumbnail: 'https://dummyimage.com/300x300/blue/fff.png&text=Running',
     description: 'Perfect pace-setting tracks for runners',
     trackCount: 18,
     tags: ['Running', 'Cardio', 'Motivation'],
@@ -25,7 +26,7 @@ export const mockPlaylists = [
   {
     id: 'playlist3',
     title: 'HIIT Workout Intensity',
-    thumbnail: 'https://i3.ytimg.com/vi/k2WcOJt-i8M/mqdefault.jpg',
+    thumbnail: 'https://dummyimage.com/300x300/yellow/fff.png&text=HIIT',
     description: 'Intense tracks with peaks and troughs for interval training',
     trackCount: 15,
     tags: ['HIIT', 'High Intensity', 'Workout'],
@@ -35,7 +36,7 @@ export const mockPlaylists = [
   {
     id: 'playlist4',
     title: 'Cool Down & Stretch',
-    thumbnail: 'https://i3.ytimg.com/vi/mWRsgZuwf_8/mqdefault.jpg',
+    thumbnail: 'https://dummyimage.com/300x300/green/fff.png&text=Recovery',
     description: 'Relaxing music for post-workout stretching and recovery',
     trackCount: 12,
     tags: ['Chill', 'Recovery', 'Focus'],
@@ -45,7 +46,7 @@ export const mockPlaylists = [
   {
     id: 'playlist5',
     title: 'Motivation Beats',
-    thumbnail: 'https://i3.ytimg.com/vi/pXRviuL6vMY/mqdefault.jpg',
+    thumbnail: 'https://dummyimage.com/300x300/purple/fff.png&text=Motivation',
     description: 'Songs to keep you motivated when the going gets tough',
     trackCount: 20,
     tags: ['Motivation', 'Workout', 'Energy'],
@@ -55,7 +56,7 @@ export const mockPlaylists = [
   {
     id: 'playlist6',
     title: 'Strength Training Power',
-    thumbnail: 'https://i3.ytimg.com/vi/CD-E-LDc384/mqdefault.jpg',
+    thumbnail: 'https://dummyimage.com/300x300/orange/fff.png&text=Strength',
     description: 'Powerful beats for pumping iron and building muscle',
     trackCount: 16,
     tags: ['Strength', 'Workout', 'Energy'],

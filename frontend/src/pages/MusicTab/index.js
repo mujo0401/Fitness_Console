@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Grid, Snackbar, Alert, Tabs, Tab } from '@mui/material';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useAuth } from '../../context/AuthContext';
 
 // Icons
 import LibraryMusicIcon from '@mui/icons-material/LibraryMusic';
@@ -46,6 +47,42 @@ const MusicTab = () => {
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertSeverity, setAlertSeverity] = useState('info');
 
+  // Get auth context to check connections
+  const { checkYouTubeMusicConnection, connectedServices } = useAuth();
+  
+  // Make sure connection status is checked when component mounts
+  useEffect(() => {
+    // Check if we're supposed to be connected to YouTube Music
+    const checkConnection = async () => {
+      console.log('MusicTab mounted, checking YouTube Music connection...');
+      
+      try {
+        // First try direct force connect which is more reliable
+        const response = await fetch('/api/youtube-music/force-connect', {
+          method: 'GET',
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          console.log('YouTube Music direct force connect successful');
+          // Update the connection state in AuthContext
+          await checkYouTubeMusicConnection(true);
+        } else {
+          console.error('YouTube Music force connect failed, falling back to status check');
+          await checkYouTubeMusicConnection(true);
+        }
+      } catch (error) {
+        console.error('Error during YouTube Music connection:', error);
+        // Fallback to regular check
+        await checkYouTubeMusicConnection(true);
+      }
+      
+      console.log('YouTube Music connection status after check:', connectedServices.youtubeMusic);
+    };
+    
+    checkConnection();
+  }, [checkYouTubeMusicConnection, connectedServices.youtubeMusic]);
+  
   // Music player context
   const { isPlaying } = useMusicPlayer();
 

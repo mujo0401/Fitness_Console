@@ -1,403 +1,62 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { 
-  ResponsiveContainer, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend,
-  ComposedChart,
-  Line,
-  Area,
-  PieChart,
-  Pie,
-  Cell,
-  Sector,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-  Scatter,
-  ScatterChart,
-  ZAxis,
-  RadialBarChart,
-  RadialBar,
-  ReferenceLine,
-  Label,
-  Brush,
-  AreaChart,
-  Treemap,
-  Rectangle,
-  SankeyChart,
-  Sankey,
-  SankeyLink,
-  SankeyNode
-} from 'recharts';
+import React, { useState, useEffect, useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { format } from 'date-fns';
 import { 
   Box, 
   Typography, 
-  Paper, 
-  FormControl,
-  InputLabel,
+  FormControlLabel, 
+  Switch,
   Select,
   MenuItem,
+  InputLabel,
+  FormControl,
   useTheme,
-  alpha,
-  Chip,
-  ToggleButtonGroup,
-  ToggleButton,
-  Grid,
-  Fade,
   IconButton,
-  Tooltip as MuiTooltip,
-  ButtonGroup,
-  Button,
-  Zoom,
-  Divider,
-  LinearProgress,
-  Card,
-  CardContent,
-  CircularProgress,
-  Stack,
-  Avatar,
-  Badge,
+  Fab,
+  alpha,
+  Paper,
   Tabs,
   Tab,
-  Modal,
-  Slider
+  CircularProgress,
+  Grid,
+  Card,
+  CardContent,
+  Divider,
+  Chip,
+  LinearProgress,
+  Stack
 } from '@mui/material';
-import { motion } from 'framer-motion';
-import PieChartIcon from '@mui/icons-material/PieChart';
-import BarChartIcon from '@mui/icons-material/BarChart';
-import TimelineIcon from '@mui/icons-material/Timeline';
-import DonutLargeIcon from '@mui/icons-material/DonutLarge';
-import RadarIcon from '@mui/icons-material/Radar';
-import NightsStayIcon from '@mui/icons-material/NightsStay';
-import HourglassTopIcon from '@mui/icons-material/HourglassTop';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+
+// Icons
 import BedtimeIcon from '@mui/icons-material/Bedtime';
-import WbTwilightIcon from '@mui/icons-material/WbTwilight';
-import WaterIcon from '@mui/icons-material/Water';
-import WavesIcon from '@mui/icons-material/Waves';
+import HotelIcon from '@mui/icons-material/Hotel';
+import ShowChartIcon from '@mui/icons-material/ShowChart';
+import TimelineIcon from '@mui/icons-material/Timeline';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import NightsStayIcon from '@mui/icons-material/NightsStay';
 import PsychologyIcon from '@mui/icons-material/Psychology';
-import SelfImprovementIcon from '@mui/icons-material/SelfImprovement';
+import WavesIcon from '@mui/icons-material/Waves';
+import TuneIcon from '@mui/icons-material/Tune';
+import StraightenIcon from '@mui/icons-material/Straighten';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import LightModeIcon from '@mui/icons-material/LightMode';
-import DarkModeIcon from '@mui/icons-material/DarkMode';
-import DeviceThermostatIcon from '@mui/icons-material/DeviceThermostat';
-import RestoreIcon from '@mui/icons-material/Restore';
-import TimerIcon from '@mui/icons-material/Timer';
-import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
-import { format, parseISO, subDays, addHours, addMinutes, differenceInMinutes, set } from 'date-fns';
+import HourglassTopIcon from '@mui/icons-material/HourglassTop';
 
-// Enhanced custom tooltip component
-const CustomTooltip = ({ active, payload, label }) => {
-  const theme = useTheme();
-  
-  if (!active || !payload || !payload.length) return null;
+// Common components
+import { 
+  AnimatedIcon, 
+  DiagnosticsDialog
+} from '../common';
 
-  const data = payload[0].payload;
-  const qualityLevel = getSleepQualityLevel(data.score);
-  
-  // Format timestamp display
-  let timestamp;
-  let formattedTime = '';
-  
-  if (data.timestamp) {
-    // Process timestamp if available (Unix timestamp in seconds)
-    const date = new Date(data.timestamp * 1000);
-    timestamp = format(date, 'yyyy-MM-dd HH:mm:ss');
-    formattedTime = format(date, 'HH:mm:ss');
-  } else {
-    // Fall back to date and time range if available
-    if (data.date) {
-      timestamp = data.startTime && data.endTime 
-        ? `${data.date} (${data.startTime} - ${data.endTime})` 
-        : data.date;
-    } else {
-      // If nothing else is available, use label
-      timestamp = typeof label === 'string' ? label : '';
-    }
-  }
-  
-  // Calculate sleep quality metrics
-  const totalSleepMinutes = (data.deepSleepMinutes || 0) + (data.lightSleepMinutes || 0) + (data.remSleepMinutes || 0);
-  const estimatedRecoveryScore = Math.round(
-    ((data.deepSleepPercentage || 0) * 0.5) + 
-    ((data.efficiency || 0) * 0.3) + 
-    ((data.remSleepPercentage || 0) * 0.2)
-  );
-  
-  return (
-    <Paper
-      elevation={4}
-      sx={{
-        p: 0,
-        borderRadius: 2,
-        maxWidth: 300,
-        backdropFilter: 'blur(8px)',
-        background: 'rgba(255, 255, 255, 0.95)',
-        border: '1px solid rgba(200, 200, 200, 0.5)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
-        overflow: 'hidden'
-      }}
-    >
-      {/* Header with quality level color */}
-      <Box sx={{ 
-        p: 1.5, 
-        background: qualityLevel?.gradient || 'linear-gradient(90deg, #9c27b0, #673ab7)', 
-        color: 'white',
-        borderBottom: '1px solid rgba(0,0,0,0.1)'
-      }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <NightsStayIcon fontSize="small" />
-          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-            {timestamp}
-          </Typography>
-        </Box>
-        {qualityLevel && (
-          <Typography variant="caption" sx={{ opacity: 0.9, display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-            <BedtimeIcon fontSize="inherit" /> 
-            {qualityLevel.name} Quality {data.score ? `(${data.score}/100)` : ''}
-          </Typography>
-        )}
-      </Box>
-      
-      <Box sx={{ p: 2 }}>
-        {/* Primary metrics */}
-        <Grid container spacing={1} sx={{ mb: 1.5 }}>
-          <Grid item xs={6}>
-            <Paper 
-              elevation={0} 
-              sx={{ 
-                p: 1, 
-                textAlign: 'center',
-                border: '1px solid rgba(0,0,0,0.05)',
-                borderRadius: 1,
-                bgcolor: alpha(theme.palette.primary.main, 0.08)
-              }}
-            >
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                Duration
-              </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
-                {formatDuration(data.durationMinutes)} <Typography component="span" variant="caption">hrs</Typography>
-              </Typography>
-            </Paper>
-          </Grid>
-          
-          <Grid item xs={6}>
-            <Paper 
-              elevation={0} 
-              sx={{ 
-                p: 1, 
-                textAlign: 'center',
-                border: '1px solid rgba(0,0,0,0.05)',
-                borderRadius: 1,
-                bgcolor: alpha(theme.palette.info.main, 0.08)
-              }}
-            >
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                Efficiency
-              </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.info.main }}>
-                {data.efficiency}% <Typography component="span" variant="caption"></Typography>
-              </Typography>
-            </Paper>
-          </Grid>
-          
-          {data.timestamp && (
-            <Grid item xs={6}>
-              <Paper 
-                elevation={0} 
-                sx={{ 
-                  p: 1, 
-                  textAlign: 'center',
-                  border: '1px solid rgba(0,0,0,0.05)',
-                  borderRadius: 1,
-                  bgcolor: alpha(theme.palette.success.main, 0.08)
-                }}
-              >
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                  Recorded Time
-                </Typography>
-                <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.success.main, fontSize: '0.9rem' }}>
-                  {formattedTime}
-                </Typography>
-              </Paper>
-            </Grid>
-          )}
-          
-          {data.score > 0 && (
-            <Grid item xs={data.timestamp ? 6 : 12}>
-              <Paper 
-                elevation={0} 
-                sx={{ 
-                  p: 1, 
-                  textAlign: 'center',
-                  border: '1px solid rgba(0,0,0,0.05)',
-                  borderRadius: 1,
-                  bgcolor: alpha(qualityLevel?.color || theme.palette.secondary.main, 0.08)
-                }}
-              >
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                  Est. Recovery
-                </Typography>
-                <Typography variant="h6" sx={{ fontWeight: 'bold', color: qualityLevel?.color || theme.palette.secondary.main }}>
-                  {estimatedRecoveryScore}<Typography component="span" variant="caption">/100</Typography>
-                </Typography>
-              </Paper>
-            </Grid>
-          )}
-        </Grid>
-        
-        {/* Sleep stages breakdown */}
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-            Sleep Stages
-          </Typography>
-          <Paper 
-            elevation={0}
-            sx={{ 
-              p: 1.5, 
-              bgcolor: alpha(theme.palette.background.default, 0.5), 
-              borderRadius: 1,
-              border: `1px dashed ${alpha(theme.palette.divider, 0.5)}`
-            }}
-          >
-            <Grid container spacing={1}>
-              {data.deepSleepMinutes && (
-                <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Box 
-                        sx={{ 
-                          width: 10, 
-                          height: 10, 
-                          borderRadius: '50%', 
-                          bgcolor: '#3f51b5' 
-                        }}
-                      />
-                      <Typography variant="caption" fontWeight="medium">
-                        Deep Sleep:
-                      </Typography>
-                    </Box>
-                    <Typography variant="caption">
-                      {formatDuration(data.deepSleepMinutes)} ({data.deepSleepPercentage}%)
-                    </Typography>
-                  </Box>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={data.deepSleepPercentage || 0} 
-                    sx={{ 
-                      height: 4, 
-                      borderRadius: 2,
-                      mb: 1,
-                      bgcolor: alpha('#3f51b5', 0.1),
-                      '& .MuiLinearProgress-bar': { bgcolor: '#3f51b5' } 
-                    }} 
-                  />
-                </Grid>
-              )}
-              
-              {data.remSleepMinutes && (
-                <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Box 
-                        sx={{ 
-                          width: 10, 
-                          height: 10, 
-                          borderRadius: '50%', 
-                          bgcolor: '#2196f3' 
-                        }}
-                      />
-                      <Typography variant="caption" fontWeight="medium">
-                        REM Sleep:
-                      </Typography>
-                    </Box>
-                    <Typography variant="caption">
-                      {formatDuration(data.remSleepMinutes)} ({data.remSleepPercentage}%)
-                    </Typography>
-                  </Box>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={data.remSleepPercentage || 0} 
-                    sx={{ 
-                      height: 4, 
-                      borderRadius: 2,
-                      mb: 1,
-                      bgcolor: alpha('#2196f3', 0.1),
-                      '& .MuiLinearProgress-bar': { bgcolor: '#2196f3' } 
-                    }} 
-                  />
-                </Grid>
-              )}
-              
-              {data.lightSleepMinutes && (
-                <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Box 
-                        sx={{ 
-                          width: 10, 
-                          height: 10, 
-                          borderRadius: '50%', 
-                          bgcolor: '#9c27b0' 
-                        }}
-                      />
-                      <Typography variant="caption" fontWeight="medium">
-                        Light Sleep:
-                      </Typography>
-                    </Box>
-                    <Typography variant="caption">
-                      {formatDuration(data.lightSleepMinutes)} ({data.lightSleepPercentage}%)
-                    </Typography>
-                  </Box>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={data.lightSleepPercentage || 0} 
-                    sx={{ 
-                      height: 4, 
-                      borderRadius: 2,
-                      bgcolor: alpha('#9c27b0', 0.1),
-                      '& .MuiLinearProgress-bar': { bgcolor: '#9c27b0' } 
-                    }} 
-                  />
-                </Grid>
-              )}
-            </Grid>
-          </Paper>
-        </Box>
-        
-        {/* Sleep quality info - show only when we have quality score */}
-        {data.score > 0 && qualityLevel && (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-              Sleep Quality
-            </Typography>
-            <Paper 
-              elevation={0}
-              sx={{ 
-                p: 1.5, 
-                bgcolor: alpha(qualityLevel.color, 0.05), 
-                borderRadius: 1,
-                border: `1px dashed ${alpha(qualityLevel.color, 0.3)}`
-              }}
-            >
-              <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                <strong>{qualityLevel.name} Sleep Quality:</strong> {qualityLevel.description}
-              </Typography>
-            </Paper>
-          </Box>
-        )}
-      </Box>
-    </Paper>
-  );
-};
+// Chart components - direct imports to fix rendering
+import AreaChart from '../common/charts/AreaChart';
+import LineChart from '../common/charts/LineChart';
+import BarChart from '../common/charts/BarChart';
+
+// Sleep analysis
+import SleepAnalysisPanel from './sleep/SleepAnalysisPanel';
 
 // Helper function to get sleep quality level
 const getSleepQualityLevel = (score) => {
@@ -458,1590 +117,879 @@ const formatDuration = (minutes) => {
   return `${hours}h ${mins}m`;
 };
 
-// Generate sleep cycles visualization - approximates how a person might have cycled through sleep stages
-const generateSleepCycles = (sleepData) => {
-  if (!sleepData) return [];
-  
-  // Default start and end times if not provided
-  const startTime = sleepData.startTime || '11:00 PM';
-  const endTime = sleepData.endTime || '7:00 AM';
-  
-  // Convert to Date objects for manipulation
-  const startDate = new Date();
-  const [startHour, startMinute] = startTime.split(':');
-  let startHourNum = parseInt(startHour);
-  if (startTime.includes('PM') && startHourNum !== 12) startHourNum += 12;
-  if (startTime.includes('AM') && startHourNum === 12) startHourNum = 0;
-  startDate.setHours(startHourNum);
-  startDate.setMinutes(parseInt(startMinute.split(' ')[0]));
-  
-  const endDate = new Date();
-  const [endHour, endMinute] = endTime.split(':');
-  let endHourNum = parseInt(endHour);
-  if (endTime.includes('PM') && endHourNum !== 12) endHourNum += 12;
-  if (endTime.includes('AM') && endHourNum === 12) endHourNum = 0;
-  endDate.setHours(endHourNum);
-  endDate.setMinutes(parseInt(endMinute.split(' ')[0]));
-  
-  // Handle the case where sleep spans midnight
-  if (endDate < startDate) {
-    endDate.setDate(endDate.getDate() + 1);
-  }
-  
-  const durationMinutes = sleepData.durationMinutes || 
-    ((endDate.getTime() - startDate.getTime()) / (1000 * 60));
-  
-  // Sleep cycles are typically 90-110 minutes each
-  const typicalCycleLength = 95; // minutes
-  const estimatedCycles = Math.floor(durationMinutes / typicalCycleLength);
-  
-  // Stage percentages from sleepData or default approximations
-  const deepPercent = sleepData.deepSleepPercentage || 20;
-  const remPercent = sleepData.remSleepPercentage || 25;
-  const lightPercent = sleepData.lightSleepPercentage || 55;
-  
-  // Create cycles data for visualization
-  const cycles = [];
-  let currentTime = new Date(startDate);
-  
-  // Add initial falling asleep period (always light sleep)
-  cycles.push({
-    stage: 'light',
-    startTime: format(currentTime, 'HH:mm'),
-    durationMinutes: 20,
-    label: 'Falling Asleep'
-  });
-  
-  currentTime = addMinutes(currentTime, 20);
-  
-  for (let i = 0; i < estimatedCycles; i++) {
-    // Each cycle follows a pattern: Light → Deep → Light → REM
-    // But we'll adjust based on the actual percentages
-    
-    // Cycle stage durations - adjusted based on the sleep stage percentages
-    const cycleDeepMinutes = Math.round((deepPercent / 100) * typicalCycleLength * 1.2); // Weight deep sleep more early in night
-    const cycleRemMinutes = Math.round((remPercent / 100) * typicalCycleLength * (i/estimatedCycles + 0.5)); // REM increases in later cycles
-    const cycleLightMinutes = typicalCycleLength - cycleDeepMinutes - cycleRemMinutes;
-    
-    // First light sleep phase
-    const lightDuration1 = Math.round(cycleLightMinutes * 0.4);
-    cycles.push({
-      stage: 'light',
-      startTime: format(currentTime, 'HH:mm'),
-      durationMinutes: lightDuration1,
-      cycleNumber: i + 1
-    });
-    currentTime = addMinutes(currentTime, lightDuration1);
-    
-    // Deep sleep phase - longer in early cycles, shorter in later ones
-    const adjustedDeepMinutes = i < 2 
-      ? cycleDeepMinutes 
-      : Math.round(cycleDeepMinutes * (1 - i / estimatedCycles * 0.7));
-    
-    cycles.push({
-      stage: 'deep',
-      startTime: format(currentTime, 'HH:mm'),
-      durationMinutes: adjustedDeepMinutes,
-      cycleNumber: i + 1
-    });
-    currentTime = addMinutes(currentTime, adjustedDeepMinutes);
-    
-    // Second light sleep phase
-    const lightDuration2 = Math.round(cycleLightMinutes * 0.6);
-    cycles.push({
-      stage: 'light',
-      startTime: format(currentTime, 'HH:mm'),
-      durationMinutes: lightDuration2,
-      cycleNumber: i + 1
-    });
-    currentTime = addMinutes(currentTime, lightDuration2);
-    
-    // REM sleep phase - increases with each cycle
-    const adjustedRemMinutes = Math.round(cycleRemMinutes * (1 + i / estimatedCycles * 0.8));
-    
-    cycles.push({
-      stage: 'rem',
-      startTime: format(currentTime, 'HH:mm'),
-      durationMinutes: adjustedRemMinutes,
-      cycleNumber: i + 1
-    });
-    currentTime = addMinutes(currentTime, adjustedRemMinutes);
-    
-    // Add brief awakening (50% chance in later cycles)
-    if (i > 1 && Math.random() > 0.5) {
-      cycles.push({
-        stage: 'awake',
-        startTime: format(currentTime, 'HH:mm'),
-        durationMinutes: Math.round(2 + Math.random() * 5),
-        label: 'Brief Awakening'
-      });
-      currentTime = addMinutes(currentTime, 5);
-    }
-  }
-  
-  // Add waking up phase
-  cycles.push({
-    stage: 'awake',
-    startTime: format(currentTime, 'HH:mm'),
-    durationMinutes: 10,
-    label: 'Waking Up'
-  });
-  
-  return cycles;
-};
-
-// Active shape component for interactive pie chart
-const ActiveShapePie = props => {
-  const RADIAN = Math.PI / 180;
-  const { cx, cy, midAngle, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value, name } = props;
-  const sin = Math.sin(-RADIAN * midAngle);
-  const cos = Math.cos(-RADIAN * midAngle);
-  const sx = cx + (outerRadius + 10) * cos;
-  const sy = cy + (outerRadius + 10) * sin;
-  const mx = cx + (outerRadius + 30) * cos;
-  const my = cy + (outerRadius + 30) * sin;
-  const ex = mx + (cos >= 0 ? 1 : -1) * 22;
-  const ey = my;
-  const textAnchor = cos >= 0 ? 'start' : 'end';
-
-  return (
-    <g>
-      <Sector
-        cx={cx}
-        cy={cy}
-        innerRadius={innerRadius}
-        outerRadius={outerRadius}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        fill={fill}
-        stroke="#fff"
-        strokeWidth={2}
-      />
-      <Sector
-        cx={cx}
-        cy={cy}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        innerRadius={outerRadius + 6}
-        outerRadius={outerRadius + 10}
-        fill={fill}
-      />
-      <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={fill} fill="none" />
-      <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
-      <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} textAnchor={textAnchor} fill="#333" fontSize={12}>{name}</text>
-      <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} dy={18} textAnchor={textAnchor} fill="#999" fontSize={12}>
-        {`${value} min (${(percent * 100).toFixed(2)}%)`}
-      </text>
-    </g>
-  );
-};
-
-// Enhanced SleepChart component
-const SleepChart = ({ data, period, dataSource = 'fitbit' }) => {
+/**
+ * Sleep Chart component
+ * Displays and controls sleep visualization from different data sources
+ * 
+ * @param {Object} props
+ * @param {Array} props.data - Main sleep data
+ * @param {Array} props.fitbitData - Fitbit sleep data
+ * @param {Array} props.googleFitData - Google Fit sleep data
+ * @param {Array} props.appleHealthData - Apple Health sleep data
+ * @param {string} props.dataSource - Current data source ('auto', 'fitbit', 'googleFit', etc.)
+ * @param {string} props.period - Time period ('day', 'week', 'month', etc.)
+ * @param {Array} props.tokenScopes - Available token scopes
+ * @param {boolean} props.isAuthenticated - Whether user is authenticated
+ * @param {Date} props.date - Current date
+ * @param {Object} props.availableSources - Available data sources
+ * @param {Function} props.onDataSourceChange - Handler for data source changes
+ * @returns {JSX.Element}
+ */
+const SleepChart = ({
+  data,
+  fitbitData,
+  googleFitData,
+  appleHealthData,
+  dataSource = 'auto',
+  period = 'day',
+  tokenScopes = [],
+  isAuthenticated = false,
+  date = new Date(),
+  availableSources = { fitbit: false, googleFit: false, appleHealth: false },
+  onDataSourceChange
+}) => {
   const theme = useTheme();
-  const [viewType, setViewType] = useState('sleepTimeline');
-  const [chartType, setChartType] = useState('timeline');
-  const [chartData, setChartData] = useState([]);
-  const [activePieIndex, setActivePieIndex] = useState(0);
-  const [selectedDay, setSelectedDay] = useState(null);
-  const [showAIAnalysis, setShowAIAnalysis] = useState(false);
-  const [sleepCycles, setSleepCycles] = useState([]);
-  const [aiInsights, setAiInsights] = useState(null);
   
-  // Process data when it changes or view type changes
+  // State
+  const [showRange, setShowRange] = useState(true);
+  const [stagesView, setStagesView] = useState(false);
+  const [resolution, setResolution] = useState('medium');
+  const [chartType, setChartType] = useState('area');
+  const [processedData, setProcessedData] = useState([]);
+  const [sleepScore, setSleepScore] = useState(0);
+  const [sleepDuration, setSleepDuration] = useState(0);
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [compareMode, setCompareMode] = useState(false);
+  const [dataQualityScores, setDataQualityScores] = useState({
+    fitbit: 0,
+    googleFit: 0,
+    appleHealth: 0
+  });
+  
+  // Process data when parameters change
   useEffect(() => {
-    if (!data || data.length === 0) return;
+    console.log("SleepChart data processing");
+    console.log("- Main data length:", data?.length || 0);
+    console.log("- Google Fit data length:", googleFitData?.length || 0);
+    console.log("- Fitbit data length:", fitbitData?.length || 0);
     
-    // Create copy to avoid modifying original data
-    const processedData = [...data].map(item => ({
-      ...item,
-      // Convert duration to hours for better visualization
-      durationHours: parseFloat((item.durationMinutes / 60).toFixed(1)),
-      // Calculate sleep quality score as percentage for radar chart
-      qualityScore: item.score || 0,
-      efficiencyScore: item.efficiency || 0,
-      deepSleepScore: (item.deepSleepPercentage || 0) * 1.2, // Weight deep sleep more
-      remSleepScore: (item.remSleepPercentage || 0) * 1.1,   // Weight REM sleep slightly more
-      durationScore: Math.min(100, (item.durationMinutes / 480) * 100), // 8 hours as 100%
-      continuityScore: Math.max(0, 100 - ((item.awakeDuringNight || 0) / 5) * 10), // Lower awake time is better
-      
-      // Sleep wellness index - proprietary score that weighs different factors
-      wellnessIndex: calculateSleepWellnessIndex(item),
-      
-      // Sleep recovery score - emphasizes restorative sleep quality
-      recoveryScore: calculateRecoveryScore(item)
-    }));
-    
-    // Sort by date
-    processedData.sort((a, b) => new Date(a.date) - new Date(b.date));
-    
-    setChartData(processedData);
-    
-    // Set the latest day as selected for detailed view
-    if (processedData.length > 0 && !selectedDay) {
-      setSelectedDay(processedData[processedData.length - 1]);
-    }
-    
-    // Generate AI analysis for selected day
-    if (selectedDay) {
-      // Generate estimated sleep cycles
-      const cycles = generateSleepCycles(selectedDay);
-      setSleepCycles(cycles);
-      
-      // Generate AI insights 
-      generateAIInsights(selectedDay);
-    }
-  }, [data, viewType, selectedDay]);
-  
-  // Calculate proprietary sleep wellness index
-  const calculateSleepWellnessIndex = (sleepData) => {
-    if (!sleepData) return 0;
-    
-    // Base factors
-    const durationFactor = Math.min(100, (sleepData.durationMinutes / 480) * 100); // 8 hours is optimal
-    const efficiencyFactor = sleepData.efficiency || 85;
-    const deepSleepFactor = ((sleepData.deepSleepPercentage || 20) / 25) * 100; // 25% deep sleep is ideal
-    const remSleepFactor = ((sleepData.remSleepPercentage || 22) / 25) * 100; // 25% REM sleep is ideal
-    const continuityFactor = 100 - Math.min(100, ((sleepData.awakeDuringNight || 10) / 20) * 100); // Lower awake time is better
-    
-    // Weighted formula
-    const wellnessIndex = Math.round(
-      (durationFactor * 0.25) +
-      (efficiencyFactor * 0.2) +
-      (deepSleepFactor * 0.25) +
-      (remSleepFactor * 0.2) +
-      (continuityFactor * 0.1)
-    );
-    
-    return Math.max(0, Math.min(100, wellnessIndex));
-  };
-  
-  // Calculate recovery score - focused on physical recovery aspects
-  const calculateRecoveryScore = (sleepData) => {
-    if (!sleepData) return 0;
-    
-    // Recovery factors - deep sleep is weighted heavily for physical recovery
-    const deepSleepFactor = ((sleepData.deepSleepPercentage || 15) / 25) * 100;
-    const sleepDurationFactor = Math.min(100, (sleepData.durationMinutes / 480) * 100);
-    const efficiencyFactor = sleepData.efficiency || 85;
-    
-    // Calculate recovery score with higher emphasis on deep sleep
-    const recoveryScore = Math.round(
-      (deepSleepFactor * 0.5) +
-      (sleepDurationFactor * 0.3) +
-      (efficiencyFactor * 0.2)
-    );
-    
-    return Math.max(0, Math.min(100, recoveryScore));
-  };
-  
-  // Generate advanced AI insights based on sleep data
-  const generateAIInsights = (sleepData) => {
-    if (!sleepData) return;
-    
-    // Deeper analysis of sleep patterns
-    const insights = {
-      // Sleep quality assessment
-      quality: {
-        score: sleepData.score || 75,
-        assessment: getQualityAssessment(sleepData.score || 75),
-        factors: []
-      },
-      
-      // Physical recovery assessment
-      recovery: {
-        score: calculateRecoveryScore(sleepData),
-        assessment: ''
-      },
-      
-      // Sleep hygiene recommendations
-      recommendations: [],
-      
-      // Sleep schedule analysis
-      scheduleAnalysis: {},
-      
-      // Brain health impact
-      brainHealth: {}
+    // Calculate data quality scores
+    const qualityScores = {
+      fitbit: calculateDataQualityScore(fitbitData),
+      googleFit: calculateDataQualityScore(googleFitData),
+      appleHealth: calculateDataQualityScore(appleHealthData)
     };
+    setDataQualityScores(qualityScores);
     
-    // Add quality factors based on sleep data
-    if ((sleepData.deepSleepPercentage || 0) < 15) {
-      insights.quality.factors.push({
-        type: 'concern',
-        message: 'Low deep sleep percentage may impact physical recovery',
-        icon: 'warning'
-      });
-    } else if ((sleepData.deepSleepPercentage || 0) > 25) {
-      insights.quality.factors.push({
-        type: 'positive',
-        message: 'Excellent deep sleep percentage supports physical recovery',
-        icon: 'check'
-      });
+    // If no data, early return
+    if (!data || data.length === 0) {
+      console.log("Main data is empty, checking alternatives");
+      
+      // Use Google Fit data as fallback if available
+      if (googleFitData && googleFitData.length > 0) {
+        console.log("Using Google Fit data as fallback because main data is empty");
+        processSleepData(googleFitData, 'googleFit');
+        return;
+      }
+      
+      // Create empty placeholder if no data available
+      console.log("No data available, creating placeholder");
+      const placeholderData = [{
+        date: format(new Date(), 'yyyy-MM-dd'),
+        durationMinutes: 0,
+        efficiency: 0,
+        score: 0,
+        deepSleepMinutes: 0,
+        lightSleepMinutes: 0,
+        remSleepMinutes: 0,
+        awakeDuringNight: 0,
+        source: "none"
+      }];
+      setProcessedData(placeholderData);
+      setSleepScore(0);
+      setSleepDuration(0);
+      return;
     }
     
-    if ((sleepData.remSleepPercentage || 0) < 15) {
-      insights.quality.factors.push({
-        type: 'concern',
-        message: 'Low REM sleep may impact memory consolidation and emotional processing',
-        icon: 'warning'
+    // Process data based on source and mode
+    if (compareMode) {
+      // When comparing, combine data from all sources
+      const combinedData = combineDataForComparison({
+        fitbit: fitbitData,
+        googleFit: googleFitData,
+        appleHealth: appleHealthData
       });
-    } else if ((sleepData.remSleepPercentage || 0) > 25) {
-      insights.quality.factors.push({
-        type: 'positive',
-        message: 'Optimal REM sleep supporting cognitive function and emotional well-being',
-        icon: 'check'
-      });
-    }
-    
-    // Recovery assessment text
-    const recoveryScore = calculateRecoveryScore(sleepData);
-    if (recoveryScore >= 85) {
-      insights.recovery.assessment = 'Excellent recovery. Your body received optimal restorative sleep.';
-    } else if (recoveryScore >= 70) {
-      insights.recovery.assessment = 'Good recovery. Your sleep provided substantial physical restoration.';
-    } else if (recoveryScore >= 50) {
-      insights.recovery.assessment = 'Moderate recovery. Your body received some restorative benefits.';
+      setProcessedData(combinedData);
+      
+      // Get average sleep score from the combined data
+      const avgScore = Math.round(
+        combinedData.reduce((sum, point) => sum + (point.score || 0), 0) / 
+        combinedData.filter(point => point.score > 0).length || 1
+      );
+      setSleepScore(avgScore);
+      
+      // Get average sleep duration from the combined data
+      const avgDuration = Math.round(
+        combinedData.reduce((sum, point) => sum + (point.durationMinutes || 0), 0) / 
+        combinedData.length || 1
+      );
+      setSleepDuration(avgDuration);
     } else {
-      insights.recovery.assessment = 'Limited recovery. Consider prioritizing sleep quality to improve physical restoration.';
+      // Process based on selected data source
+      let sourceData = data;
+      let sourceName = 'auto';
+      
+      console.log("Processing with data source:", dataSource);
+      
+      // Use Google Fit data if available and selected
+      if (dataSource === 'googleFit' && googleFitData && googleFitData.length > 0) {
+        console.log("Using Google Fit data explicitly");
+        sourceData = googleFitData;
+        sourceName = 'googleFit';
+      } 
+      // Use Fitbit data if selected
+      else if (dataSource === 'fitbit' && fitbitData && fitbitData.length > 0) {
+        console.log("Using Fitbit data explicitly");
+        sourceData = fitbitData;
+        sourceName = 'fitbit';
+      }
+      // Use Apple Health data if selected
+      else if (dataSource === 'appleHealth' && appleHealthData && appleHealthData.length > 0) {
+        console.log("Using Apple Health data explicitly");
+        sourceData = appleHealthData;
+        sourceName = 'appleHealth';
+      } 
+      // Auto-select based on quality if in auto mode
+      else if (dataSource === 'auto') {
+        console.log("Auto mode, selecting best data source");
+        // Priority to Google Fit data if available
+        if (googleFitData && googleFitData.length > 0) {
+          console.log("Auto mode selecting Google Fit data");
+          sourceData = googleFitData;
+          sourceName = 'googleFit';
+        }
+        // If no Google Fit data, use best available
+        else {
+          const bestSource = selectBestDataSource();
+          console.log("Best source determined:", bestSource);
+          if (bestSource === 'fitbit' && fitbitData && fitbitData.length > 0) {
+            sourceData = fitbitData;
+            sourceName = 'fitbit';
+          } else if (bestSource === 'appleHealth' && appleHealthData && appleHealthData.length > 0) {
+            sourceData = appleHealthData;
+            sourceName = 'appleHealth';
+          }
+        }
+      }
+      
+      // Check if sourceData has been properly assigned
+      if (!sourceData || sourceData.length === 0) {
+        console.log("sourceData is empty after selection, checking fallbacks");
+        // Try to use any available data
+        if (googleFitData && googleFitData.length > 0) {
+          console.log("Falling back to Google Fit data");
+          sourceData = googleFitData;
+          sourceName = 'googleFit';
+        } else if (fitbitData && fitbitData.length > 0) {
+          console.log("Falling back to Fitbit data");
+          sourceData = fitbitData;
+          sourceName = 'fitbit';
+        } else if (appleHealthData && appleHealthData.length > 0) {
+          console.log("Falling back to Apple Health data");
+          sourceData = appleHealthData;
+          sourceName = 'appleHealth';
+        }
+      }
+      
+      console.log("Final source data selected:", sourceName, "with", sourceData?.length || 0, "data points");
+      
+      // Process the selected data
+      if (sourceData && sourceData.length > 0) {
+        processSleepData(sourceData, sourceName);
+      } else {
+        console.warn("No valid data source found for sleep chart");
+        // Create placeholder data as fallback
+        const placeholderData = [{
+          date: format(new Date(), 'yyyy-MM-dd'),
+          durationMinutes: 0,
+          efficiency: 0,
+          score: 0,
+          deepSleepMinutes: 0,
+          lightSleepMinutes: 0,
+          remSleepMinutes: 0,
+          awakeDuringNight: 0,
+          source: "none"
+        }];
+        setProcessedData(placeholderData);
+        setSleepScore(0);
+        setSleepDuration(0);
+      }
+    }
+  }, [data, googleFitData, fitbitData, appleHealthData, dataSource, resolution, compareMode, period]);
+  
+  // Process sleep data for display
+  const processSleepData = (sourceData, sourceName) => {
+    if (!sourceData || sourceData.length === 0) {
+      console.warn("No source data to process");
+      return;
     }
     
-    // Generate personalized recommendations
-    if (sleepData.durationMinutes < 420) { // Less than 7 hours
-      insights.recommendations.push({
-        type: 'duration',
-        message: 'Consider extending your sleep time to 7-9 hours for optimal health',
-        priority: 'high'
+    // Check if we only have a placeholder data point
+    const hasOnlyPlaceholder = sourceData.length === 1 && sourceData[0].placeholder === true;
+    if (hasOnlyPlaceholder) {
+      console.log("Only placeholder data available for today");
+      setSleepScore(0);
+      setSleepDuration(0);
+      setProcessedData([sourceData[0]]);
+      return;
+    }
+    
+    console.log(`Processing ${sourceName} data with ${sourceData.length} points`);
+    
+    // Downsample and enhance data
+    const downsampledData = downsampleData(sourceData, resolution === 'low' ? 20 : resolution === 'high' ? 100 : 50);
+    console.log(`Downsampled to ${downsampledData.length} points`);
+    
+    const enhanced = enhanceSleepData(downsampledData, sourceName);
+    console.log(`Enhanced data has ${enhanced.length} points`);
+    
+    setProcessedData(enhanced);
+    
+    // Calculate sleep score
+    const scoresWithValues = enhanced.filter(item => item.score > 0);
+    const avgScore = scoresWithValues.length > 0
+      ? Math.round(scoresWithValues.reduce((sum, item) => sum + item.score, 0) / scoresWithValues.length)
+      : 0;
+    
+    setSleepScore(avgScore);
+    
+    // Calculate average sleep duration
+    const avgDuration = enhanced.length > 0
+      ? Math.round(enhanced.reduce((sum, item) => sum + (item.durationMinutes || 0), 0) / enhanced.length)
+      : 0;
+    
+    setSleepDuration(avgDuration);
+  };
+  
+  // Select the best data source based on quality scores
+  const selectBestDataSource = () => {
+    // Filter for available sources only
+    const scores = Object.entries(dataQualityScores)
+      .filter(([source]) => availableSources[source])
+      .sort((a, b) => b[1] - a[1]);
+    
+    // Return the highest scoring source, or 'googleFit' as fallback if available
+    if (scores.length > 0) return scores[0][0];
+    if (availableSources.googleFit) return 'googleFit';
+    return 'fitbit';
+  };
+  
+  // Calculate data quality score
+  const calculateDataQualityScore = (data) => {
+    if (!data || !Array.isArray(data) || data.length === 0) return 0;
+    
+    // Score based on quantity (30%)
+    const quantityScore = Math.min(100, (data.length / 10) * 100) * 0.3;
+    
+    // Score based on completeness (40%)
+    let completenessScore = 0;
+    const keysToCheck = ['deepSleepMinutes', 'remSleepMinutes', 'lightSleepMinutes', 'durationMinutes', 'efficiency'];
+    const completeItems = data.filter(item => 
+      keysToCheck.every(key => item[key] !== undefined && item[key] !== null)
+    );
+    completenessScore = (completeItems.length / data.length) * 100 * 0.4;
+    
+    // Score based on consistency (30%)
+    let consistencyScore = 0;
+    if (data.length > 1) {
+      const hasConsistentDates = data.every(item => item.date);
+      consistencyScore = hasConsistentDates ? 30 : 15;
+    }
+    
+    return Math.round(quantityScore + completenessScore + consistencyScore);
+  };
+  
+  // Downsample data for performance
+  const downsampleData = (sourceData, targetPoints) => {
+    if (sourceData.length <= targetPoints) return sourceData;
+    
+    // Calculate the factor by which to reduce the data
+    const factor = Math.max(1, Math.ceil(sourceData.length / targetPoints));
+    
+    const result = [];
+    
+    // Always include first and last point for proper time range
+    if (sourceData.length > 1) {
+      result.push({...sourceData[0]});
+    }
+    
+    // Process middle points
+    for (let i = 1; i < sourceData.length - 1; i += factor) {
+      const chunk = sourceData.slice(i, Math.min(i + factor, sourceData.length - 1));
+      
+      // For high-fidelity detail, use first point in each chunk
+      const pointObj = { ...chunk[0] };
+      
+      result.push(pointObj);
+    }
+    
+    // Always include last point
+    if (sourceData.length > 1) {
+      result.push({...sourceData[sourceData.length - 1]});
+    }
+    
+    return result;
+  };
+  
+  // Enhance sleep data for visualization
+  const enhanceSleepData = (data, source) => {
+    if (!data || !Array.isArray(data)) return [];
+    
+    return data.map(item => {
+      try {
+        // Convert duration to hours for better visualization
+        const durationHours = parseFloat(((item.durationMinutes || 0) / 60).toFixed(1));
+        
+        // Calculate sleep quality level
+        const qualityLevel = getSleepQualityLevel(item.score);
+        
+        // Calculate sleep stage percentages if not provided
+        const totalMinutes = item.durationMinutes || 480; // Default to 8 hours
+        
+        const deepPercent = item.deepSleepPercentage || 
+                           (item.deepSleepMinutes ? Math.round((item.deepSleepMinutes / totalMinutes) * 100) : 20);
+                           
+        const remPercent = item.remSleepPercentage || 
+                          (item.remSleepMinutes ? Math.round((item.remSleepMinutes / totalMinutes) * 100) : 25);
+                          
+        const lightPercent = item.lightSleepPercentage || 
+                            (item.lightSleepMinutes ? Math.round((item.lightSleepMinutes / totalMinutes) * 100) : 55);
+        
+        // Calculate sleep efficiency if not provided
+        const efficiency = item.efficiency || 90;
+        
+        // Create a formattedDate for consistent display
+        const formattedDate = item.date || format(new Date(), 'yyyy-MM-dd');
+        
+        return {
+          ...item,
+          source,
+          durationHours,
+          deepPercent,
+          remPercent,
+          lightPercent,
+          efficiency,
+          formattedDate,
+          qualityLevel: qualityLevel || { name: 'Unknown', color: '#9e9e9e' },
+          sleepQualityColor: qualityLevel?.color || '#9e9e9e',
+          // Ensure these fields exist
+          deepSleepMinutes: item.deepSleepMinutes || Math.round(totalMinutes * (deepPercent / 100)),
+          remSleepMinutes: item.remSleepMinutes || Math.round(totalMinutes * (remPercent / 100)),
+          lightSleepMinutes: item.lightSleepMinutes || Math.round(totalMinutes * (lightPercent / 100)),
+          awakeDuringNight: item.awakeDuringNight || 0,
+          // For display
+          sleepDurationFormatted: formatDuration(item.durationMinutes || 0)
+        };
+      } catch (e) {
+        console.error('Error enhancing sleep data:', e, 'for item:', item);
+        return {
+          ...item,
+          source,
+          durationHours: 0,
+          deepPercent: 0,
+          remPercent: 0,
+          lightPercent: 0,
+          efficiency: 0,
+          formattedDate: item.date || format(new Date(), 'yyyy-MM-dd'),
+          qualityLevel: { name: 'Unknown', color: '#9e9e9e' },
+          sleepQualityColor: '#9e9e9e',
+          deepSleepMinutes: 0,
+          remSleepMinutes: 0,
+          lightSleepMinutes: 0,
+          awakeDuringNight: 0,
+          sleepDurationFormatted: '0h 0m',
+          error: true
+        };
+      }
+    });
+  };
+  
+  // Combine data from multiple sources for comparison
+  const combineDataForComparison = (dataSources) => {
+    const combinedData = [];
+    const dateMap = {};
+    
+    // Process each data source
+    Object.entries(dataSources).forEach(([source, data]) => {
+      if (!data || !Array.isArray(data) || data.length === 0) return;
+      
+      // Create a map of dates to data points
+      data.forEach(item => {
+        if (!item.date) return;
+        
+        if (!dateMap[item.date]) {
+          dateMap[item.date] = {
+            date: item.date,
+            formattedDate: item.date
+          };
+        }
+        
+        // Add source-specific data
+        dateMap[item.date][`${source}Score`] = item.score || 0;
+        dateMap[item.date][`${source}Duration`] = item.durationMinutes || 0;
+        dateMap[item.date][`${source}Efficiency`] = item.efficiency || 0;
+        dateMap[item.date][`${source}DeepSleep`] = item.deepSleepMinutes || 0;
+        dateMap[item.date][`${source}RemSleep`] = item.remSleepMinutes || 0;
+        dateMap[item.date][`${source}LightSleep`] = item.lightSleepMinutes || 0;
       });
-    }
+    });
     
-    if ((sleepData.efficiency || 0) < 85) {
-      insights.recommendations.push({
-        type: 'efficiency',
-        message: 'Improve sleep efficiency by maintaining a consistent sleep schedule',
-        priority: 'medium'
-      });
-    }
-    
-    if ((sleepData.deepSleepPercentage || 0) < 15) {
-      insights.recommendations.push({
-        type: 'deepSleep',
-        message: 'To improve deep sleep: avoid alcohol before bed, exercise regularly, and maintain cool bedroom temperature',
-        priority: 'high'
-      });
-    }
-    
-    // Brain health impact analysis
-    insights.brainHealth = {
-      cognitiveFunction: (sleepData.remSleepPercentage || 0) >= 20 ? 'Optimal' : 'Suboptimal',
-      emotionalRegulation: (sleepData.remSleepPercentage || 0) >= 20 ? 'Well-supported' : 'May be impacted',
-      memoryConsolidation: (sleepData.deepSleepPercentage || 0) >= 20 ? 'Strong' : 'May be reduced'
+    // Convert the map to an array and sort by date
+    return Object.values(dateMap).sort((a, b) => new Date(a.date) - new Date(b.date));
+  };
+  
+  // Chart configuration
+  const getChartConfig = () => {
+    // Base configuration
+    const baseConfig = {
+      data: processedData,
+      xAxisDataKey: "formattedDate",
+      height: 400,
+      showTooltip: true,
+      minYValue: 0
     };
     
-    // Schedule analysis
-    insights.scheduleAnalysis = {
-      optimalSleepTime: '10:30 PM - 6:30 AM',
-      circadianAlignment: sleepData.startTime?.includes('PM') ? 'Good' : 'May need adjustment',
-      consistencyScore: 85
-    };
-    
-    setAiInsights(insights);
-  };
-  
-  // Helper function for quality assessment text
-  const getQualityAssessment = (score) => {
-    if (score >= 90) return 'Excellent sleep quality supporting optimal cognitive and physical functioning';
-    if (score >= 80) return 'Very good sleep quality supporting healthy brain and body recovery';
-    if (score >= 70) return 'Good sleep quality providing adequate recovery';
-    if (score >= 60) return 'Fair sleep quality with room for improvement';
-    return 'Sleep quality needs attention to better support health and recovery';
-  };
-  
-  const handlePieEnter = useCallback((_, index) => {
-    setActivePieIndex(index);
-  }, []);
-  
-  const handleChartTypeChange = (_, newChartType) => {
-    if (newChartType !== null) {
-      setChartType(newChartType);
+    if (stagesView) {
+      // Sleep stages visualization (stacked bar chart)
+      return {
+        ...baseConfig,
+        series: [
+          {
+            dataKey: "deepSleepMinutes",
+            name: "Deep Sleep",
+            color: "#3f51b5",
+            stackId: "sleep",
+            barSize: processedData.length > 30 ? 5 : 20
+          },
+          {
+            dataKey: "remSleepMinutes",
+            name: "REM Sleep",
+            color: "#2196f3",
+            stackId: "sleep",
+            barSize: processedData.length > 30 ? 5 : 20
+          },
+          {
+            dataKey: "lightSleepMinutes",
+            name: "Light Sleep",
+            color: "#9c27b0",
+            stackId: "sleep",
+            barSize: processedData.length > 30 ? 5 : 20
+          },
+          {
+            dataKey: "awakeDuringNight",
+            name: "Awake",
+            color: "#ff9800",
+            stackId: "sleep",
+            barSize: processedData.length > 30 ? 5 : 20
+          }
+        ]
+      };
+    } else if (compareMode) {
+      // Comparison mode - show data from different sources
+      const series = [];
+      
+      if (availableSources.fitbit) {
+        series.push({
+          dataKey: 'fitbitDuration',
+          name: 'Fitbit (minutes)',
+          color: '#1976d2',
+          strokeWidth: 2
+        });
+      }
+      
+      if (availableSources.googleFit) {
+        series.push({
+          dataKey: 'googleFitDuration',
+          name: 'Google Fit (minutes)',
+          color: '#4caf50',
+          strokeWidth: 2
+        });
+      }
+      
+      if (availableSources.appleHealth) {
+        series.push({
+          dataKey: 'appleHealthDuration',
+          name: 'Apple Health (minutes)',
+          color: '#f44336',
+          strokeWidth: 2
+        });
+      }
+      
+      return {
+        ...baseConfig,
+        series
+      };
+    } else {
+      // Standard single source mode
+      if (chartType === 'bar') {
+        return {
+          ...baseConfig,
+          series: [
+            {
+              dataKey: "durationMinutes",
+              name: "Sleep Duration (minutes)",
+              color: theme.palette.primary.main,
+              barSize: processedData.length > 30 ? 5 : 20,
+              // Custom coloring based on quality
+              getItemColor: (entry) => {
+                if (!entry.score) return theme.palette.grey[300];
+                return entry.sleepQualityColor;
+              },
+              itemColors: true
+            }
+          ],
+          // Reference area for recommended sleep (7-9 hours)
+          referenceAreas: [
+            {
+              y1: 420, // 7 hours
+              y2: 540, // 9 hours
+              fill: alpha(theme.palette.success.main, 0.1),
+              label: { 
+                value: 'Recommended', 
+                position: 'insideLeft',
+                fill: theme.palette.success.main 
+              }
+            }
+          ]
+        };
+      } else if (chartType === 'line') {
+        return {
+          ...baseConfig,
+          series: [
+            // Sleep score
+            {
+              dataKey: "score",
+              name: "Sleep Score",
+              color: theme.palette.secondary.main,
+              strokeWidth: 2,
+              yAxisId: "right",
+              dot: true
+            },
+            // Sleep efficiency
+            {
+              dataKey: "efficiency",
+              name: "Sleep Efficiency (%)",
+              color: theme.palette.info.main,
+              strokeWidth: 2,
+              yAxisId: "right",
+              dot: true
+            },
+            // Sleep duration
+            {
+              dataKey: "durationMinutes",
+              name: "Sleep Duration (minutes)",
+              color: theme.palette.primary.main,
+              strokeWidth: 2,
+              yAxisId: "left",
+              dot: true
+            }
+          ],
+          secondYAxis: {
+            dataKey: "score",
+            label: "Score/Efficiency",
+            domain: [0, 100],
+            orientation: "right"
+          }
+        };
+      } else {
+        // Default area chart
+        return {
+          ...baseConfig,
+          series: [
+            {
+              dataKey: "durationMinutes",
+              name: "Sleep Duration (minutes)",
+              color: theme.palette.primary.main,
+              strokeWidth: 2,
+              gradientId: 'sleepGradient',
+              fillOpacity: { start: 0.8, end: 0.1 }
+            }
+          ],
+          // Reference area for recommended sleep (7-9 hours)
+          referenceAreas: [
+            {
+              y1: 420, // 7 hours
+              y2: 540, // 9 hours
+              fill: alpha(theme.palette.success.main, 0.1),
+              label: { 
+                value: 'Recommended', 
+                position: 'insideLeft',
+                fill: theme.palette.success.main 
+              }
+            }
+          ]
+        };
+      }
     }
   };
   
-  const handleDaySelect = (day) => {
-    setSelectedDay(day);
-  };
-  
-  // Sleep Timeline visualization component
-  const SleepTimelineView = () => {
-    if (!selectedDay || !sleepCycles || sleepCycles.length === 0) {
+  // Render the selected chart
+  const renderChart = () => {
+    try {
+      const config = getChartConfig();
+      
+      if (!AreaChart || !LineChart || !BarChart) {
+        console.error("Chart components not found. Make sure they're properly imported.");
+        return (
+          <Box sx={{ p: 3, textAlign: 'center' }}>
+            <Typography color="error">Chart components not loaded</Typography>
+          </Box>
+        );
+      }
+      
+      // Render based on chart type
+      if (stagesView || chartType === 'bar') {
+        return <BarChart {...config} />;
+      } else if (chartType === 'line') {
+        return <LineChart {...config} />;
+      } else {
+        return <AreaChart {...config} />;
+      }
+    } catch (error) {
+      console.error("Error rendering sleep chart:", error);
       return (
-        <Box sx={{ textAlign: 'center', p: 3 }}>
-          <CircularProgress size={30} />
-          <Typography sx={{ mt: 2 }}>Generating sleep cycle data...</Typography>
+        <Box sx={{ p: 3, textAlign: 'center' }}>
+          <Typography color="error">Chart rendering failed: {error.message}</Typography>
         </Box>
       );
     }
-    
-    // Calculate total width for the timeline
-    const totalDuration = sleepCycles.reduce((sum, cycle) => sum + cycle.durationMinutes, 0);
-    
-    // Get start and end times
-    const startTime = selectedDay.startTime || sleepCycles[0].startTime;
-    const endTime = selectedDay.endTime || sleepCycles[sleepCycles.length - 1].startTime;
-    
-    // Color mapping for sleep stages
-    const stageColors = {
-      deep: '#3f51b5',
-      rem: '#2196f3',
-      light: '#9c27b0',
-      awake: '#ff9800'
-    };
-    
-    const stageIcons = {
-      deep: <WavesIcon fontSize="small" sx={{ color: stageColors.deep, verticalAlign: 'middle' }} />,
-      rem: <PsychologyIcon fontSize="small" sx={{ color: stageColors.rem, verticalAlign: 'middle' }} />,
-      light: <NightsStayIcon fontSize="small" sx={{ color: stageColors.light, verticalAlign: 'middle' }} />,
-      awake: <LightModeIcon fontSize="small" sx={{ color: stageColors.awake, verticalAlign: 'middle' }} />
-    };
-    
-    return (
-      <Box sx={{ mt: 3, width: '100%' }}>
-        <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <BedtimeIcon color="primary" />
-          Sleep Cycle Timeline
-          <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-            {startTime || '10:30 PM'} - {endTime || '6:45 AM'}
-          </Typography>
-        </Typography>
-        
-        <Paper sx={{ p: 2, borderRadius: 2, boxShadow: '0 4px 20px rgba(0,0,0,0.1)', bgcolor: alpha(theme.palette.background.paper, 0.6), mb: 2 }}>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            This visualization shows your estimated sleep cycles throughout the night, showcasing how your sleep transitioned between different stages.
-          </Typography>
-          
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2, mb: 1, px: 1 }}>
-            <Typography variant="caption" color="text.secondary">
-              {startTime || '10:30 PM'}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {endTime || '6:45 AM'}
-            </Typography>
-          </Box>
-          
-          {/* Timeline visualization */}
-          <Box sx={{ 
-            width: '100%', 
-            height: 100, 
-            position: 'relative', 
-            bgcolor: 'rgba(0,0,0,0.03)', 
-            borderRadius: 2, 
-            overflow: 'hidden' 
-          }}>
-            {sleepCycles.map((cycle, index) => {
-              // Calculate width based on proportion of total duration
-              const width = `${(cycle.durationMinutes / totalDuration) * 100}%`;
-              
-              return (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.02 }}
-                  style={{
-                    position: 'absolute',
-                    left: `${sleepCycles.slice(0, index).reduce((sum, c) => sum + (c.durationMinutes / totalDuration) * 100, 0)}%`,
-                    width: width,
-                    height: '100%',
-                    backgroundColor: stageColors[cycle.stage],
-                    opacity: cycle.stage === 'awake' ? 0.5 : 0.8
-                  }}
-                >
-                  <MuiTooltip
-                    title={
-                      <Box>
-                        <Typography variant="subtitle2">{cycle.stage.charAt(0).toUpperCase() + cycle.stage.slice(1)} Sleep</Typography>
-                        <Typography variant="body2">Time: {cycle.startTime}</Typography>
-                        <Typography variant="body2">Duration: {formatDuration(cycle.durationMinutes)}</Typography>
-                        {cycle.label && <Typography variant="body2">{cycle.label}</Typography>}
-                        {cycle.cycleNumber && <Typography variant="body2">Cycle: {cycle.cycleNumber}</Typography>}
-                      </Box>
-                    }
-                  >
-                    <Box sx={{ 
-                      width: '100%', 
-                      height: '100%', 
-                      display: 'flex', 
-                      flexDirection: 'column',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      cursor: 'pointer',
-                      color: 'white',
-                      userSelect: 'none'
-                    }}>
-                      {width.replace('%', '') > 5 && (
-                        <Typography variant="caption" sx={{ fontSize: '0.6rem', fontWeight: 'bold' }}>
-                          {cycle.stage.toUpperCase()}
-                        </Typography>
-                      )}
-                    </Box>
-                  </MuiTooltip>
-                </motion.div>
-              );
-            })}
-          </Box>
-          
-          {/* Legend */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, flexWrap: 'wrap', gap: 2 }}>
-            {Object.entries(stageColors).map(([stage, color]) => (
-              <Box key={stage} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: color }} />
-                <Typography variant="caption" fontWeight="medium">
-                  {stage.charAt(0).toUpperCase() + stage.slice(1)}
-                </Typography>
-              </Box>
-            ))}
-          </Box>
-        </Paper>
-        
-        {/* Cycle Summary */}
-        <Grid container spacing={2} sx={{ mt: 1 }}>
-          <Grid item xs={12} md={6}>
-            <Card variant="outlined" sx={{ height: '100%' }}>
-              <CardContent>
-                <Typography variant="subtitle2" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <HourglassTopIcon color="primary" fontSize="small" />
-                  Sleep Cycles
-                </Typography>
-                <Divider sx={{ my: 1 }} />
-                
-                <Typography variant="body2" color="text.secondary" paragraph>
-                  Your sleep had approximately {Math.floor(totalDuration / 90)} complete sleep cycles. A typical cycle progresses through light, deep, and REM sleep stages.
-                </Typography>
-                
-                <Box sx={{ mt: 1 }}>
-                  <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-                    {stageIcons.deep} Deep Sleep: Physically restorative, crucial for recovery
-                  </Typography>
-                  <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-                    {stageIcons.rem} REM Sleep: Mentally restorative, important for memory and learning
-                  </Typography>
-                  <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-                    {stageIcons.light} Light Sleep: Transitional, still beneficial for overall rest
-                  </Typography>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-          
-          <Grid item xs={12} md={6}>
-            <Card variant="outlined" sx={{ height: '100%', bgcolor: 'rgba(0,0,0,0.02)' }}>
-              <CardContent>
-                <Typography variant="subtitle2" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <AutoAwesomeIcon color="primary" fontSize="small" />
-                  Optimal Sleep Pattern
-                </Typography>
-                <Divider sx={{ my: 1 }} />
-                
-                <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, position: 'relative' }}>
-                  {/* Time arrow */}
-                  <Box sx={{ 
-                    position: 'absolute', 
-                    top: '50%', 
-                    left: 0, 
-                    right: 0, 
-                    height: 2, 
-                    bgcolor: 'rgba(0,0,0,0.1)', 
-                    zIndex: 0 
-                  }} />
-                  
-                  {/* Cycle nodes */}
-                  {[...Array(5)].map((_, i) => (
-                    <Box key={i} sx={{ 
-                      position: 'relative', 
-                      width: `${100/5}%`, 
-                      textAlign: 'center', 
-                      zIndex: 1 
-                    }}>
-                      <Box sx={{ 
-                        width: 12, 
-                        height: 12, 
-                        borderRadius: '50%', 
-                        bgcolor: theme.palette.primary.main, 
-                        margin: '0 auto',
-                        border: '2px solid white'
-                      }} />
-                      <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
-                        Cycle {i+1}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Box>
-                
-                <Stack spacing={1} sx={{ mt: 3 }}>
-                  <Typography variant="body2">
-                    Ideal sleep follows a 90-minute cycle pattern with 4-6 complete cycles per night. The amount of REM sleep increases in later cycles while deep sleep dominates early cycles.
-                  </Typography>
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      </Box>
-    );
   };
-
-  if (!data || data.length === 0) {
-    return (
-      <Paper elevation={2} sx={{ p: 3, textAlign: 'center', borderRadius: 2, mb: 3 }}>
-        <Typography color="text.secondary">No sleep data available</Typography>
-      </Paper>
-    );
-  }
   
-  // AI Analysis component
-  const SleepAIAnalysisView = () => {
-    if (!selectedDay || !aiInsights) {
-      return (
-        <Box sx={{ textAlign: 'center', p: 3 }}>
-          <CircularProgress size={30} />
-          <Typography sx={{ mt: 2 }}>Generating AI analysis...</Typography>
-        </Box>
-      );
-    }
-    
-    return (
-      <Box sx={{ mt: 3 }}>
-        <Box sx={{ 
-          borderRadius: 3, 
-          p: 2, 
-          mb: 3,
-          background: 'linear-gradient(145deg, #f3e5f5, #f8effa)',
-          boxShadow: '0 4px 20px rgba(156, 39, 176, 0.1)',
-          border: '1px solid rgba(156, 39, 176, 0.1)'
-        }}>
-          <Typography variant="h6" color="#9c27b0" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <AutoAwesomeIcon /> 
-            Sleep Intelligence™ AI Analysis
-          </Typography>
-          <Typography variant="caption" sx={{ display: 'block', mt: 0.5, mb: 2, fontStyle: 'italic', color: 'text.secondary' }}>
-            Advanced neural analysis of your sleep patterns to optimize recovery and cognitive performance
-          </Typography>
-          
-          <Grid container spacing={3}>
-            {/* Quality Assessment */}
-            <Grid item xs={12} md={4}>
-              <Paper elevation={0} sx={{ p: 2, height: '100%', borderRadius: 2, border: '1px solid rgba(0,0,0,0.06)' }}>
-                <Typography variant="subtitle2" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <HealthAndSafetyIcon fontSize="small" color="primary" />
-                  Sleep Quality
-                </Typography>
-                
-                <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center', mt: 2, mb: 3 }}>
-                  <CircularProgress
-                    variant="determinate"
-                    value={100}
-                    size={100}
-                    thickness={4}
-                    sx={{ color: alpha(theme.palette.grey[200], 0.8), position: 'absolute' }}
-                  />
-                  <CircularProgress
-                    variant="determinate"
-                    value={aiInsights.quality.score}
-                    size={100}
-                    thickness={4}
-                    sx={{ 
-                      color: aiInsights.quality.score > 80 ? theme.palette.success.main : 
-                              aiInsights.quality.score > 60 ? theme.palette.primary.main : 
-                              aiInsights.quality.score > 40 ? theme.palette.warning.main : theme.palette.error.main
-                    }}
-                  />
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      bottom: 0,
-                      right: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Typography variant="h4" component="div" fontWeight="bold">
-                      {aiInsights.quality.score}
-                    </Typography>
-                  </Box>
-                </Box>
-                
-                <Typography variant="body2" textAlign="center" gutterBottom>
-                  {aiInsights.quality.assessment}
-                </Typography>
-                
-                <Stack spacing={1} sx={{ mt: 2 }}>
-                  {aiInsights.quality.factors.map((factor, idx) => (
-                    <Box key={idx} sx={{ 
-                      p: 1, 
-                      borderRadius: 1, 
-                      bgcolor: factor.type === 'positive' ? alpha(theme.palette.success.main, 0.1) : alpha(theme.palette.warning.main, 0.1),
-                      border: `1px dashed ${factor.type === 'positive' ? theme.palette.success.main : theme.palette.warning.main}`
-                    }}>
-                      <Typography variant="body2" fontSize="0.8rem">
-                        {factor.message}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Stack>
-              </Paper>
-            </Grid>
-            
-            {/* Recovery Assessment */}
-            <Grid item xs={12} md={4}>
-              <Paper elevation={0} sx={{ p: 2, height: '100%', borderRadius: 2, border: '1px solid rgba(0,0,0,0.06)' }}>
-                <Typography variant="subtitle2" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <DeviceThermostatIcon fontSize="small" color="primary" />
-                  Recovery Analysis
-                </Typography>
-                
-                <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center', mt: 2, mb: 3 }}>
-                  <CircularProgress
-                    variant="determinate"
-                    value={100}
-                    size={100}
-                    thickness={4}
-                    sx={{ color: alpha(theme.palette.grey[200], 0.8), position: 'absolute' }}
-                  />
-                  <CircularProgress
-                    variant="determinate"
-                    value={aiInsights.recovery.score}
-                    size={100}
-                    thickness={4}
-                    sx={{ 
-                      color: aiInsights.recovery.score > 80 ? theme.palette.success.main : 
-                              aiInsights.recovery.score > 60 ? theme.palette.primary.main : 
-                              aiInsights.recovery.score > 40 ? theme.palette.warning.main : theme.palette.error.main
-                    }}
-                  />
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      bottom: 0,
-                      right: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Typography variant="h4" component="div" fontWeight="bold">
-                      {aiInsights.recovery.score}
-                    </Typography>
-                  </Box>
-                </Box>
-                
-                <Typography variant="body2" textAlign="center" gutterBottom>
-                  {aiInsights.recovery.assessment}
-                </Typography>
-                
-                <Box sx={{ mt: 3, p: 1.5, borderRadius: 1, bgcolor: 'rgba(0,0,0,0.02)' }}>
-                  <Typography variant="subtitle2" gutterBottom>Brain Function Impact:</Typography>
-                  <Grid container spacing={1}>
-                    <Grid item xs={6}>
-                      <Typography variant="caption" color="text.secondary">
-                        Cognitive Function
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {aiInsights.brainHealth.cognitiveFunction}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography variant="caption" color="text.secondary">
-                        Memory Consolidation
-                      </Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {aiInsights.brainHealth.memoryConsolidation}
-                      </Typography>
-                    </Grid>
-                  </Grid>
-                </Box>
-              </Paper>
-            </Grid>
-            
-            {/* Recommendations */}
-            <Grid item xs={12} md={4}>
-              <Paper elevation={0} sx={{ p: 2, height: '100%', borderRadius: 2, border: '1px solid rgba(0,0,0,0.06)' }}>
-                <Typography variant="subtitle2" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <TipsAndUpdatesIcon fontSize="small" color="primary" />
-                  AI Recommendations
-                </Typography>
-                
-                <Stack spacing={1.5} sx={{ mt: 2 }}>
-                  {aiInsights.recommendations.map((recommendation, idx) => (
-                    <Paper 
-                      key={idx} 
-                      elevation={0}
-                      sx={{ 
-                        p: 1.5, 
-                        borderRadius: 2,
-                        bgcolor: recommendation.priority === 'high' 
-                          ? alpha(theme.palette.error.light, 0.1)
-                          : alpha(theme.palette.info.light, 0.1),
-                        border: `1px solid ${recommendation.priority === 'high' 
-                          ? alpha(theme.palette.error.light, 0.3)
-                          : alpha(theme.palette.info.light, 0.3)}`
-                      }}
-                    >
-                      <Typography variant="body2" fontSize="0.85rem">
-                        {recommendation.message}
-                      </Typography>
-                    </Paper>
-                  ))}
-                  
-                  {aiInsights.recommendations.length === 0 && (
-                    <Box sx={{ textAlign: 'center', py: 2 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        No specific recommendations needed. Your sleep patterns are optimized.
-                      </Typography>
-                    </Box>
-                  )}
-                </Stack>
-                
-                <Box sx={{ mt: 'auto', pt: 2 }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2, fontStyle: 'italic' }}>
-                    Sleep schedule analysis suggests your optimal sleep window is {aiInsights.scheduleAnalysis.optimalSleepTime}
-                  </Typography>
-                </Box>
-              </Paper>
-            </Grid>
-          </Grid>
-        </Box>
-      </Box>
-    );
+  // Get quality level color
+  const getQualityLevelColor = (score) => {
+    const level = getSleepQualityLevel(score);
+    return level?.color || '#9e9e9e';
   };
-
+  
   return (
     <Paper 
       elevation={3} 
       sx={{ 
         width: '100%', 
-        p: 3, 
+        p: { xs: 2, md: 3 }, 
         borderRadius: 2,
-        background: 'linear-gradient(145deg, #f5f5f5, #ffffff)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-        mb: 4 
+        background: 'linear-gradient(to bottom, #ffffff, #f9f9f9)',
+        mb: 4,
+        position: 'relative',
+        overflow: 'hidden'
       }}
     >
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
-        <Typography variant="h6" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <NightsStayIcon sx={{ color: theme.palette.primary.main }} />
-          Sleep Analytics Dashboard
-          {dataSource && dataSource !== 'loading' && (
-            <Chip 
-              size="small" 
-              label={dataSource === 'fitbit' ? 'Fitbit' : 
-                     dataSource === 'apple' ? 'Apple Health' : 
-                     dataSource === 'google' ? 'Google Fit' : 
-                     dataSource === 'mock' ? 'Demo Data' : dataSource}
-              color={dataSource === 'mock' ? 'default' : 'primary'}
-              variant="outlined"
-              sx={{ ml: 1, height: 20, fontSize: '0.65rem' }}
-            />
-          )}
-        </Typography>
-        
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Tabs
-            value={viewType}
-            onChange={(e, newValue) => setViewType(newValue)}
-            aria-label="sleep analysis tabs"
-            sx={{ minHeight: 0 }}
-          >
-            <Tab 
-              value="sleepTimeline" 
-              label="Sleep Timeline" 
-              icon={<BedtimeIcon fontSize="small" />} 
-              iconPosition="start"
-              sx={{ minHeight: 0, py: 1 }}
-            />
-            <Tab 
-              value="sleepCycles" 
-              label="Cycles" 
-              icon={<HourglassTopIcon fontSize="small" />} 
-              iconPosition="start"
-              sx={{ minHeight: 0, py: 1 }}
-            />
-            <Tab 
-              value="aiAnalysis" 
-              label="AI Analysis" 
-              icon={<AutoAwesomeIcon fontSize="small" />} 
-              iconPosition="start"
-              sx={{ minHeight: 0, py: 1 }}
-            />
-            <Tab 
-              value="traditional" 
-              label="Charts" 
-              icon={<BarChartIcon fontSize="small" />} 
-              iconPosition="start"
-              sx={{ minHeight: 0, py: 1 }}
-            />
-          </Tabs>
+      {/* Visual enhancement - decorative gradient accent at top */}
+      <Box 
+        sx={{ 
+          position: 'absolute', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          height: '6px', 
+          background: 'linear-gradient(90deg, #673ab7, #9c27b0, #e91e63)' 
+        }} 
+      />
+      
+      {/* Header with current sleep score */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: { xs: 'wrap', md: 'nowrap' }, gap: { xs: 2, md: 0 } }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <AnimatedIcon 
+            icon={<BedtimeIcon />} 
+            value={sleepScore} 
+            unit="Score" 
+            size="large" 
+            color={getQualityLevelColor(sleepScore)} 
+          />
           
-          {viewType === 'traditional' && (
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <ToggleButtonGroup
-                value={chartType}
-                exclusive
-                onChange={handleChartTypeChange}
-                aria-label="chart type"
-                size="small"
-              >
-                <MuiTooltip title="Bar Chart">
-                  <ToggleButton value="bar" aria-label="bar chart">
-                    <BarChartIcon />
-                  </ToggleButton>
-                </MuiTooltip>
-                <MuiTooltip title="Line Chart">
-                  <ToggleButton value="line" aria-label="line chart">
-                    <TimelineIcon />
-                  </ToggleButton>
-                </MuiTooltip>
-                <MuiTooltip title="Pie Chart">
-                  <ToggleButton value="pie" aria-label="pie chart">
-                    <PieChartIcon />
-                  </ToggleButton>
-                </MuiTooltip>
-                <MuiTooltip title="Radar Chart">
-                  <ToggleButton value="radar" aria-label="radar chart">
-                    <RadarIcon />
-                  </ToggleButton>
-                </MuiTooltip>
-              </ToggleButtonGroup>
-              
-              <FormControl size="small" sx={{ minWidth: 150 }}>
-                <InputLabel>View</InputLabel>
-                <Select
-                  value={chartType === 'timeline' ? 'sleep' : 'duration'}
-                  label="View"
-                  onChange={(e) => setChartType(e.target.value === 'sleep' ? 'timeline' : e.target.value)}
+          {/* Duration information */}
+          <Box 
+            sx={{ 
+              ml: 2,
+              display: { xs: 'none', md: 'block' },
+              bgcolor: alpha(getQualityLevelColor(sleepScore) || theme.palette.primary.main, 0.1),
+              p: 1,
+              px: 2,
+              borderRadius: 2,
+              border: `1px solid ${alpha(getQualityLevelColor(sleepScore) || theme.palette.primary.main, 0.2)}`
+            }}
+          >
+            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+              <HotelIcon />
+              {formatDuration(sleepDuration)}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {sleepDuration >= 480 ? 'Optimal sleep duration' : 
+               sleepDuration >= 420 ? 'Good sleep duration' : 
+               sleepDuration >= 360 ? 'Fair sleep duration' : 
+               'Below recommended sleep duration'}
+            </Typography>
+          </Box>
+          
+          {/* Diagnostic button - subtle and discreet */}
+          <IconButton 
+            size="small" 
+            onClick={() => setDiagnosticsOpen(true)}
+            sx={{ 
+              ml: 2, 
+              opacity: 0.4, 
+              '&:hover': { opacity: 1 },
+              bgcolor: alpha(theme.palette.primary.main, 0.05),
+            }}
+            title="Open diagnostics console"
+          >
+            <TuneIcon fontSize="small" />
+          </IconButton>
+        </Box>
+        
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <InputLabel>Chart Type</InputLabel>
+            <Select
+              value={chartType}
+              label="Chart Type"
+              onChange={(e) => setChartType(e.target.value)}
+              size="small"
+            >
+              <MenuItem value="area" sx={{ display: 'flex', gap: 1 }}>
+                <ShowChartIcon fontSize="small" /> Area Chart
+              </MenuItem>
+              <MenuItem value="line" sx={{ display: 'flex', gap: 1 }}>
+                <TimelineIcon fontSize="small" /> Line Chart
+              </MenuItem>
+              <MenuItem value="bar" sx={{ display: 'flex', gap: 1 }}>
+                <BarChartIcon fontSize="small" /> Bar Chart
+              </MenuItem>
+            </Select>
+          </FormControl>
+          
+          <FormControl size="small" sx={{ minWidth: 110 }}>
+            <InputLabel>Resolution</InputLabel>
+            <Select
+              value={resolution}
+              label="Resolution"
+              onChange={(e) => setResolution(e.target.value)}
+              size="small"
+            >
+              <MenuItem value="low" sx={{ display: 'flex', gap: 1 }}>
+                <StraightenIcon fontSize="small" /> Low
+              </MenuItem>
+              <MenuItem value="medium" sx={{ display: 'flex', gap: 1 }}>
+                <StraightenIcon fontSize="small" /> Medium
+              </MenuItem>
+              <MenuItem value="high" sx={{ display: 'flex', gap: 1 }}>
+                <StraightenIcon fontSize="small" /> High
+              </MenuItem>
+            </Select>
+          </FormControl>
+          
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={showRange}
+                  onChange={(e) => setShowRange(e.target.checked)}
                   size="small"
-                >
-                  <MenuItem value="duration">Sleep Duration</MenuItem>
-                  <MenuItem value="efficiency">Sleep Efficiency</MenuItem>
-                  <MenuItem value="score">Sleep Score</MenuItem>
-                  <MenuItem value="stages">Sleep Stages</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-          )}
+                />
+              }
+              label="Range"
+              sx={{ m: 0 }}
+            />
+          
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={stagesView}
+                  onChange={(e) => setStagesView(e.target.checked)}
+                  size="small"
+                />
+              }
+              label="Stages"
+              sx={{ m: 0 }}
+            />
+            
+            {/* Compare mode switch with clear labeling */}
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={compareMode}
+                  onChange={(e) => setCompareMode(e.target.checked)}
+                  size="small"
+                />
+              }
+              label="Compare"
+              sx={{ m: 0 }}
+            />
+          </Box>
         </Box>
       </Box>
       
-      {/* Display different view types based on selection */}
-      {viewType === 'sleepTimeline' && (
-        <SleepTimelineView />
-      )}
+      {/* Main chart container */}
+      <Box sx={{ height: 400, width: '100%' }}>
+        {renderChart()}
+      </Box>
       
-      {viewType === 'aiAnalysis' && (
-        <SleepAIAnalysisView />
-      )}
-      
-      {viewType === 'traditional' && (
-        <>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={chartType === 'pie' || chartType === 'radar' ? 8 : 12}>
-            <Box sx={{ height: 400, width: '100%', position: 'relative' }}>
-              <ResponsiveContainer width="100%" height="100%">
-              {viewType === 'duration' && chartType === 'bar' && (
-                <BarChart
-                  data={chartData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.text.secondary, 0.2)} />
-                  <XAxis 
-                    dataKey="date" 
-                    tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
-                  />
-                  <YAxis 
-                    yAxisId="left"
-                    orientation="left"
-                    label={{ value: 'Hours', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }}
-                    tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend verticalAlign="top" height={36} />
-                  <Bar 
-                    yAxisId="left"
-                    dataKey="durationHours" 
-                    name="Sleep Duration (hours)" 
-                    fill={theme.palette.primary.main}
-                    shape={(props) => {
-                      // Customize the bar based on sleep quality
-                      const sleepData = chartData[props.index];
-                      let fill = theme.palette.primary.main;
-                      
-                      if (sleepData.score >= 90) fill = '#4caf50';
-                      else if (sleepData.score >= 80) fill = '#3f51b5';
-                      else if (sleepData.score >= 70) fill = '#2196f3';
-                      else if (sleepData.score >= 50) fill = '#ff9800';
-                      else if (sleepData.score > 0) fill = '#f44336';
-                      
-                      return <rect x={props.x} y={props.y} width={props.width} height={props.height} fill={fill} radius={[4, 4, 0, 0]} />;
-                    }}
-                  />
-                  <ReferenceLine 
-                    y={8} 
-                    yAxisId="left" 
-                    stroke="#4caf50" 
-                    strokeDasharray="3 3"
-                    label={{ value: 'Recommended (8h)', position: 'right', fill: '#4caf50' }} 
-                  />
-                  {chartData.length > 10 && (
-                    <Brush 
-                      dataKey="date" 
-                      height={30} 
-                      stroke={theme.palette.primary.main}
-                      y={370}
-                    />
-                  )}
-                </BarChart>
-              )}
-
-              {viewType === 'duration' && chartType === 'line' && (
-                <AreaChart
-                  data={chartData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                >
-                  <defs>
-                    <linearGradient id="colorDuration" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#8884d8" stopOpacity={0.2}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.text.secondary, 0.2)} />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
-                  />
-                  <YAxis
-                    label={{ value: 'Hours', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }}
-                    tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Area 
-                    type="monotone" 
-                    dataKey="durationHours" 
-                    stroke="#8884d8" 
-                    fillOpacity={1} 
-                    fill="url(#colorDuration)"
-                    name="Sleep Duration (hours)"
-                  />
-                  <ReferenceLine 
-                    y={8} 
-                    stroke="#4caf50" 
-                    strokeDasharray="3 3"
-                    label={{ value: 'Recommended (8h)', position: 'right', fill: '#4caf50' }} 
-                  />
-                </AreaChart>
-              )}
-
-              {viewType === 'duration' && chartType === 'pie' && period === 'day' && selectedDay && (
-                <PieChart>
-                  <Pie
-                    activeIndex={activePieIndex}
-                    activeShape={ActiveShapePie}
-                    data={[
-                      { name: 'Deep Sleep', value: selectedDay.deepSleepMinutes || 0, fill: '#3f51b5' },
-                      { name: 'REM Sleep', value: selectedDay.remSleepMinutes || 0, fill: '#2196f3' },
-                      { name: 'Light Sleep', value: selectedDay.lightSleepMinutes || 0, fill: '#9c27b0' },
-                      { name: 'Awake', value: selectedDay.awakeDuringNight || 0, fill: '#ff9800' }
-                    ]}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={70}
-                    outerRadius={120}
-                    dataKey="value"
-                    onMouseEnter={handlePieEnter}
-                  >
-                    {[
-                      { name: 'Deep Sleep', value: selectedDay.deepSleepMinutes || 0, fill: '#3f51b5' },
-                      { name: 'REM Sleep', value: selectedDay.remSleepMinutes || 0, fill: '#2196f3' },
-                      { name: 'Light Sleep', value: selectedDay.lightSleepMinutes || 0, fill: '#9c27b0' },
-                      { name: 'Awake', value: selectedDay.awakeDuringNight || 0, fill: '#ff9800' }
-                    ].map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend verticalAlign="bottom" height={36} />
-                </PieChart>
-              )}
-
-              {viewType === 'duration' && chartType === 'radar' && period === 'day' && selectedDay && (
-                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={[
-                  {
-                    subject: 'Duration',
-                    A: selectedDay.durationScore,
-                    fullMark: 100,
-                  },
-                  {
-                    subject: 'Efficiency',
-                    A: selectedDay.efficiencyScore,
-                    fullMark: 100,
-                  },
-                  {
-                    subject: 'Deep Sleep',
-                    A: selectedDay.deepSleepScore,
-                    fullMark: 100,
-                  },
-                  {
-                    subject: 'REM Sleep',
-                    A: selectedDay.remSleepScore,
-                    fullMark: 100,
-                  },
-                  {
-                    subject: 'Continuity',
-                    A: selectedDay.continuityScore,
-                    fullMark: 100,
-                  },
-                  {
-                    subject: 'Overall Quality',
-                    A: selectedDay.qualityScore,
-                    fullMark: 100,
-                  },
-                ]}>
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="subject" />
-                  <PolarRadiusAxis angle={30} domain={[0, 100]} />
-                  <Radar name="Sleep Quality" dataKey="A" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
-                  <Legend />
-                </RadarChart>
-              )}
-
-              {viewType === 'efficiency' && chartType === 'bar' && (
-                <ComposedChart
-                  data={chartData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.text.secondary, 0.2)} />
-                  <XAxis 
-                    dataKey="date" 
-                    tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
-                  />
-                  <YAxis 
-                    yAxisId="left"
-                    domain={[0, 100]}
-                    orientation="left"
-                    label={{ value: 'Efficiency (%)', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }}
-                    tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend verticalAlign="top" height={36} />
-                  <Bar 
-                    yAxisId="left"
-                    dataKey="efficiency" 
-                    name="Sleep Efficiency (%)" 
-                    fill={theme.palette.info.main}
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Line
-                    yAxisId="left"
-                    type="monotone"
-                    dataKey="efficiency"
-                    name="Trend"
-                    stroke={theme.palette.secondary.main}
-                    dot={false}
-                    activeDot={false}
-                  />
-                  <ReferenceLine 
-                    y={90} 
-                    yAxisId="left" 
-                    stroke="#4caf50" 
-                    strokeDasharray="3 3"
-                    label={{ value: 'Excellent (90%)', position: 'right', fill: '#4caf50' }} 
-                  />
-                  {chartData.length > 10 && (
-                    <Brush 
-                      dataKey="date" 
-                      height={30} 
-                      stroke={theme.palette.primary.main}
-                      y={370}
-                    />
-                  )}
-                </ComposedChart>
-              )}
-
-              {viewType === 'score' && (chartType === 'bar' || chartType === 'line') && (
-                <ComposedChart
-                  data={chartData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.text.secondary, 0.2)} />
-                  <XAxis 
-                    dataKey="date" 
-                    tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
-                  />
-                  <YAxis 
-                    yAxisId="left"
-                    domain={[0, 100]}
-                    orientation="left"
-                    label={{ value: 'Score', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }}
-                    tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend verticalAlign="top" height={36} />
-                  {chartType === 'bar' && (
-                    <Bar 
-                      yAxisId="left"
-                      dataKey="score" 
-                      name="Sleep Score" 
-                      shape={(props) => {
-                        // Customize the bar based on sleep quality
-                        const sleepData = chartData[props.index];
-                        let fill = '#9e9e9e'; // default gray
-                        
-                        if (sleepData.score >= 90) fill = '#4caf50';
-                        else if (sleepData.score >= 80) fill = '#3f51b5';
-                        else if (sleepData.score >= 70) fill = '#2196f3';
-                        else if (sleepData.score >= 50) fill = '#ff9800';
-                        else if (sleepData.score > 0) fill = '#f44336';
-                        
-                        return <rect x={props.x} y={props.y} width={props.width} height={props.height} fill={fill} radius={[4, 4, 0, 0]} />;
-                      }}
-                    />
-                  )}
-                  <Line
-                    yAxisId="left"
-                    type="monotone"
-                    dataKey="score"
-                    name="Score Trend"
-                    stroke={theme.palette.secondary.main}
-                    strokeWidth={chartType === 'line' ? 3 : 1}
-                    dot={chartType === 'line'}
-                    activeDot={chartType === 'line'}
-                  />
-                  <ReferenceLine 
-                    y={90} 
-                    yAxisId="left" 
-                    stroke="#4caf50" 
-                    strokeDasharray="3 3"
-                    label={{ value: 'Excellent (90+)', position: 'right', fill: '#4caf50' }} 
-                  />
-                  <ReferenceLine 
-                    y={70} 
-                    yAxisId="left" 
-                    stroke="#ff9800" 
-                    strokeDasharray="3 3"
-                    label={{ value: 'Fair (70+)', position: 'right', fill: '#ff9800' }} 
-                  />
-                  {chartData.length > 10 && (
-                    <Brush 
-                      dataKey="date" 
-                      height={30} 
-                      stroke={theme.palette.primary.main}
-                      y={370}
-                    />
-                  )}
-                </ComposedChart>
-              )}
-
-              {viewType === 'stages' && chartType === 'bar' && (
-                <BarChart
-                  data={chartData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                  barSize={40}
-                  barGap={0}
-                  barCategoryGap={8}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.text.secondary, 0.2)} />
-                  <XAxis 
-                    dataKey="date" 
-                    tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
-                  />
-                  <YAxis 
-                    yAxisId="left"
-                    orientation="left"
-                    label={{ value: 'Minutes', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }}
-                    tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend verticalAlign="top" height={36} />
-                  <Bar 
-                    yAxisId="left"
-                    dataKey="deepSleepMinutes" 
-                    name="Deep Sleep" 
-                    stackId="sleep"
-                    fill="#3f51b5"
-                  />
-                  <Bar 
-                    yAxisId="left"
-                    dataKey="remSleepMinutes" 
-                    name="REM Sleep" 
-                    stackId="sleep"
-                    fill="#2196f3"
-                  />
-                  <Bar 
-                    yAxisId="left"
-                    dataKey="lightSleepMinutes" 
-                    name="Light Sleep" 
-                    stackId="sleep"
-                    fill="#9c27b0"
-                  />
-                  <Bar 
-                    yAxisId="left"
-                    dataKey="awakeDuringNight" 
-                    name="Awake" 
-                    stackId="sleep"
-                    fill="#ff9800"
-                  />
-                  {chartData.length > 10 && (
-                    <Brush 
-                      dataKey="date" 
-                      height={30} 
-                      stroke={theme.palette.primary.main}
-                      y={370}
-                    />
-                  )}
-                </BarChart>
-              )}
-
-              {viewType === 'stages' && chartType === 'line' && (
-                <ComposedChart
-                  data={chartData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.text.secondary, 0.2)} />
-                  <XAxis 
-                    dataKey="date" 
-                    tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
-                  />
-                  <YAxis 
-                    yAxisId="left"
-                    orientation="left"
-                    label={{ value: 'Minutes', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }}
-                    tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend verticalAlign="top" height={36} />
-                  <Area 
-                    type="monotone" 
-                    yAxisId="left"
-                    dataKey="deepSleepMinutes" 
-                    name="Deep Sleep" 
-                    stackId="1"
-                    stroke="#3f51b5"
-                    fill="#3f51b5"
-                  />
-                  <Area 
-                    type="monotone" 
-                    yAxisId="left"
-                    dataKey="remSleepMinutes" 
-                    name="REM Sleep" 
-                    stackId="1"
-                    stroke="#2196f3"
-                    fill="#2196f3"
-                  />
-                  <Area 
-                    type="monotone" 
-                    yAxisId="left"
-                    dataKey="lightSleepMinutes" 
-                    name="Light Sleep" 
-                    stackId="1"
-                    stroke="#9c27b0"
-                    fill="#9c27b0"
-                  />
-                  <Area 
-                    type="monotone" 
-                    yAxisId="left"
-                    dataKey="awakeDuringNight" 
-                    name="Awake" 
-                    stackId="1"
-                    stroke="#ff9800"
-                    fill="#ff9800"
-                  />
-                </ComposedChart>
-              )}
-
-              {viewType === 'cycles' && period === 'day' && selectedDay && (
-                <RadialBarChart 
-                  cx="50%" 
-                  cy="50%" 
-                  innerRadius="20%" 
-                  outerRadius="80%" 
-                  barSize={20} 
-                  data={[
-                    { name: 'Deep Sleep', value: selectedDay.deepSleepMinutes || 0, fill: '#3f51b5' },
-                    { name: 'REM Sleep', value: selectedDay.remSleepMinutes || 0, fill: '#2196f3' },
-                    { name: 'Light Sleep', value: selectedDay.lightSleepMinutes || 0, fill: '#9c27b0' },
-                    { name: 'Total Sleep', value: selectedDay.durationMinutes || 0, fill: '#8884d8' }
-                  ]}
-                  startAngle={0}
-                  endAngle={360}
-                >
-                  <RadialBar 
-                    label={{ fill: '#666', position: 'insideStart' }} 
-                    background 
-                    dataKey="value" 
-                  />
-                  <Legend iconSize={10} width={120} height={140} layout="vertical" verticalAlign="middle" align="right" />
-                  <Tooltip />
-                </RadialBarChart>
-              )}
-            </ResponsiveContainer>
-          </Box>
-        </Grid>
-        
-        {(chartType === 'pie' || chartType === 'radar') && period === 'day' && (
-          <Grid item xs={12} md={4}>
-            <Paper elevation={2} sx={{ p: 3, height: '100%', borderRadius: 2, background: 'linear-gradient(145deg, #f8f9fa, #e9ecef)' }}>
-              <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <HourglassTopIcon color="primary" />
-                Daily Sleep Breakdown
-              </Typography>
-              <Divider sx={{ my: 1.5 }} />
-              
-              {chartData.length > 0 && (
-                <Box sx={{ mt: 2 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                    <Typography variant="subtitle2">Date Selection:</Typography>
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-                    <ButtonGroup size="small" variant="outlined">
-                      {chartData.slice(Math.max(0, chartData.length - 5), chartData.length).map((day) => (
-                        <Button 
-                          key={day.date}
-                          onClick={() => handleDaySelect(day)}
-                          variant={selectedDay && selectedDay.date === day.date ? 'contained' : 'outlined'}
-                        >
-                          {day.date.slice(-5)}
-                        </Button>
-                      ))}
-                    </ButtonGroup>
-                  </Box>
-                  
-                  {selectedDay && (
-                    <Fade in={true}>
-                      <Box>
-                        <Typography variant="subtitle1" fontWeight="bold">Sleep Quality Factors:</Typography>
-                        <Box sx={{ mt: 2 }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                            <Typography variant="body2">Deep Sleep %:</Typography>
-                            <Typography variant="body2" fontWeight="bold" color="primary">
-                              {selectedDay.deepSleepPercentage}%
-                            </Typography>
-                          </Box>
-                          <LinearProgress 
-                            variant="determinate" 
-                            value={selectedDay.deepSleepPercentage} 
-                            sx={{ height: 8, borderRadius: 4, mb: 1.5 }}
-                          />
-                          
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                            <Typography variant="body2">REM Sleep %:</Typography>
-                            <Typography variant="body2" fontWeight="bold" color="primary">
-                              {selectedDay.remSleepPercentage}%
-                            </Typography>
-                          </Box>
-                          <LinearProgress 
-                            variant="determinate" 
-                            value={selectedDay.remSleepPercentage} 
-                            color="secondary"
-                            sx={{ height: 8, borderRadius: 4, mb: 1.5 }}
-                          />
-                          
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                            <Typography variant="body2">Sleep Efficiency:</Typography>
-                            <Typography variant="body2" fontWeight="bold" color="primary">
-                              {selectedDay.efficiency}%
-                            </Typography>
-                          </Box>
-                          <LinearProgress 
-                            variant="determinate" 
-                            value={selectedDay.efficiency} 
-                            color="success"
-                            sx={{ height: 8, borderRadius: 4, mb: 1.5 }}
-                          />
-                        </Box>
-                      </Box>
-                    </Fade>
-                  )}
-                </Box>
-              )}
-            </Paper>
-          </Grid>
-        )}
-      </Grid>
-      
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
-          {chartType === 'duration' 
-            ? 'Your sleep duration pattern over time. Recommended sleep for adults is 7-9 hours per night.'
-            : chartType === 'efficiency'
-              ? 'Sleep efficiency is the percentage of time in bed actually spent sleeping. Higher is better.'
-              : chartType === 'score'
-                ? 'Your sleep score combines duration, quality, and other factors into a 0-100 scale.'
-                : chartType === 'stages'
-                  ? 'Breakdown of sleep stages shows how much time you spend in each sleep phase.'
-                  : chartType === 'pie'
-                    ? 'Sleep stages visualization showing the proportion of different sleep phases.'
-                    : 'Comprehensive analysis of your sleep quality across different metrics.'}
+      {/* Data source indicator */}
+      <Box sx={{ mt: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
+        <Typography variant="caption" color="text.secondary">
+          Data source: {dataSource === 'auto' ? 'Auto' : dataSource === 'googleFit' ? 'Google Fit' : dataSource === 'fitbit' ? 'Fitbit' : 'Apple Health'}
         </Typography>
-        </>
-      )}
+        {processedData.length > 0 && (
+          <Typography variant="caption" color="text.secondary">
+            • {processedData.length} data points
+          </Typography>
+        )}
+      </Box>
       
-      {viewType === 'sleepCycles' && selectedDay && (
-        <Box sx={{ mt: 4, textAlign: 'center' }}>
-          <Paper elevation={0} sx={{ 
-            p: 3, 
-            borderRadius: 2,
-            boxShadow: '0 2px 12px rgba(0,0,0,0.1)', 
-            bgcolor: 'rgba(250,250,250,0.5)',
-            border: '1px solid rgba(0,0,0,0.05)'
-          }}>
-            <Typography variant="body1" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-              Based on your sleep data, we've identified approximately {Math.floor(selectedDay.durationMinutes / 90)} complete sleep cycles.
-              Each cycle typically lasts around 90-110 minutes and includes phases of light, deep, and REM sleep.
-            </Typography>
-            
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                Learn more about how your sleep cycles affect your mental and physical recovery by exploring the
-                <Button
-                  color="primary"
-                  onClick={() => setViewType('aiAnalysis')}
-                  sx={{ mx: 1 }}
-                >
-                  AI Analysis
-                </Button>
-                or view your detailed 
-                <Button
-                  color="primary"
-                  onClick={() => setViewType('sleepTimeline')}
-                  sx={{ mx: 1 }}
-                >
-                  Sleep Timeline
-                </Button>
-              </Typography>
-            </Box>
-          </Paper>
-        </Box>
-      )}
+      {/* Analysis section */}
+      <Box sx={{ mt: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <Fab
+          color="primary"
+          variant="extended"
+          size="medium"
+          onClick={() => setShowAnalysis(prev => !prev)}
+          sx={{
+            boxShadow: 3,
+            textTransform: 'none'
+          }}
+        >
+          <AnalyticsIcon sx={{ mr: 1 }} />
+          {showAnalysis ? "Hide Analysis" : "Show Detailed Analysis"}
+        </Fab>
+      </Box>
+      
+      {/* Sleep analysis panel */}
+      <motion.div
+        initial={{ opacity: 0, height: 0 }}
+        animate={{ 
+          opacity: showAnalysis ? 1 : 0,
+          height: showAnalysis ? 'auto' : 0,
+          marginTop: showAnalysis ? 24 : 0
+        }}
+        transition={{ duration: 0.3 }}
+      >
+        {showAnalysis && <SleepAnalysisPanel data={processedData} period={period} />}
+      </motion.div>
+      
+      {/* Diagnostics Dialog */}
+      <DiagnosticsDialog 
+        open={diagnosticsOpen}
+        onClose={() => setDiagnosticsOpen(false)}
+        tokenScopes={tokenScopes}
+        isAuthenticated={isAuthenticated}
+        date={date}
+        period={period}
+        dataQualityScores={dataQualityScores}
+        availableSources={availableSources}
+        dataType="sleep"
+        requiredScopes={['sleep']}
+      />
     </Paper>
   );
 };

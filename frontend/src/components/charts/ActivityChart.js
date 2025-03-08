@@ -18,8 +18,10 @@ import {
 import { format, parseISO } from 'date-fns';
 import InfoIcon from '@mui/icons-material/Info';
 
-// Import reusable chart components
-import { AreaChart, LineChart, BarChart } from '../common/charts';
+// Import reusable chart components - direct imports to fix rendering
+import AreaChart from '../common/charts/AreaChart';
+import LineChart from '../common/charts/LineChart';
+import BarChart from '../common/charts/BarChart';
 import DiagnosticsDialog from '../common/DiagnosticsDialog';
 
 // Enhanced ActivityChart component using reusable components
@@ -112,7 +114,8 @@ const ActivityChart = ({
     // Base configuration that applies to all chart types
     const baseConfig = {
       data: chartData,
-      xAxisDataKey: period === 'day' ? "time" : "dateTime",
+      // CRITICAL FIX: Use formattedTime for consistent field reference
+      xAxisDataKey: period === 'day' ? "formattedTime" : "dateTime",
       minYValue: 0,
       showBrush: chartData.length > 10,
       tooltipOptions: {
@@ -302,51 +305,76 @@ const ActivityChart = ({
   
   // Determine which chart type to use based on view
   const renderChart = () => {
-    const config = getChartConfig();
-    
-    switch (viewType) {
-      case 'steps':
+    try {
+      const config = getChartConfig();
+      
+      // Check if chart components are available
+      if (!AreaChart || !LineChart || !BarChart) {
+        console.error("Chart components not found. Make sure they're properly imported.");
         return (
-          <Box sx={{ height: 400, width: '100%' }}>
-            <BarChart {...config} />
+          <Box sx={{ p: 3, textAlign: 'center', border: '1px dashed #ccc', borderRadius: 2 }}>
+            <Typography color="error" variant="h6">Chart components not loaded</Typography>
+            <Typography variant="body2" color="text.secondary">
+              There was an issue loading the chart components. Please check the console for errors.
+            </Typography>
           </Box>
         );
-        
-      case 'calories':
-        return (
-          <Box sx={{ height: 400, width: '100%' }}>
-            <AreaChart {...config} />
-          </Box>
-        );
-        
-      case 'activeMinutes':
-        return (
-          <Box sx={{ height: 400, width: '100%' }}>
-            <BarChart {...config} />
-          </Box>
-        );
-        
-      case 'distance':
-        return (
-          <Box sx={{ height: 400, width: '100%' }}>
-            <LineChart {...config} />
-          </Box>
-        );
-        
-      case 'hourly':
+      }
+      
+      switch (viewType) {
+        case 'steps':
+          return (
+            <Box sx={{ height: 400, width: '100%' }}>
+              <BarChart {...config} />
+            </Box>
+          );
+          
+        case 'calories':
+          return (
+            <Box sx={{ height: 400, width: '100%' }}>
+              <AreaChart {...config} />
+            </Box>
+          );
+          
+        case 'activeMinutes':
+          return (
+            <Box sx={{ height: 400, width: '100%' }}>
+              <BarChart {...config} />
+            </Box>
+          );
+          
+        case 'distance':
+          return (
+            <Box sx={{ height: 400, width: '100%' }}>
+              <LineChart {...config} />
+            </Box>
+          );
+          
+        case 'hourly':
         // Special case for hourly breakdown using composite chart with bar and line
         return (
           <Box sx={{ height: 400, width: '100%' }}>
             <BarChart {...config} />
           </Box>
         );
-        
+      
       default:
         return (
           <Box sx={{ height: 400, width: '100%' }}>
             <BarChart {...config} />
           </Box>
         );
+      }
+    } catch (error) {
+      console.error("Error rendering activity chart:", error);
+      return (
+        <Box sx={{ p: 3, textAlign: 'center', border: '1px dashed #ccc', borderRadius: 2 }}>
+          <Typography color="error" variant="h6">Chart rendering failed</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {error.message || "There was an error rendering the chart. Please try refreshing."}
+          </Typography>
+        </Box>
+      );
     }
   };
   
