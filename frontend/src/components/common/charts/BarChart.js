@@ -173,8 +173,8 @@ const BarChart = ({
             })
           ) : (
             <Bar
-              dataKey="avg"
-              name="Heart Rate"
+              dataKey={data[0] && Object.keys(data[0]).includes('steps') ? 'steps' : 'avg'}
+              name={data[0] && Object.keys(data[0]).includes('steps') ? 'Steps' : 'Heart Rate'}
               fill={theme.palette.primary.main}
               barSize={data.length > 50 ? 5 : 15}
               isAnimationActive={true}

@@ -636,15 +636,15 @@ const ActivityTab = () => {
       } else if (Array.isArray(response)) {
         setPreviousPeriodData(response);
       } else {
-        // If no data available, generate mock data for comparison
-        const mockPrevData = generateMockActivityData(period, previousDate).data;
-        setPreviousPeriodData(mockPrevData);
+        // If no data available, use empty data (not mock data)
+        const emptyPrevData = generateEmptyActivityData(period, previousDate).data;
+        setPreviousPeriodData(emptyPrevData);
       }
     } catch (error) {
       console.log('Error fetching previous period data:', error);
-      // Generate mock data as fallback
-      const mockPrevData = generateMockActivityData(period, new Date(date.getTime() - 86400000)).data;
-      setPreviousPeriodData(mockPrevData);
+      // Generate empty data as fallback (not mock data)
+      const emptyPrevData = generateEmptyActivityData(period, new Date(date.getTime() - 86400000)).data;
+      setPreviousPeriodData(emptyPrevData);
     }
   };
 
@@ -737,25 +737,72 @@ const ActivityTab = () => {
           
           // Format the data consistently
           if (source === 'googleFit') {
-            // Google Fit handling with better error checks
-            if (Array.isArray(response)) {
-              if (debugMode) console.log(`🔍 DEBUG: Formatting Google Fit array of length ${response.length}`);
-              return response.map(item => ({
-                ...item,
-                dateTime: item.dateTime || format(new Date((item.timestamp || 0) * 1000), 'yyyy-MM-dd'),
-                activityLevel: item.activityLevel || calculateActivityLevel(item.activeMinutes || 0, item.steps || 0)
-              }));
-            } else if (response.data && Array.isArray(response.data)) {
-              if (debugMode) console.log(`🔍 DEBUG: Formatting Google Fit nested array of length ${response.data.length}`);
-              return response.data.map(item => ({
-                ...item,
-                dateTime: item.dateTime || format(new Date((item.timestamp || 0) * 1000), 'yyyy-MM-dd'),
-                activityLevel: item.activityLevel || calculateActivityLevel(item.activeMinutes || 0, item.steps || 0)
-              }));
-            } else {
-              if (debugMode) console.log(`🔍 DEBUG: Google Fit returned unexpected format, returning empty array`);
+            console.log("PROCESSING GOOGLE FIT RESPONSE:", response);
+            
+            // SUPER SIMPLE APPROACH - just convert any response format to an array of items
+            let dataArray = [];
+            
+            // Handle known response formats
+            if (response && typeof response === 'object') {
+              if ('data' in response && Array.isArray(response.data)) {
+                // New format with data property
+                console.log("Found nested data array with length:", response.data.length);
+                dataArray = response.data;
+              } else if (Array.isArray(response)) {
+                // Direct array
+                console.log("Found direct array with length:", response.length);
+                dataArray = response;
+              } else {
+                // Some other object format
+                console.log("Unknown object format, trying to extract data");
+                // Let's try to be clever and extract any array we find
+                for (const key in response) {
+                  if (Array.isArray(response[key])) {
+                    console.log(`Found array in property '${key}' with length:`, response[key].length);
+                    dataArray = response[key];
+                    break;
+                  }
+                }
+              }
+            } else if (Array.isArray(response)) {
+              // Direct array (duplicating logic for safety)
+              console.log("Response is a direct array with length:", response.length);
+              dataArray = response;
+            }
+            
+            // If we couldn't find any usable data, return empty array
+            if (!dataArray || dataArray.length === 0) {
+              console.log("No usable data found in response");
               return [];
             }
+            
+            // Log raw data for debugging
+            console.log("First raw data item:", dataArray[0]);
+            
+            // Super simple normalization - ensure we have something reasonable
+            return dataArray.map(item => {
+              const normalizedItem = {
+                ...item,
+                dateTime: item.dateTime || item.date || formattedDate,
+                date: item.date || item.dateTime || formattedDate,
+                steps: typeof item.steps === 'number' ? item.steps : 0,
+                calories: typeof item.calories === 'number' ? item.calories : 0,
+                activeMinutes: typeof item.activeMinutes === 'number' ? item.activeMinutes : 0,
+                distance: typeof item.distance === 'number' ? item.distance : 
+                           (typeof item.steps === 'number' ? item.steps / 1300 : 0),
+                source: 'googleFit'
+              };
+              
+              // Only calculate activity level if it doesn't exist
+              if (!item.activityLevel) {
+                normalizedItem.activityLevel = calculateActivityLevel(
+                  normalizedItem.activeMinutes, 
+                  normalizedItem.steps
+                );
+              }
+              
+              return normalizedItem;
+            });
           } else if (source === 'appleHealth') {
             // Apple Health handling
             if (Array.isArray(response)) {
@@ -767,8 +814,51 @@ const ActivityTab = () => {
             }
           }
           
-          // For Fitbit, we expect a standard format with data property
-          return response.data || [];
+          // For Fitbit - apply the same robust format handling as Google Fit
+          console.log("PROCESSING FITBIT RESPONSE:", response);
+          
+          // Handle various possible response formats
+          let dataArray = [];
+          
+          if (response && typeof response === 'object') {
+            if ('data' in response && Array.isArray(response.data)) {
+              console.log("Found Fitbit nested data array with length:", response.data.length);
+              dataArray = response.data;
+            } else if (Array.isArray(response)) {
+              console.log("Found Fitbit direct array with length:", response.length);
+              dataArray = response;
+            } else {
+              // Try to find any array
+              for (const key in response) {
+                if (Array.isArray(response[key])) {
+                  console.log(`Found Fitbit array in property '${key}' with length:`, response[key].length);
+                  dataArray = response[key];
+                  break;
+                }
+              }
+            }
+          } else if (Array.isArray(response)) {
+            console.log("Fitbit response is direct array with length:", response.length);
+            dataArray = response;
+          }
+          
+          // If we have data, normalize it
+          if (dataArray.length > 0) {
+            console.log("First raw Fitbit data item:", dataArray[0]);
+            
+            return dataArray.map(item => ({
+              ...item,
+              dateTime: item.dateTime || item.date || formattedDate,
+              date: item.date || item.dateTime || formattedDate,
+              steps: typeof item.steps === 'number' ? item.steps : 0,
+              calories: typeof item.calories === 'number' ? item.calories : 0,
+              activeMinutes: typeof item.activeMinutes === 'number' ? item.activeMinutes : 0,
+              distance: typeof item.distance === 'number' ? item.distance : 0,
+              source: 'fitbit'
+            }));
+          }
+          
+          return [];
         } catch (error) {
           if (debugMode) console.log(`🔍 DEBUG: Error in fetchActivityData for ${source}:`, error);
           console.error(`Error fetching ${source} activity data:`, error);
@@ -796,13 +886,13 @@ const ActivityTab = () => {
         promiseLabels.push('appleHealth');
       }
       
-      // If no service is connected, use mock data
+      // If no service is connected, use empty data (never use mock data)
       if (promises.length === 0) {
-        if (debugMode) console.log('🔍 DEBUG: No fitness services connected. Using mock data.');
-        console.log('No fitness services connected. Using mock data.');
-        const mockData = generateMockActivityData(period);
-        setActivityData(mockData.data);
-        setFitbitData(mockData.data);
+        if (debugMode) console.log('🔍 DEBUG: No fitness services connected. Using empty data.');
+        console.log('No fitness services connected. Using empty data.');
+        const emptyData = generateEmptyActivityData(period);
+        setActivityData(emptyData.data);
+        setFitbitData(emptyData.data);
         
         // Ensure loading is set to false 
         if (debugMode) console.log('🔍 DEBUG: Setting loading false (no services connected)');
@@ -897,104 +987,41 @@ const ActivityTab = () => {
       console.error('Error fetching activity data:', error);
       setError('Failed to fetch activity data. Please try again.');
       
-      // Use mock data as fallback
-      if (debugMode) console.log('🔍 DEBUG: Generating mock data as fallback');
-      const mockData = generateMockActivityData(period);
-      setActivityData(mockData.data);
-      setFitbitData(mockData.data);
+      // Use empty data as fallback (never use mock data)
+      if (debugMode) console.log('🔍 DEBUG: Generating empty data as fallback');
+      const emptyData = generateEmptyActivityData(period);
+      setActivityData(emptyData.data);
+      setFitbitData(emptyData.data);
     } finally {
       if (debugMode) console.log('🔍 DEBUG: In finally block, setting loading false');
       setLoading(false);
     }
   };
   
-  // Generate mock activity data for demonstration
-  const generateMockActivityData = (dataPeriod, mockDate = null) => {
-    console.log(`🔄 Generating mock activity data for period: ${dataPeriod}`);
-    const mockData = [];
+  // Generate zero-filled activity data
+  const generateEmptyActivityData = (dataPeriod, mockDate = null) => {
+    console.log(`🔄 Generating empty activity data for period: ${dataPeriod}`);
+    const emptyData = [];
     const targetDate = mockDate || date;
     
     if (dataPeriod === 'day') {
-      // Generate hourly activity data for a day
+      // Generate hourly data points with all zeros
       for (let hour = 0; hour < 24; hour++) {
-        const isEarlyMorning = hour >= 0 && hour < 6;
-        const isMorning = hour >= 6 && hour < 9;
-        const isWorkDay = hour >= 9 && hour < 17;
-        const isEvening = hour >= 17 && hour < 22;
-        const isNight = hour >= 22;
-        
-        // Generate realistic activity patterns based on time of day
-        let steps, activeMins, calories, distance, floors;
-        
-        if (isEarlyMorning) {
-          // Minimal activity during sleeping hours
-          steps = Math.floor(Math.random() * 100);
-          activeMins = Math.floor(Math.random() * 3);
-          calories = 50 + Math.floor(Math.random() * 20);
-          distance = (steps / 1300).toFixed(2);
-          floors = 0;
-        } else if (isMorning) {
-          // Morning routine and commute
-          steps = 1000 + Math.floor(Math.random() * 2000);
-          activeMins = 10 + Math.floor(Math.random() * 15);
-          calories = 100 + Math.floor(Math.random() * 150);
-          distance = (steps / 1300).toFixed(2);
-          floors = 1 + Math.floor(Math.random() * 3);
-        } else if (isWorkDay) {
-          // Work hours with variation
-          const isLunchHour = hour === 12 || hour === 13;
-          
-          if (isLunchHour) {
-            steps = 500 + Math.floor(Math.random() * 1000);
-            activeMins = 5 + Math.floor(Math.random() * 15);
-          } else {
-            steps = 200 + Math.floor(Math.random() * 500);
-            activeMins = Math.floor(Math.random() * 10);
-          }
-          
-          calories = 80 + Math.floor(Math.random() * 100);
-          distance = (steps / 1300).toFixed(2);
-          floors = Math.floor(Math.random() * 2);
-        } else if (isEvening) {
-          // Evening activity (possibly workout)
-          const isWorkoutTime = hour === 18 || hour === 19;
-          
-          if (isWorkoutTime) {
-            steps = 3000 + Math.floor(Math.random() * 4000);
-            activeMins = 30 + Math.floor(Math.random() * 30);
-            calories = 250 + Math.floor(Math.random() * 200);
-            floors = 2 + Math.floor(Math.random() * 5);
-          } else {
-            steps = 500 + Math.floor(Math.random() * 1000);
-            activeMins = 5 + Math.floor(Math.random() * 10);
-            calories = 100 + Math.floor(Math.random() * 100);
-            floors = Math.floor(Math.random() * 2);
-          }
-          
-          distance = (steps / 1300).toFixed(2);
-        } else {
-          // Night time, winding down
-          steps = 100 + Math.floor(Math.random() * 300);
-          activeMins = Math.floor(Math.random() * 5);
-          calories = 60 + Math.floor(Math.random() * 40);
-          distance = (steps / 1300).toFixed(2);
-          floors = 0;
-        }
-        
         // Convert hour to 12-hour format with AM/PM
         const hour12 = hour % 12 || 12;
         const ampm = hour < 12 ? 'AM' : 'PM';
 
-        mockData.push({
+        emptyData.push({
           dateTime: format(targetDate, 'yyyy-MM-dd'),
           time: `${hour12}:00 ${ampm}`,
-          steps: steps,
-          distance: parseFloat(distance),
-          floors: floors,
-          activeMinutes: activeMins,
-          calories: calories,
-          heartRate: 60 + Math.floor(Math.random() * 40),
-          activityLevel: calculateActivityLevel(activeMins, steps)
+          steps: 0,
+          distance: 0,
+          floors: 0,
+          activeMinutes: 0,
+          calories: 0,
+          heartRate: 0,
+          activityLevel: 'Sedentary',
+          is_placeholder: true
         });
       }
     } else {
@@ -1006,64 +1033,31 @@ const ActivityTab = () => {
         day.setDate(day.getDate() - i);
         const dateStr = format(day, 'yyyy-MM-dd');
         
-        // Generate daily patterns with variations
-        // Weekend vs weekday
-        const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-        
-        let stepsBase, activeMinBase, caloriesBase, floorsBase;
-        
-        if (isWeekend) {
-          // Weekends - potentially more leisure activity
-          stepsBase = 8000 + Math.floor(Math.random() * 4000);
-          activeMinBase = 60 + Math.floor(Math.random() * 60);
-          caloriesBase = 2000 + Math.floor(Math.random() * 500);
-          floorsBase = 8 + Math.floor(Math.random() * 8);
-        } else {
-          // Weekdays - work routine
-          stepsBase = 6000 + Math.floor(Math.random() * 4000);
-          activeMinBase = 40 + Math.floor(Math.random() * 50);
-          caloriesBase = 1800 + Math.floor(Math.random() * 400);
-          floorsBase = 5 + Math.floor(Math.random() * 5);
-        }
-        
-        // Add random variation
-        const steps = Math.max(0, stepsBase + Math.floor(Math.random() * 2000) - 1000);
-        const activeMins = Math.max(0, activeMinBase + Math.floor(Math.random() * 30) - 15);
-        const calories = Math.max(0, caloriesBase + Math.floor(Math.random() * 300) - 150);
-        const floors = Math.max(0, floorsBase + Math.floor(Math.random() * 4) - 2);
-        const distance = (steps / 1300).toFixed(2);
-        
-        // Activity breakdown in minutes
-        const sedentaryMins = 1440 - activeMins; // 24 hours - active time
-        const lightMins = Math.floor(activeMins * 0.5);
-        const moderateMins = Math.floor(activeMins * 0.3);
-        const vigorousMins = Math.floor(activeMins * 0.15);
-        const peakMins = activeMins - lightMins - moderateMins - vigorousMins;
-        
-        mockData.push({
+        emptyData.push({
           dateTime: dateStr,
-          steps: steps,
-          distance: parseFloat(distance),
-          floors: floors,
-          activeMinutes: activeMins,
-          calories: calories,
-          sedentaryMinutes: sedentaryMins,
-          lightActiveMinutes: lightMins,
-          moderateActiveMinutes: moderateMins,
-          vigorousActiveMinutes: vigorousMins,
-          peakActiveMinutes: peakMins,
-          activityLevel: calculateActivityLevel(activeMins, steps)
+          steps: 0,
+          distance: 0,
+          floors: 0,
+          activeMinutes: 0,
+          calories: 0,
+          sedentaryMinutes: 1440, // 24 hours as sedentary
+          lightActiveMinutes: 0,
+          moderateActiveMinutes: 0,
+          vigorousActiveMinutes: 0,
+          peakActiveMinutes: 0,
+          activityLevel: 'Sedentary',
+          is_placeholder: true
         });
       }
       
       // Sort by date
-      mockData.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+      emptyData.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
     }
     
-    console.log(`✅ Generated ${mockData.length} mock activity data points`);
+    console.log(`✅ Generated ${emptyData.length} empty activity data points`);
     
     return {
-      data: mockData,
+      data: emptyData,
       period: dataPeriod,
       start_date: format(targetDate, 'yyyy-MM-dd'),
       end_date: format(targetDate, 'yyyy-MM-dd')
@@ -1081,12 +1075,20 @@ const ActivityTab = () => {
   // Determine which activity data to use based on settings and availability
   const determineActivityDataToUse = () => {
     if (debugMode) console.log('🔍 DEBUG: determineActivityDataToUse called');
-    console.log("Determining activity data source:", {
+    console.log("CRITICAL DEBUG - Activity data sources:", {
       activeDataSource,
       googleFitDataLength: googleFitData ? googleFitData.length : 0,
       fitbitDataLength: fitbitData ? fitbitData.length : 0,
       appleHealthLength: appleHealthData ? appleHealthData.length : 0
     });
+    
+    // Debug real data samples
+    if (googleFitData && googleFitData.length > 0) {
+      console.log("Sample Google Fit data:", googleFitData[0]);
+    }
+    if (fitbitData && fitbitData.length > 0) {
+      console.log("Sample Fitbit data:", fitbitData[0]);
+    }
     
     switch (activeDataSource) {
       case 'fitbit':
@@ -1101,8 +1103,22 @@ const ActivityTab = () => {
         
       case 'googleFit':
         if (googleFitData && googleFitData.length > 0) {
-          console.log('Setting activity data to Google Fit data');
-          setActivityData([...googleFitData]);  // Create a new array copy to ensure state update
+          console.log('Setting activity data to Google Fit data with length:', googleFitData.length);
+          
+          // Always create a deep clone to ensure good reactivity
+          const processedData = googleFitData.map(item => ({
+            ...item,
+            // Ensure required fields exist
+            steps: item.steps || 0,
+            calories: item.calories || 0,
+            activeMinutes: item.activeMinutes || 0,
+            distance: item.distance || (item.steps ? item.steps / 1300 : 0),
+            // Add source identifier
+            source: 'googleFit'
+          }));
+          
+          console.log('Processed Google Fit data:', processedData.length, 'items');
+          setActivityData(processedData);
         } else {
           setError('Google Fit activity data is not available. Please select another data source.');
           setActivityData([]);
@@ -1143,25 +1159,73 @@ const ActivityTab = () => {
       case 'auto':
       default:
         if (debugMode) console.log('🔍 DEBUG: Using auto data source selection logic');
-        // Auto-select the best dataset based on data quality and completeness
-        if (googleFitData && Array.isArray(googleFitData) && googleFitData.length > 0) {
-          if (debugMode) console.log('🔍 DEBUG: Using Google Fit data (auto)');
-          console.log('Auto-selected Google Fit activity data with length:', googleFitData.length);
-          setActivityData([...googleFitData]); // Create a new array copy to ensure state update
-        } else if (fitbitData && Array.isArray(fitbitData) && fitbitData.length > 0) {
-          if (debugMode) console.log('🔍 DEBUG: Using Fitbit data (auto)');
-          setActivityData([...fitbitData]);
-          console.log('Auto-selected Fitbit activity data');
-        } else if (appleHealthData && Array.isArray(appleHealthData) && appleHealthData.length > 0) {
-          if (debugMode) console.log('🔍 DEBUG: Using Apple Health data (auto)');
-          setActivityData([...appleHealthData]);
-          console.log('Auto-selected Apple Health activity data');
-        } else {
-          // No data available from any source, use mock data
-          if (debugMode) console.log('🔍 DEBUG: No data available, using mock data');
-          console.log('No activity data available from any source, using mock data.');
-          const mockData = generateMockActivityData(period);
-          setActivityData(mockData.data);
+        // NEVER USE DEMO DATA - focus on real data, even if values are all 0
+        // If we have ANY data from a real service, we should use it and not fake data
+        const hasGoogleFitData = googleFitData && Array.isArray(googleFitData) && googleFitData.length > 0;
+        const hasFitbitData = fitbitData && Array.isArray(fitbitData) && fitbitData.length > 0;
+        const hasAppleHealthData = appleHealthData && Array.isArray(appleHealthData) && appleHealthData.length > 0;
+        
+        console.log("CRITICAL DATA CHECK - Has real data:", {
+          googleFit: hasGoogleFitData,
+          fitbit: hasFitbitData, 
+          appleHealth: hasAppleHealthData
+        });
+        
+        // Try Google Fit first (seems to be primary data source)
+        if (hasGoogleFitData) {
+          console.log('AUTO SELECT: Using Google Fit data with', googleFitData.length, 'items');
+          
+          // Process and standardize the data
+          const processedData = googleFitData.map(item => ({
+            ...item,
+            steps: typeof item.steps === 'number' ? item.steps : 0,
+            calories: typeof item.calories === 'number' ? item.calories : 0,
+            activeMinutes: typeof item.activeMinutes === 'number' ? item.activeMinutes : 0,
+            distance: typeof item.distance === 'number' ? item.distance : 
+                      (typeof item.steps === 'number' ? item.steps / 2000 : 0),
+            source: 'googleFit'
+          }));
+          
+          setActivityData(processedData);
+        } 
+        // Then try Fitbit
+        else if (hasFitbitData) {
+          console.log('AUTO SELECT: Using Fitbit data with', fitbitData.length, 'items');
+          
+          // Process and standardize the data
+          const processedData = fitbitData.map(item => ({
+            ...item,
+            steps: typeof item.steps === 'number' ? item.steps : 0,
+            calories: typeof item.calories === 'number' ? item.calories : 0,
+            activeMinutes: typeof item.activeMinutes === 'number' ? item.activeMinutes : 0,
+            distance: typeof item.distance === 'number' ? item.distance : 0,
+            source: 'fitbit'
+          }));
+          
+          setActivityData(processedData);
+        } 
+        // Then Apple Health
+        else if (hasAppleHealthData) {
+          console.log('AUTO SELECT: Using Apple Health data with', appleHealthData.length, 'items');
+          
+          // Process and standardize data
+          const processedData = appleHealthData.map(item => ({
+            ...item,
+            steps: typeof item.steps === 'number' ? item.steps : 0,
+            calories: typeof item.calories === 'number' ? item.calories : 0,
+            activeMinutes: typeof item.activeMinutes === 'number' ? item.activeMinutes : 0,
+            distance: typeof item.distance === 'number' ? item.distance : 0,
+            source: 'appleHealth'
+          }));
+          
+          setActivityData(processedData);
+        } 
+        // If no real data, use mock data
+        else {
+          // DO NOT use mock data - instead, show zero data rather than empty
+        console.log('AUTO SELECT: No real data available from any source.');
+        const emptyData = generateEmptyActivityData(period).data;
+        setActivityData(emptyData);
         }
         
         // Safety check - make sure loading is set to false here
@@ -1224,14 +1288,27 @@ const ActivityTab = () => {
     }
   }, [date, period]);
 
-  // Check if we're using mock data
+  // Check if we're using mock data - improved detection
   const isMockData = useMemo(() => {
-    return activityData && activityData.length > 0 && (
-      !fitbitData && !googleFitData && !appleHealthData ||
-      activityData[0].time?.includes('AM') || 
-      activityData[0].time?.includes('PM') ||
-      activityData.some(item => item.activityLevel === 'Very Active' || item.activityLevel === 'Active')
-    );
+    // No data? Not mock
+    if (!activityData || activityData.length === 0) return false;
+    
+    // Explicit mock data flag
+    if (activityData.some(item => item.isMockData === true || item.source === 'mock' || item.name === 'DEMO DATA')) {
+      console.log("Using DEMO DATA (explicitly marked)");
+      return true;
+    }
+    
+    // Empty real data sources but we have activity data
+    if ((!googleFitData || googleFitData.length === 0) && 
+        (!fitbitData || fitbitData.length === 0) && 
+        (!appleHealthData || appleHealthData.length === 0) && 
+        activityData.length > 0) {
+      console.log("Using DEMO DATA (no real data sources)");
+      return true;
+    }
+    
+    return false;
   }, [activityData, fitbitData, googleFitData, appleHealthData]);
 
   // Data source display component
@@ -1681,7 +1758,7 @@ const ActivityTab = () => {
                           <StatCard 
                             title="Distance" 
                             value={totalDistance} 
-                            unit="km"
+                            unit="miles"
                             color="#2196f3"
                             icon={<TerrainIcon />}
                           />
