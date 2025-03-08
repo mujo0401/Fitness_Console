@@ -654,15 +654,12 @@ def get_activity():
         "aggregateBy": [
             {
                 "dataTypeName": "com.google.step_count.delta"
-                # dataSourceId omitted to allow system to find any available source
             },
             {
                 "dataTypeName": "com.google.calories.expended"
-                # dataSourceId omitted to allow system to find any available source
             },
             {
                 "dataTypeName": "com.google.active_minutes"
-                # dataSourceId omitted to allow system to find any available source
             }
         ],
         "bucketByTime": {"durationMillis": 86400000},  # Daily buckets
