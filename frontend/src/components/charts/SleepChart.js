@@ -1,111 +1,111 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { format } from 'date-fns';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { format, parseISO, addHours, isSameDay, subDays, differenceInMinutes } from 'date-fns';
 import { 
   Box, 
   Typography, 
-  FormControlLabel, 
-  Switch,
-  Select,
-  MenuItem,
-  InputLabel,
-  FormControl,
-  useTheme,
+  Button,
   IconButton,
-  Fab,
+  useTheme,
   alpha,
   Paper,
-  Tabs,
-  Tab,
-  CircularProgress,
   Grid,
   Card,
   CardContent,
   Divider,
   Chip,
+  Stack,
+  Tooltip,
+  Tabs,
+  Tab,
+  Avatar,
   LinearProgress,
-  Stack
+  Fade,
+  CircularProgress,
+  Zoom,
+  Badge
 } from '@mui/material';
 
 // Icons
 import BedtimeIcon from '@mui/icons-material/Bedtime';
 import HotelIcon from '@mui/icons-material/Hotel';
-import ShowChartIcon from '@mui/icons-material/ShowChart';
-import TimelineIcon from '@mui/icons-material/Timeline';
-import BarChartIcon from '@mui/icons-material/BarChart';
 import NightsStayIcon from '@mui/icons-material/NightsStay';
-import PsychologyIcon from '@mui/icons-material/Psychology';
 import WavesIcon from '@mui/icons-material/Waves';
 import TuneIcon from '@mui/icons-material/Tune';
-import StraightenIcon from '@mui/icons-material/Straighten';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import LightModeIcon from '@mui/icons-material/LightMode';
-import HourglassTopIcon from '@mui/icons-material/HourglassTop';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
+import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
+import TimerIcon from '@mui/icons-material/Timer';
+import DoneIcon from '@mui/icons-material/Done';
+import ScienceIcon from '@mui/icons-material/Science';
+import PsychologyIcon from '@mui/icons-material/Psychology';
+import Battery90Icon from '@mui/icons-material/Battery90';
+import Battery60Icon from '@mui/icons-material/Battery60';
+import Battery30Icon from '@mui/icons-material/Battery30';
+import SpeedIcon from '@mui/icons-material/Speed';
+import ShowChartIcon from '@mui/icons-material/ShowChart';
 
 // Common components
-import { 
-  AnimatedIcon, 
-  DiagnosticsDialog
-} from '../common';
-
-// Chart components - direct imports to fix rendering
-import AreaChart from '../common/charts/AreaChart';
-import LineChart from '../common/charts/LineChart';
-import BarChart from '../common/charts/BarChart';
-
-// Sleep analysis
+import { AnimatedIcon, DiagnosticsDialog } from '../common';
 import SleepAnalysisPanel from './sleep/SleepAnalysisPanel';
+
+// Sleep quality levels with colors
+const SLEEP_QUALITY_LEVELS = [
+  { 
+    name: 'Excellent', 
+    min: 90, 
+    max: 100, 
+    color: '#3f51b5', 
+    gradient: 'linear-gradient(135deg, #3f51b5 0%, #5c6bc0 100%)',
+    description: 'Optimal sleep quality and duration',
+    icon: <Battery90Icon />
+  },
+  { 
+    name: 'Good', 
+    min: 80, 
+    max: 89, 
+    color: '#2196f3', 
+    gradient: 'linear-gradient(135deg, #2196f3 0%, #4dabf5 100%)',
+    description: 'Good sleep quality with proper sleep cycles',
+    icon: <Battery90Icon />
+  },
+  { 
+    name: 'Fair', 
+    min: 70, 
+    max: 79, 
+    color: '#009688', 
+    gradient: 'linear-gradient(135deg, #009688 0%, #4db6ac 100%)',
+    description: 'Average sleep quality, may need improvement',
+    icon: <Battery60Icon />
+  },
+  { 
+    name: 'Poor', 
+    min: 50, 
+    max: 69, 
+    color: '#ff9800', 
+    gradient: 'linear-gradient(135deg, #ff9800 0%, #ffb74d 100%)',
+    description: 'Below average sleep quality, needs attention',
+    icon: <Battery30Icon />
+  },
+  { 
+    name: 'Very Poor', 
+    min: 0, 
+    max: 49, 
+    color: '#f44336', 
+    gradient: 'linear-gradient(135deg, #f44336 0%, #ef5350 100%)',
+    description: 'Insufficient or disrupted sleep, needs intervention',
+    icon: <Battery30Icon />
+  }
+];
 
 // Helper function to get sleep quality level
 const getSleepQualityLevel = (score) => {
   if (!score) return null;
-  
-  // Sleep quality levels with colors
-  const SLEEP_QUALITY_LEVELS = [
-    { 
-      name: 'Excellent', 
-      min: 90, 
-      max: 100, 
-      color: '#3f51b5', 
-      gradient: 'linear-gradient(135deg, #3f51b5 0%, #5c6bc0 100%)',
-      description: 'Optimal sleep quality and duration'
-    },
-    { 
-      name: 'Good', 
-      min: 80, 
-      max: 89, 
-      color: '#2196f3', 
-      gradient: 'linear-gradient(135deg, #2196f3 0%, #4dabf5 100%)',
-      description: 'Good sleep quality with proper sleep cycles'
-    },
-    { 
-      name: 'Fair', 
-      min: 70, 
-      max: 79, 
-      color: '#009688', 
-      gradient: 'linear-gradient(135deg, #009688 0%, #4db6ac 100%)',
-      description: 'Average sleep quality, may need improvement'
-    },
-    { 
-      name: 'Poor', 
-      min: 50, 
-      max: 69, 
-      color: '#ff9800', 
-      gradient: 'linear-gradient(135deg, #ff9800 0%, #ffb74d 100%)',
-      description: 'Below average sleep quality, needs attention'
-    },
-    { 
-      name: 'Very Poor', 
-      min: 0, 
-      max: 49, 
-      color: '#f44336', 
-      gradient: 'linear-gradient(135deg, #f44336 0%, #ef5350 100%)',
-      description: 'Insufficient or disrupted sleep, needs intervention'
-    }
-  ];
-  
   return SLEEP_QUALITY_LEVELS.find(level => score >= level.min && score <= level.max);
 };
 
@@ -117,23 +117,59 @@ const formatDuration = (minutes) => {
   return `${hours}h ${mins}m`;
 };
 
+// Format time as AM/PM
+const formatTime = (timeString) => {
+  if (!timeString) return '';
+  if (timeString.includes(':')) return timeString;
+  
+  // Handle hour-only format
+  const hour = parseInt(timeString);
+  if (isNaN(hour)) return '';
+  
+  if (hour === 0) return '12:00 AM';
+  if (hour === 12) return '12:00 PM';
+  if (hour < 12) return `${hour}:00 AM`;
+  return `${hour - 12}:00 PM`;
+};
+
+// Calculate sleep stage colors
+const getSleepStageColors = (theme) => {
+  return {
+    deep: {
+      main: '#3f51b5',
+      light: alpha('#3f51b5', 0.3),
+      dark: '#303f9f',
+      contrastText: '#ffffff'
+    },
+    rem: {
+      main: '#03a9f4',
+      light: alpha('#03a9f4', 0.3),
+      dark: '#0288d1',
+      contrastText: '#ffffff'
+    },
+    light: {
+      main: '#9c27b0',
+      light: alpha('#9c27b0', 0.3),
+      dark: '#7b1fa2',
+      contrastText: '#ffffff'
+    },
+    awake: {
+      main: '#ff9800',
+      light: alpha('#ff9800', 0.3),
+      dark: '#f57c00',
+      contrastText: '#ffffff'
+    },
+    asleep: {
+      main: '#4a148c',
+      light: alpha('#4a148c', 0.3),
+      dark: '#311b92',
+      contrastText: '#ffffff'
+    }
+  };
+};
+
 /**
- * Sleep Chart component
- * Displays and controls sleep visualization from different data sources
- * 
- * @param {Object} props
- * @param {Array} props.data - Main sleep data
- * @param {Array} props.fitbitData - Fitbit sleep data
- * @param {Array} props.googleFitData - Google Fit sleep data
- * @param {Array} props.appleHealthData - Apple Health sleep data
- * @param {string} props.dataSource - Current data source ('auto', 'fitbit', 'googleFit', etc.)
- * @param {string} props.period - Time period ('day', 'week', 'month', etc.)
- * @param {Array} props.tokenScopes - Available token scopes
- * @param {boolean} props.isAuthenticated - Whether user is authenticated
- * @param {Date} props.date - Current date
- * @param {Object} props.availableSources - Available data sources
- * @param {Function} props.onDataSourceChange - Handler for data source changes
- * @returns {JSX.Element}
+ * SleepChart Component - Elegant modern visualization of sleep data
  */
 const SleepChart = ({
   data,
@@ -149,30 +185,42 @@ const SleepChart = ({
   onDataSourceChange
 }) => {
   const theme = useTheme();
+  const sleepStageColors = useMemo(() => getSleepStageColors(theme), [theme]);
+  const canvasRef = useRef(null);
   
   // State
-  const [showRange, setShowRange] = useState(true);
-  const [stagesView, setStagesView] = useState(false);
-  const [resolution, setResolution] = useState('medium');
-  const [chartType, setChartType] = useState('area');
+  const [viewMode, setViewMode] = useState('stages'); // 'stages', 'timeline', 'cycles', 'insights'
+  const [animation, setAnimation] = useState(false);
   const [processedData, setProcessedData] = useState([]);
   const [sleepScore, setSleepScore] = useState(0);
-  const [sleepDuration, setSleepDuration] = useState(0);
+  const [sleepMetrics, setSleepMetrics] = useState({
+    duration: 0,
+    efficiency: 0,
+    deepSleepMinutes: 0,
+    remSleepMinutes: 0,
+    lightSleepMinutes: 0,
+    deepSleepPercentage: 0,
+    remSleepPercentage: 0,
+    lightSleepPercentage: 0,
+    awakeDuringNight: 0,
+    startTime: '',
+    endTime: '',
+    bedtimeConsistency: 0
+  });
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
-  const [showAnalysis, setShowAnalysis] = useState(false);
-  const [compareMode, setCompareMode] = useState(false);
+  const [showInsights, setShowInsights] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [sleepQualityLevel, setSleepQualityLevel] = useState(null);
   const [dataQualityScores, setDataQualityScores] = useState({
     fitbit: 0,
     googleFit: 0,
     appleHealth: 0
   });
-  
+
   // Process data when parameters change
   useEffect(() => {
-    console.log("SleepChart data processing");
-    console.log("- Main data length:", data?.length || 0);
-    console.log("- Google Fit data length:", googleFitData?.length || 0);
-    console.log("- Fitbit data length:", fitbitData?.length || 0);
+    console.log("Processing sleep data for new visualization...");
+    setIsLoading(true);
     
     // Calculate data quality scores
     const qualityScores = {
@@ -182,211 +230,124 @@ const SleepChart = ({
     };
     setDataQualityScores(qualityScores);
     
-    // If no data, early return
-    if (!data || data.length === 0) {
-      console.log("Main data is empty, checking alternatives");
-      
-      // Use Google Fit data as fallback if available
-      if (googleFitData && googleFitData.length > 0) {
-        console.log("Using Google Fit data as fallback because main data is empty");
-        processSleepData(googleFitData, 'googleFit');
-        return;
-      }
-      
-      // Create empty placeholder if no data available
-      console.log("No data available, creating placeholder with zeros");
-      const placeholderData = [{
-        date: format(new Date(), 'yyyy-MM-dd'),
-        durationMinutes: 0,
-        efficiency: 0,
-        score: 0,
-        deepSleepMinutes: 0,
-        lightSleepMinutes: 0,
-        remSleepMinutes: 0,
-        awakeDuringNight: 0,
-        deepSleepPercentage: 0,
-        lightSleepPercentage: 0,
-        remSleepPercentage: 0,
-        source: "none",
-        placeholder: true
-      }];
-      setProcessedData(placeholderData);
-      setSleepScore(0);
-      setSleepDuration(0);
-      return;
-    }
+    // Select the appropriate data source
+    let sourceData = selectDataSource();
     
-    // Process data based on source and mode
-    if (compareMode) {
-      // When comparing, combine data from all sources
-      const combinedData = combineDataForComparison({
-        fitbit: fitbitData,
-        googleFit: googleFitData,
-        appleHealth: appleHealthData
-      });
-      setProcessedData(combinedData);
+    // Process the data
+    if (sourceData && sourceData.length > 0) {
+      // Process and transform data
+      const enhancedData = enhanceSleepData(sourceData);
+      setProcessedData(enhancedData);
       
-      // Get average sleep score from the combined data
-      const avgScore = Math.round(
-        combinedData.reduce((sum, point) => sum + (point.score || 0), 0) / 
-        combinedData.filter(point => point.score > 0).length || 1
-      );
-      setSleepScore(avgScore);
+      // Calculate metrics
+      const metrics = calculateSleepMetrics(enhancedData);
+      setSleepMetrics(metrics);
+      setSleepScore(metrics.sleepScore);
       
-      // Get average sleep duration from the combined data
-      const avgDuration = Math.round(
-        combinedData.reduce((sum, point) => sum + (point.durationMinutes || 0), 0) / 
-        combinedData.length || 1
-      );
-      setSleepDuration(avgDuration);
+      // Determine sleep quality level
+      const qualityLevel = getSleepQualityLevel(metrics.sleepScore);
+      setSleepQualityLevel(qualityLevel);
+      
+      // Trigger animation after data is loaded
+      setTimeout(() => {
+        setAnimation(true);
+        setIsLoading(false);
+      }, 300);
+      
+      // Draw sleep graph if in timeline mode
+      if (viewMode === 'timeline' && enhancedData.length > 0) {
+        setTimeout(() => {
+          drawSleepTimeline(enhancedData);
+        }, 500);
+      }
     } else {
-      // Process based on selected data source
-      let sourceData = data;
-      let sourceName = 'auto';
-      
-      console.log("Processing with data source:", dataSource);
-      
-      // Use Google Fit data if available and selected
-      if (dataSource === 'googleFit' && googleFitData && googleFitData.length > 0) {
-        console.log("Using Google Fit data explicitly");
-        sourceData = googleFitData;
-        sourceName = 'googleFit';
-      } 
-      // Use Fitbit data if selected
-      else if (dataSource === 'fitbit' && fitbitData && fitbitData.length > 0) {
-        console.log("Using Fitbit data explicitly");
-        sourceData = fitbitData;
-        sourceName = 'fitbit';
-      }
-      // Use Apple Health data if selected
-      else if (dataSource === 'appleHealth' && appleHealthData && appleHealthData.length > 0) {
-        console.log("Using Apple Health data explicitly");
-        sourceData = appleHealthData;
-        sourceName = 'appleHealth';
-      } 
-      // Auto-select based on quality if in auto mode
-      else if (dataSource === 'auto') {
-        console.log("Auto mode, selecting best data source");
-        // Priority to Google Fit data if available
-        if (googleFitData && googleFitData.length > 0) {
-          console.log("Auto mode selecting Google Fit data");
-          sourceData = googleFitData;
-          sourceName = 'googleFit';
-        }
-        // If no Google Fit data, use best available
-        else {
-          const bestSource = selectBestDataSource();
-          console.log("Best source determined:", bestSource);
-          if (bestSource === 'fitbit' && fitbitData && fitbitData.length > 0) {
-            sourceData = fitbitData;
-            sourceName = 'fitbit';
-          } else if (bestSource === 'appleHealth' && appleHealthData && appleHealthData.length > 0) {
-            sourceData = appleHealthData;
-            sourceName = 'appleHealth';
-          }
-        }
-      }
-      
-      // Check if sourceData has been properly assigned
-      if (!sourceData || sourceData.length === 0) {
-        console.log("sourceData is empty after selection, checking fallbacks");
-        // Try to use any available data
-        if (googleFitData && googleFitData.length > 0) {
-          console.log("Falling back to Google Fit data");
-          sourceData = googleFitData;
-          sourceName = 'googleFit';
-        } else if (fitbitData && fitbitData.length > 0) {
-          console.log("Falling back to Fitbit data");
-          sourceData = fitbitData;
-          sourceName = 'fitbit';
-        } else if (appleHealthData && appleHealthData.length > 0) {
-          console.log("Falling back to Apple Health data");
-          sourceData = appleHealthData;
-          sourceName = 'appleHealth';
-        }
-      }
-      
-      console.log("Final source data selected:", sourceName, "with", sourceData?.length || 0, "data points");
-      
-      // Process the selected data
-      if (sourceData && sourceData.length > 0) {
-        processSleepData(sourceData, sourceName);
-      } else {
-        console.warn("No valid data source found for sleep chart");
-        // Create placeholder data as fallback
-        const placeholderData = [{
-          date: format(new Date(), 'yyyy-MM-dd'),
-          durationMinutes: 0,
-          efficiency: 0,
-          score: 0,
-          deepSleepMinutes: 0,
-          lightSleepMinutes: 0,
-          remSleepMinutes: 0,
-          awakeDuringNight: 0,
-          source: "none"
-        }];
-        setProcessedData(placeholderData);
-        setSleepScore(0);
-        setSleepDuration(0);
-      }
-    }
-  }, [data, googleFitData, fitbitData, appleHealthData, dataSource, resolution, compareMode, period]);
-  
-  // Process sleep data for display
-  const processSleepData = (sourceData, sourceName) => {
-    if (!sourceData || sourceData.length === 0) {
-      console.warn("No source data to process");
-      return;
-    }
-    
-    // Check if we only have a placeholder data point
-    const hasOnlyPlaceholder = sourceData.length === 1 && sourceData[0].placeholder === true;
-    if (hasOnlyPlaceholder) {
-      console.log("Only placeholder data available for today");
+      // Handle empty data case
+      setProcessedData([]);
+      setSleepMetrics({
+        duration: 0,
+        efficiency: 0,
+        deepSleepMinutes: 0,
+        remSleepMinutes: 0,
+        lightSleepMinutes: 0,
+        deepSleepPercentage: 0,
+        remSleepPercentage: 0,
+        lightSleepPercentage: 0,
+        awakeDuringNight: 0,
+        startTime: '',
+        endTime: '',
+        bedtimeConsistency: 0,
+        sleepScore: 0
+      });
       setSleepScore(0);
-      setSleepDuration(0);
-      setProcessedData([sourceData[0]]);
-      return;
+      setSleepQualityLevel(null);
+      setIsLoading(false);
     }
     
-    console.log(`Processing ${sourceName} data with ${sourceData.length} points`);
-    
-    // Downsample and enhance data
-    const downsampledData = downsampleData(sourceData, resolution === 'low' ? 20 : resolution === 'high' ? 100 : 50);
-    console.log(`Downsampled to ${downsampledData.length} points`);
-    
-    const enhanced = enhanceSleepData(downsampledData, sourceName);
-    console.log(`Enhanced data has ${enhanced.length} points`);
-    
-    setProcessedData(enhanced);
-    
-    // Calculate sleep score
-    const scoresWithValues = enhanced.filter(item => item.score > 0);
-    const avgScore = scoresWithValues.length > 0
-      ? Math.round(scoresWithValues.reduce((sum, item) => sum + item.score, 0) / scoresWithValues.length)
-      : 0;
-    
-    setSleepScore(avgScore);
-    
-    // Calculate average sleep duration
-    const avgDuration = enhanced.length > 0
-      ? Math.round(enhanced.reduce((sum, item) => sum + (item.durationMinutes || 0), 0) / enhanced.length)
-      : 0;
-    
-    setSleepDuration(avgDuration);
-  };
+  }, [data, googleFitData, fitbitData, appleHealthData, dataSource, period, date, viewMode]);
   
-  // Select the best data source based on quality scores
-  const selectBestDataSource = () => {
-    // Filter for available sources only
-    const scores = Object.entries(dataQualityScores)
-      .filter(([source]) => availableSources[source])
-      .sort((a, b) => b[1] - a[1]);
+  // Redraw sleep timeline when canvas size changes
+  useEffect(() => {
+    if (viewMode === 'timeline' && processedData.length > 0 && canvasRef.current) {
+      const handleResize = () => {
+        drawSleepTimeline(processedData);
+      };
+      
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, [viewMode, processedData, canvasRef.current]);
+  
+  // Select the appropriate data source based on availability and quality
+  const selectDataSource = () => {
+    // If no data at all, return empty array
+    if (!data || data.length === 0) {
+      if (!fitbitData && !googleFitData && !appleHealthData) {
+        console.log("No sleep data available from any source");
+        return [];
+      }
+    }
     
-    // Return the highest scoring source, or 'googleFit' as fallback if available
-    if (scores.length > 0) return scores[0][0];
-    if (availableSources.googleFit) return 'googleFit';
-    return 'fitbit';
+    // Use the explicitly requested data source if available
+    if (dataSource === 'fitbit' && fitbitData && fitbitData.length > 0) {
+      console.log("Using Fitbit data as requested");
+      return fitbitData;
+    } else if (dataSource === 'googleFit' && googleFitData && googleFitData.length > 0) {
+      console.log("Using Google Fit data as requested");
+      return googleFitData;
+    } else if (dataSource === 'appleHealth' && appleHealthData && appleHealthData.length > 0) {
+      console.log("Using Apple Health data as requested");
+      return appleHealthData;
+    } 
+    
+    // Auto mode - select the best source
+    if (dataSource === 'auto' || !dataSource) {
+      // If we already have data in main data prop, use it
+      if (data && data.length > 0) {
+        console.log("Using main data array");
+        return data;
+      }
+      
+      // Prioritize Google Fit data if available
+      if (googleFitData && googleFitData.length > 0) {
+        console.log("Auto-selecting Google Fit data");
+        return googleFitData;
+      }
+      
+      // If not, use Fitbit data if available
+      if (fitbitData && fitbitData.length > 0) {
+        console.log("Auto-selecting Fitbit data");
+        return fitbitData;
+      }
+      
+      // Finally, try Apple Health data
+      if (appleHealthData && appleHealthData.length > 0) {
+        console.log("Auto-selecting Apple Health data");
+        return appleHealthData;
+      }
+    }
+    
+    // Fallback to the main data prop if nothing else worked
+    return data || [];
   };
   
   // Calculate data quality score
@@ -414,574 +375,1439 @@ const SleepChart = ({
     return Math.round(quantityScore + completenessScore + consistencyScore);
   };
   
-  // Downsample data for performance
-  const downsampleData = (sourceData, targetPoints) => {
-    if (sourceData.length <= targetPoints) return sourceData;
-    
-    // Calculate the factor by which to reduce the data
-    const factor = Math.max(1, Math.ceil(sourceData.length / targetPoints));
-    
-    const result = [];
-    
-    // Always include first and last point for proper time range
-    if (sourceData.length > 1) {
-      result.push({...sourceData[0]});
+  // Process and enhance sleep data for visualization
+  const enhanceSleepData = (sourceData) => {
+    if (!sourceData || !Array.isArray(sourceData) || sourceData.length === 0) {
+      return [];
     }
     
-    // Process middle points
-    for (let i = 1; i < sourceData.length - 1; i += factor) {
-      const chunk = sourceData.slice(i, Math.min(i + factor, sourceData.length - 1));
+    // Filter data based on selected period if necessary
+    let filteredData = sourceData;
+    
+    // Processing for different period types
+    if (period === 'day' && sourceData.length > 1) {
+      // For day view, find the data point that matches the selected date
+      const dateStr = format(date, 'yyyy-MM-dd');
+      filteredData = sourceData.filter(item => {
+        const itemDate = item.date || 
+                         (item.timestamp ? format(new Date(item.timestamp * 1000), 'yyyy-MM-dd') : null);
+        return itemDate === dateStr;
+      });
       
-      // For high-fidelity detail, use first point in each chunk
-      const pointObj = { ...chunk[0] };
-      
-      result.push(pointObj);
+      // If no exact match found, use the most recent data point
+      if (filteredData.length === 0) {
+        console.log("No exact date match found, using most recent data");
+        filteredData = [sourceData[sourceData.length - 1]];
+      }
     }
     
-    // Always include last point
-    if (sourceData.length > 1) {
-      result.push({...sourceData[sourceData.length - 1]});
-    }
-    
-    return result;
-  };
-  
-  // Enhance sleep data for visualization
-  const enhanceSleepData = (data, source) => {
-    if (!data || !Array.isArray(data)) return [];
-    
-    return data.map(item => {
+    // Map and enhance each data point
+    return filteredData.map(item => {
       try {
-        // Convert duration to hours for better visualization
-        const durationHours = parseFloat(((item.durationMinutes || 0) / 60).toFixed(1));
+        // Use existing fields or calculate them if missing
+        const totalMinutes = item.durationMinutes || 0;
         
-        // Calculate sleep quality level
-        const qualityLevel = getSleepQualityLevel(item.score);
-        
-        // Calculate sleep stage percentages if not provided
-        const totalMinutes = item.durationMinutes || 480; // Default to 8 hours
-        
+        // Calculate sleep stage percentages
         const deepPercent = item.deepSleepPercentage || 
-                           (item.deepSleepMinutes ? Math.round((item.deepSleepMinutes / totalMinutes) * 100) : 20);
-                           
-        const remPercent = item.remSleepPercentage || 
-                          (item.remSleepMinutes ? Math.round((item.remSleepMinutes / totalMinutes) * 100) : 25);
+                          (item.deepSleepMinutes && totalMinutes ? 
+                           Math.round((item.deepSleepMinutes / totalMinutes) * 100) : 20);
                           
+        const remPercent = item.remSleepPercentage || 
+                          (item.remSleepMinutes && totalMinutes ? 
+                           Math.round((item.remSleepMinutes / totalMinutes) * 100) : 25);
+                           
         const lightPercent = item.lightSleepPercentage || 
-                            (item.lightSleepMinutes ? Math.round((item.lightSleepMinutes / totalMinutes) * 100) : 55);
+                            (item.lightSleepMinutes && totalMinutes ? 
+                             Math.round((item.lightSleepMinutes / totalMinutes) * 100) : 55);
         
-        // Calculate sleep efficiency if not provided
-        const efficiency = item.efficiency || 90;
-        
-        // Create a formattedDate for consistent display
-        const formattedDate = item.date || format(new Date(), 'yyyy-MM-dd');
-        
+        // Ensure all required fields exist
         return {
           ...item,
-          source,
-          durationHours,
-          deepPercent,
-          remPercent,
-          lightPercent,
-          efficiency,
-          formattedDate,
-          qualityLevel: qualityLevel || { name: 'Unknown', color: '#9e9e9e' },
-          sleepQualityColor: qualityLevel?.color || '#9e9e9e',
-          // Ensure these fields exist
+          date: item.date || format(new Date(), 'yyyy-MM-dd'),
+          formattedDate: format(parseISO(item.date) || new Date(), 'EEE, MMM d'),
+          startTime: item.startTime || '22:00',
+          endTime: item.endTime || '06:00',
+          durationMinutes: totalMinutes,
+          durationHours: parseFloat((totalMinutes / 60).toFixed(1)),
+          efficiency: item.efficiency || 85,
+          score: item.score || 75,
           deepSleepMinutes: item.deepSleepMinutes || Math.round(totalMinutes * (deepPercent / 100)),
           remSleepMinutes: item.remSleepMinutes || Math.round(totalMinutes * (remPercent / 100)),
           lightSleepMinutes: item.lightSleepMinutes || Math.round(totalMinutes * (lightPercent / 100)),
           awakeDuringNight: item.awakeDuringNight || 0,
+          deepSleepPercentage: deepPercent,
+          remSleepPercentage: remPercent,
+          lightSleepPercentage: lightPercent,
+          sleepCycles: item.sleepCycles || Math.floor(totalMinutes / 90),
           // For display
-          sleepDurationFormatted: formatDuration(item.durationMinutes || 0)
+          sleepDurationFormatted: formatDuration(totalMinutes)
         };
-      } catch (e) {
-        console.error('Error enhancing sleep data:', e, 'for item:', item);
-        return {
-          ...item,
-          source,
-          durationHours: 0,
-          deepPercent: 0,
-          remPercent: 0,
-          lightPercent: 0,
-          efficiency: 0,
-          formattedDate: item.date || format(new Date(), 'yyyy-MM-dd'),
-          qualityLevel: { name: 'Unknown', color: '#9e9e9e' },
-          sleepQualityColor: '#9e9e9e',
-          deepSleepMinutes: 0,
-          remSleepMinutes: 0,
-          lightSleepMinutes: 0,
-          awakeDuringNight: 0,
-          sleepDurationFormatted: '0h 0m',
-          error: true
-        };
+      } catch (error) {
+        console.error('Error enhancing sleep data:', error);
+        return item;
       }
     });
   };
   
-  // Combine data from multiple sources for comparison
-  const combineDataForComparison = (dataSources) => {
-    const combinedData = [];
-    const dateMap = {};
+  // Calculate sleep metrics from processed data
+  const calculateSleepMetrics = (data) => {
+    if (!data || data.length === 0) {
+      return {
+        duration: 0,
+        efficiency: 0,
+        deepSleepMinutes: 0,
+        remSleepMinutes: 0,
+        lightSleepMinutes: 0,
+        deepSleepPercentage: 0,
+        remSleepPercentage: 0,
+        lightSleepPercentage: 0,
+        awakeDuringNight: 0,
+        startTime: '',
+        endTime: '',
+        bedtimeConsistency: 0,
+        sleepScore: 0
+      };
+    }
     
-    // Process each data source
-    Object.entries(dataSources).forEach(([source, data]) => {
-      if (!data || !Array.isArray(data) || data.length === 0) return;
+    // For day view, use the single day's data
+    if (period === 'day' || data.length === 1) {
+      const dayData = data[0];
       
-      // Create a map of dates to data points
-      data.forEach(item => {
-        if (!item.date) return;
-        
-        if (!dateMap[item.date]) {
-          dateMap[item.date] = {
-            date: item.date,
-            formattedDate: item.date
-          };
+      // If we have a sleep score, use it
+      const sleepScore = dayData.score || 
+                         calculateSleepScoreFromMetrics(
+                           dayData.durationMinutes, 
+                           dayData.efficiency, 
+                           dayData.deepSleepPercentage
+                         );
+                         
+      return {
+        duration: dayData.durationMinutes || 0,
+        efficiency: dayData.efficiency || 0,
+        deepSleepMinutes: dayData.deepSleepMinutes || 0,
+        remSleepMinutes: dayData.remSleepMinutes || 0,
+        lightSleepMinutes: dayData.lightSleepMinutes || 0,
+        deepSleepPercentage: dayData.deepSleepPercentage || 0,
+        remSleepPercentage: dayData.remSleepPercentage || 0,
+        lightSleepPercentage: dayData.lightSleepPercentage || 0,
+        awakeDuringNight: dayData.awakeDuringNight || 0,
+        startTime: dayData.startTime || '',
+        endTime: dayData.endTime || '',
+        bedtimeConsistency: calculateBedtimeConsistency([dayData]),
+        sleepScore: sleepScore
+      };
+    }
+    
+    // For week/month view, calculate averages
+    const validItems = data.filter(item => item.durationMinutes > 0);
+    const count = validItems.length || 1;
+    
+    // Calculate averages
+    const avgDuration = Math.round(
+      validItems.reduce((sum, item) => sum + (item.durationMinutes || 0), 0) / count
+    );
+    
+    const avgEfficiency = Math.round(
+      validItems.reduce((sum, item) => sum + (item.efficiency || 0), 0) / count
+    );
+    
+    const avgDeepSleep = Math.round(
+      validItems.reduce((sum, item) => sum + (item.deepSleepMinutes || 0), 0) / count
+    );
+    
+    const avgRemSleep = Math.round(
+      validItems.reduce((sum, item) => sum + (item.remSleepMinutes || 0), 0) / count
+    );
+    
+    const avgLightSleep = Math.round(
+      validItems.reduce((sum, item) => sum + (item.lightSleepMinutes || 0), 0) / count
+    );
+    
+    const avgDeepPercentage = Math.round(
+      validItems.reduce((sum, item) => sum + (item.deepSleepPercentage || 0), 0) / count
+    );
+    
+    const avgRemPercentage = Math.round(
+      validItems.reduce((sum, item) => sum + (item.remSleepPercentage || 0), 0) / count
+    );
+    
+    const avgLightPercentage = Math.round(
+      validItems.reduce((sum, item) => sum + (item.lightSleepPercentage || 0), 0) / count
+    );
+    
+    const avgAwake = Math.round(
+      validItems.reduce((sum, item) => sum + (item.awakeDuringNight || 0), 0) / count
+    );
+    
+    // Calculate sleep score if not available
+    const avgScoreFromItems = validItems.filter(item => item.score > 0).length > 0 ?
+      Math.round(
+        validItems.reduce((sum, item) => sum + (item.score || 0), 0) / 
+        validItems.filter(item => item.score > 0).length
+      ) : 0;
+    
+    const calculatedScore = avgScoreFromItems || 
+                           calculateSleepScoreFromMetrics(
+                             avgDuration, 
+                             avgEfficiency, 
+                             avgDeepPercentage
+                           );
+    
+    // Calculate bedtime consistency
+    const bedtimeConsistency = calculateBedtimeConsistency(validItems);
+    
+    return {
+      duration: avgDuration,
+      efficiency: avgEfficiency,
+      deepSleepMinutes: avgDeepSleep,
+      remSleepMinutes: avgRemSleep,
+      lightSleepMinutes: avgLightSleep,
+      deepSleepPercentage: avgDeepPercentage,
+      remSleepPercentage: avgRemPercentage,
+      lightSleepPercentage: avgLightPercentage,
+      awakeDuringNight: avgAwake,
+      startTime: validItems.length > 0 ? validItems[0].startTime : '',
+      endTime: validItems.length > 0 ? validItems[0].endTime : '',
+      bedtimeConsistency: bedtimeConsistency,
+      sleepScore: calculatedScore
+    };
+  };
+  
+  // Calculate a sleep score from metrics if not provided
+  const calculateSleepScoreFromMetrics = (duration, efficiency, deepSleepPercent) => {
+    // Weight factors
+    const durationWeight = 0.4;
+    const efficiencyWeight = 0.3;
+    const deepSleepWeight = 0.3;
+    
+    // Calculate duration score (0-100)
+    // Optimal sleep: 7-9 hours (420-540 minutes)
+    let durationScore = 0;
+    if (duration >= 420 && duration <= 540) {
+      durationScore = 100; // Optimal range
+    } else if (duration >= 360 && duration < 420) {
+      durationScore = 80; // Slightly below optimal
+    } else if (duration > 540 && duration <= 600) {
+      durationScore = 80; // Slightly above optimal
+    } else if (duration >= 300 && duration < 360) {
+      durationScore = 60; // Below recommended
+    } else if (duration > 600) {
+      durationScore = 60; // Too much sleep
+    } else if (duration < 300) {
+      durationScore = 40; // Significantly below recommended
+    }
+    
+    // Calculate efficiency score
+    // Efficiency is already 0-100
+    const efficiencyScore = efficiency;
+    
+    // Calculate deep sleep score
+    // Ideal deep sleep: 20-25% of total sleep
+    let deepSleepScore = 0;
+    if (deepSleepPercent >= 20 && deepSleepPercent <= 25) {
+      deepSleepScore = 100; // Optimal range
+    } else if (deepSleepPercent >= 15 && deepSleepPercent < 20) {
+      deepSleepScore = 80; // Slightly below optimal
+    } else if (deepSleepPercent > 25 && deepSleepPercent <= 30) {
+      deepSleepScore = 80; // Slightly above optimal
+    } else if (deepSleepPercent >= 10 && deepSleepPercent < 15) {
+      deepSleepScore = 60; // Below recommended
+    } else if (deepSleepPercent > 30) {
+      deepSleepScore = 60; // Too much deep sleep
+    } else if (deepSleepPercent < 10) {
+      deepSleepScore = 40; // Significantly below recommended
+    }
+    
+    // Calculate weighted score
+    const weightedScore = (durationScore * durationWeight) + 
+                         (efficiencyScore * efficiencyWeight) + 
+                         (deepSleepScore * deepSleepWeight);
+    
+    return Math.round(weightedScore);
+  };
+  
+  // Calculate bedtime consistency (0-100)
+  const calculateBedtimeConsistency = (data) => {
+    if (!data || data.length < 2) return 80; // Default consistency if not enough data
+    
+    // Extract bedtimes
+    const bedtimes = data
+      .filter(item => item.startTime)
+      .map(item => {
+        // Parse the bedtime
+        let hours, minutes;
+        if (item.startTime.includes(':')) {
+          [hours, minutes] = item.startTime.split(':').map(Number);
+        } else {
+          hours = parseInt(item.startTime);
+          minutes = 0;
         }
         
-        // Add source-specific data
-        dateMap[item.date][`${source}Score`] = item.score || 0;
-        dateMap[item.date][`${source}Duration`] = item.durationMinutes || 0;
-        dateMap[item.date][`${source}Efficiency`] = item.efficiency || 0;
-        dateMap[item.date][`${source}DeepSleep`] = item.deepSleepMinutes || 0;
-        dateMap[item.date][`${source}RemSleep`] = item.remSleepMinutes || 0;
-        dateMap[item.date][`${source}LightSleep`] = item.lightSleepMinutes || 0;
+        // Handle bedtimes that are actually in the early hours of the next day
+        if (hours < 12) hours += 24;
+        
+        return hours * 60 + minutes;
       });
-    });
     
-    // Convert the map to an array and sort by date
-    return Object.values(dateMap).sort((a, b) => new Date(a.date) - new Date(b.date));
+    if (bedtimes.length < 2) return 80;
+    
+    // Calculate standard deviation
+    const average = bedtimes.reduce((sum, time) => sum + time, 0) / bedtimes.length;
+    const squareDiffs = bedtimes.map(time => Math.pow(time - average, 2));
+    const variance = squareDiffs.reduce((sum, diff) => sum + diff, 0) / bedtimes.length;
+    const stdDev = Math.sqrt(variance);
+    
+    // Convert to a 0-100 score (lower deviation = higher consistency)
+    // A standard deviation of 0 minutes would be perfect (100)
+    // A standard deviation of 60 minutes or more would be poor (0)
+    const consistencyScore = Math.max(0, 100 - (stdDev / 0.6));
+    
+    return Math.round(consistencyScore);
   };
   
-  // Chart configuration
-  const getChartConfig = () => {
-    // Base configuration
-    const baseConfig = {
-      data: processedData,
-      xAxisDataKey: "formattedDate",
-      height: 400,
-      showTooltip: true,
-      minYValue: 0
-    };
+  // Draw sleep timeline on canvas
+  const drawSleepTimeline = (data) => {
+    if (!canvasRef.current || !data || data.length === 0) return;
     
-    if (stagesView) {
-      // Sleep stages visualization (stacked bar chart)
-      return {
-        ...baseConfig,
-        series: [
-          {
-            dataKey: "deepSleepMinutes",
-            name: "Deep Sleep",
-            color: "#3f51b5",
-            stackId: "sleep",
-            barSize: processedData.length > 30 ? 5 : 20
-          },
-          {
-            dataKey: "remSleepMinutes",
-            name: "REM Sleep",
-            color: "#2196f3",
-            stackId: "sleep",
-            barSize: processedData.length > 30 ? 5 : 20
-          },
-          {
-            dataKey: "lightSleepMinutes",
-            name: "Light Sleep",
-            color: "#9c27b0",
-            stackId: "sleep",
-            barSize: processedData.length > 30 ? 5 : 20
-          },
-          {
-            dataKey: "awakeDuringNight",
-            name: "Awake",
-            color: "#ff9800",
-            stackId: "sleep",
-            barSize: processedData.length > 30 ? 5 : 20
-          }
-        ]
-      };
-    } else if (compareMode) {
-      // Comparison mode - show data from different sources
-      const series = [];
-      
-      if (availableSources.fitbit) {
-        series.push({
-          dataKey: 'fitbitDuration',
-          name: 'Fitbit (minutes)',
-          color: '#1976d2',
-          strokeWidth: 2
-        });
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    
+    // Get canvas dimensions based on parent container
+    const container = canvas.parentElement;
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // If no stage data, return
+    if (!data[0].deepSleepMinutes && !data[0].lightSleepMinutes && !data[0].remSleepMinutes) {
+      ctx.font = '16px Arial';
+      ctx.fillStyle = theme.palette.text.secondary;
+      ctx.fillText('No detailed sleep stage data available', canvas.width / 2 - 150, canvas.height / 2);
+      return;
+    }
+    
+    // Set up timeline parameters
+    const dayData = data[0];
+    const marginX = 50;
+    const marginY = 30;
+    const timelineWidth = canvas.width - (marginX * 2);
+    const timelineHeight = canvas.height - (marginY * 2);
+    
+    // Parse start and end times
+    let startHour = 22; // Default to 10 PM
+    let endHour = 8;    // Default to 8 AM
+    
+    if (dayData.startTime) {
+      try {
+        const startTimeParts = dayData.startTime.split(':');
+        startHour = parseInt(startTimeParts[0]);
+      } catch (e) {
+        console.error('Error parsing start time:', e);
       }
-      
-      if (availableSources.googleFit) {
-        series.push({
-          dataKey: 'googleFitDuration',
-          name: 'Google Fit (minutes)',
-          color: '#4caf50',
-          strokeWidth: 2
-        });
+    }
+    
+    if (dayData.endTime) {
+      try {
+        const endTimeParts = dayData.endTime.split(':');
+        endHour = parseInt(endTimeParts[0]);
+      } catch (e) {
+        console.error('Error parsing end time:', e);
       }
+    }
+    
+    // Adjust for 24-hour format and ensure end is after start
+    if (startHour > 12) startHour -= 24;
+    if (endHour < startHour) endHour += 24;
+    
+    const hoursTotal = endHour - startHour;
+    const pixelsPerHour = timelineWidth / hoursTotal;
+    
+    // Draw timeline axis
+    ctx.beginPath();
+    ctx.moveTo(marginX, canvas.height - marginY);
+    ctx.lineTo(marginX + timelineWidth, canvas.height - marginY);
+    ctx.strokeStyle = theme.palette.divider;
+    ctx.stroke();
+    
+    // Draw hour markers
+    ctx.font = '12px Arial';
+    ctx.fillStyle = theme.palette.text.secondary;
+    ctx.textAlign = 'center';
+    
+    for (let hour = 0; hour <= hoursTotal; hour++) {
+      const x = marginX + (hour * pixelsPerHour);
       
-      if (availableSources.appleHealth) {
-        series.push({
-          dataKey: 'appleHealthDuration',
-          name: 'Apple Health (minutes)',
-          color: '#f44336',
-          strokeWidth: 2
-        });
-      }
+      // Draw tick mark
+      ctx.beginPath();
+      ctx.moveTo(x, canvas.height - marginY);
+      ctx.lineTo(x, canvas.height - marginY + 5);
+      ctx.stroke();
       
-      return {
-        ...baseConfig,
-        series
-      };
-    } else {
-      // Standard single source mode
-      if (chartType === 'bar') {
-        return {
-          ...baseConfig,
-          series: [
-            {
-              dataKey: "durationMinutes",
-              name: "Sleep Duration (minutes)",
-              color: theme.palette.primary.main,
-              barSize: processedData.length > 30 ? 5 : 20,
-              // Custom coloring based on quality
-              getItemColor: (entry) => {
-                if (!entry.score) return theme.palette.grey[300];
-                return entry.sleepQualityColor;
-              },
-              itemColors: true
-            }
-          ],
-          // Reference area for recommended sleep (7-9 hours)
-          referenceAreas: [
-            {
-              y1: 420, // 7 hours
-              y2: 540, // 9 hours
-              fill: alpha(theme.palette.success.main, 0.1),
-              label: { 
-                value: 'Recommended', 
-                position: 'insideLeft',
-                fill: theme.palette.success.main 
-              }
-            }
-          ]
-        };
-      } else if (chartType === 'line') {
-        return {
-          ...baseConfig,
-          series: [
-            // Sleep score
-            {
-              dataKey: "score",
-              name: "Sleep Score",
-              color: theme.palette.secondary.main,
-              strokeWidth: 2,
-              yAxisId: "right",
-              dot: true
-            },
-            // Sleep efficiency
-            {
-              dataKey: "efficiency",
-              name: "Sleep Efficiency (%)",
-              color: theme.palette.info.main,
-              strokeWidth: 2,
-              yAxisId: "right",
-              dot: true
-            },
-            // Sleep duration
-            {
-              dataKey: "durationMinutes",
-              name: "Sleep Duration (minutes)",
-              color: theme.palette.primary.main,
-              strokeWidth: 2,
-              yAxisId: "left",
-              dot: true
-            }
-          ],
-          secondYAxis: {
-            dataKey: "score",
-            label: "Score/Efficiency",
-            domain: [0, 100],
-            orientation: "right"
-          }
-        };
-      } else {
-        // Default area chart
-        return {
-          ...baseConfig,
-          series: [
-            {
-              dataKey: "durationMinutes",
-              name: "Sleep Duration (minutes)",
-              color: theme.palette.primary.main,
-              strokeWidth: 2,
-              gradientId: 'sleepGradient',
-              fillOpacity: { start: 0.8, end: 0.1 }
-            }
-          ],
-          // Reference area for recommended sleep (7-9 hours)
-          referenceAreas: [
-            {
-              y1: 420, // 7 hours
-              y2: 540, // 9 hours
-              fill: alpha(theme.palette.success.main, 0.1),
-              label: { 
-                value: 'Recommended', 
-                position: 'insideLeft',
-                fill: theme.palette.success.main 
-              }
-            }
-          ]
-        };
+      // Draw hour label
+      let displayHour = (startHour + hour) % 24;
+      if (displayHour < 0) displayHour += 24;
+      const ampm = displayHour >= 12 ? 'PM' : 'AM';
+      displayHour = displayHour % 12;
+      if (displayHour === 0) displayHour = 12;
+      
+      ctx.fillText(`${displayHour}${ampm}`, x, canvas.height - marginY + 20);
+    }
+    
+    // Calculate proportions of sleep stages
+    const totalSleepMinutes = dayData.durationMinutes;
+    const sleepStages = [
+      { 
+        name: 'Deep Sleep', 
+        minutes: dayData.deepSleepMinutes, 
+        color: sleepStageColors.deep.main,
+        offset: 0
+      },
+      { 
+        name: 'REM Sleep', 
+        minutes: dayData.remSleepMinutes, 
+        color: sleepStageColors.rem.main,
+        offset: dayData.deepSleepMinutes
+      },
+      { 
+        name: 'Light Sleep', 
+        minutes: dayData.lightSleepMinutes, 
+        color: sleepStageColors.light.main,
+        offset: dayData.deepSleepMinutes + dayData.remSleepMinutes
+      },
+      { 
+        name: 'Awake', 
+        minutes: dayData.awakeDuringNight, 
+        color: sleepStageColors.awake.main,
+        offset: dayData.deepSleepMinutes + dayData.remSleepMinutes + dayData.lightSleepMinutes
       }
+    ];
+    
+    // Draw sleep cycles as a wave-like pattern
+    const waveHeight = timelineHeight * 0.6;
+    const waveTop = marginY + (timelineHeight - waveHeight) / 2;
+    
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // First draw a baseline sleep area
+    ctx.beginPath();
+    ctx.moveTo(marginX, canvas.height - marginY);
+    ctx.lineTo(marginX, waveTop + waveHeight);
+    
+    // Create a smooth wave pattern
+    const hourOffset = 0.5;
+    const minutesPerHour = 60;
+    const cycles = Math.max(1, Math.floor(totalSleepMinutes / 90));
+    const cycleWidth = (totalSleepMinutes / minutesPerHour) * pixelsPerHour / cycles;
+    
+    // Adjustable parameters
+    const smoothness = 20;
+    const cycles_amplitude = [0.5, 1.0, 0.65, 0.9, 0.7, 0.8, 0.6];  // variations for natural look
+    
+    for (let minute = 0; minute <= totalSleepMinutes; minute += smoothness) {
+      const hourPosition = minute / minutesPerHour;
+      const x = marginX + ((hourOffset + hourPosition) * pixelsPerHour);
+      
+      // Calculate current sleep stage
+      const currentStage = sleepStages.find(stage => 
+        minute >= stage.offset && minute < (stage.offset + stage.minutes)
+      ) || sleepStages[2]; // Default to light sleep
+      
+      // Calculate cycle phase (0 to 2π)
+      const cycleProgress = (minute % 90) / 90;
+      const cyclePhase = cycleProgress * Math.PI * 2;
+      
+      // Calculate cycle number for amplitude variation
+      const cycleNumber = Math.floor(minute / 90) % cycles_amplitude.length;
+      
+      // Calculate y position based on sleep stage and cycle
+      const baseDepth = getStageDepth(currentStage.name);
+      const wave = Math.sin(cyclePhase) * cycles_amplitude[cycleNumber];
+      const y = waveTop + waveHeight - (waveHeight * baseDepth) - (wave * waveHeight * 0.15);
+      
+      // Draw line to this point
+      ctx.lineTo(x, y);
+    }
+    
+    // Complete the area path
+    ctx.lineTo(marginX + timelineWidth, canvas.height - marginY);
+    ctx.closePath();
+    
+    // Fill with gradient
+    const gradient = ctx.createLinearGradient(
+      marginX, waveTop, 
+      marginX, waveTop + waveHeight
+    );
+    gradient.addColorStop(0, alpha(sleepStageColors.deep.main, 0.7));
+    gradient.addColorStop(0.3, alpha(sleepStageColors.rem.main, 0.6));
+    gradient.addColorStop(0.7, alpha(sleepStageColors.light.main, 0.5));
+    gradient.addColorStop(1, alpha(theme.palette.background.paper, 0.1));
+    
+    ctx.fillStyle = gradient;
+    ctx.fill();
+    
+    // Draw stroke outline
+    ctx.strokeStyle = alpha(theme.palette.primary.main, 0.3);
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Draw sleep stage indicators
+    const legendY = marginY + 20;
+    let legendX = marginX;
+    
+    sleepStages.forEach(stage => {
+      if (stage.minutes <= 0) return;
+      
+      ctx.fillStyle = stage.color;
+      ctx.fillRect(legendX, legendY, 15, 15);
+      
+      ctx.fillStyle = theme.palette.text.primary;
+      ctx.textAlign = 'left';
+      ctx.fillText(`${stage.name} (${formatDuration(stage.minutes)})`, legendX + 20, legendY + 12);
+      
+      legendX += 180;
+    });
+    
+    ctx.restore();
+  };
+  
+  // Helper function to get the relative depth of a sleep stage
+  const getStageDepth = (stageName) => {
+    switch (stageName) {
+      case 'Deep Sleep': return 0.85;
+      case 'REM Sleep': return 0.6;
+      case 'Light Sleep': return 0.4;
+      case 'Awake': return 0.1;
+      default: return 0.5;
     }
   };
   
-  // Render the selected chart
-  const renderChart = () => {
-    try {
-      const config = getChartConfig();
-      
-      if (!AreaChart || !LineChart || !BarChart) {
-        console.error("Chart components not found. Make sure they're properly imported.");
-        return (
-          <Box sx={{ p: 3, textAlign: 'center' }}>
-            <Typography color="error">Chart components not loaded</Typography>
-          </Box>
-        );
-      }
-      
-      // Render based on chart type
-      if (stagesView || chartType === 'bar') {
-        return <BarChart {...config} />;
-      } else if (chartType === 'line') {
-        return <LineChart {...config} />;
-      } else {
-        return <AreaChart {...config} />;
-      }
-    } catch (error) {
-      console.error("Error rendering sleep chart:", error);
+  // Render sleep stage circular graph
+  const renderSleepStagesGraph = () => {
+    const { deepSleepMinutes, remSleepMinutes, lightSleepMinutes, awakeDuringNight } = sleepMetrics;
+    const totalMinutes = deepSleepMinutes + remSleepMinutes + lightSleepMinutes + awakeDuringNight;
+    
+    if (totalMinutes === 0) {
       return (
-        <Box sx={{ p: 3, textAlign: 'center' }}>
-          <Typography color="error">Chart rendering failed: {error.message}</Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: 300 }}>
+          <Typography variant="body2" color="text.secondary">
+            No sleep stage data available
+          </Typography>
         </Box>
       );
     }
+    
+    // Calculate percentage and angle for each segment
+    const stages = [
+      {
+        name: 'Deep Sleep',
+        minutes: deepSleepMinutes,
+        percentage: Math.round((deepSleepMinutes / totalMinutes) * 100),
+        color: sleepStageColors.deep.main,
+        icon: <NightsStayIcon />,
+        description: 'Physical recovery, immune function, memory consolidation'
+      },
+      {
+        name: 'REM Sleep',
+        minutes: remSleepMinutes,
+        percentage: Math.round((remSleepMinutes / totalMinutes) * 100),
+        color: sleepStageColors.rem.main,
+        icon: <PsychologyIcon />,
+        description: 'Dreaming, creativity, emotional processing, learning'
+      },
+      {
+        name: 'Light Sleep',
+        minutes: lightSleepMinutes,
+        percentage: Math.round((lightSleepMinutes / totalMinutes) * 100),
+        color: sleepStageColors.light.main,
+        icon: <WavesIcon />,
+        description: 'Transition stage, maintaining sleep, basic recovery'
+      },
+      {
+        name: 'Awake',
+        minutes: awakeDuringNight,
+        percentage: Math.round((awakeDuringNight / totalMinutes) * 100),
+        color: sleepStageColors.awake.main,
+        icon: <LightModeIcon />,
+        description: 'Brief awakenings are normal during the night'
+      }
+    ];
+    
+    // Filter out stages with 0 minutes
+    const activeStages = stages.filter(stage => stage.minutes > 0);
+    
+    return (
+      <Grid container spacing={2} sx={{ mt: 2 }}>
+        {/* Sleep stage graph */}
+        <Grid item xs={12} md={5}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center',
+            position: 'relative',
+            height: '100%',
+            minHeight: 250
+          }}>
+            <Box
+              component={motion.div}
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              sx={{
+                width: 220,
+                height: 220,
+                borderRadius: '50%',
+                position: 'relative',
+                background: `conic-gradient(
+                  ${sleepStageColors.deep.main} 0deg,
+                  ${sleepStageColors.deep.main} ${stages[0].percentage * 3.6}deg,
+                  ${sleepStageColors.rem.main} ${stages[0].percentage * 3.6}deg,
+                  ${sleepStageColors.rem.main} ${(stages[0].percentage + stages[1].percentage) * 3.6}deg,
+                  ${sleepStageColors.light.main} ${(stages[0].percentage + stages[1].percentage) * 3.6}deg,
+                  ${sleepStageColors.light.main} ${(stages[0].percentage + stages[1].percentage + stages[2].percentage) * 3.6}deg,
+                  ${sleepStageColors.awake.main} ${(stages[0].percentage + stages[1].percentage + stages[2].percentage) * 3.6}deg,
+                  ${sleepStageColors.awake.main} 360deg
+                )`,
+                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}
+            >
+              <Box
+                sx={{
+                  width: 120,
+                  height: 120,
+                  borderRadius: '50%',
+                  background: theme.palette.background.paper,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.1)'
+                }}
+              >
+                <Typography variant="h4" color="text.primary" fontWeight="bold">
+                  {formatDuration(totalMinutes)}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Total Sleep
+                </Typography>
+              </Box>
+            </Box>
+            
+            {/* Animated indicators for each sleep stage */}
+            {activeStages.map((stage, index) => {
+              // Calculate position on the circle
+              const angleInRadians = (
+                (stages
+                  .slice(0, stages.findIndex(s => s.name === stage.name))
+                  .reduce((sum, s) => sum + s.percentage, 0) 
+                  + stage.percentage / 2
+                ) * 3.6 * Math.PI / 180
+              );
+              
+              const radius = 135;
+              const x = Math.cos(angleInRadians) * radius;
+              const y = Math.sin(angleInRadians) * radius;
+              
+              return (
+                <Box
+                  component={motion.div}
+                  key={stage.name}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.3 + index * 0.1 }}
+                  sx={{
+                    position: 'absolute',
+                    left: 'calc(50% + ' + x + 'px)',
+                    top: 'calc(50% + ' + y + 'px)',
+                    transform: 'translate(-50%, -50%)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    pointerEvents: 'none'
+                  }}
+                >
+                  <Avatar
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      backgroundColor: stage.color,
+                      color: '#fff',
+                      boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+                    }}
+                  >
+                    {stage.percentage}%
+                  </Avatar>
+                </Box>
+              );
+            })}
+          </Box>
+        </Grid>
+        
+        {/* Sleep stage details */}
+        <Grid item xs={12} md={7}>
+          <Stack spacing={2}>
+            {activeStages.map((stage, index) => (
+              <Box 
+                component={motion.div}
+                key={stage.name}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, delay: 0.2 + index * 0.1 }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Avatar
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        bgcolor: stage.color
+                      }}
+                    >
+                      {stage.icon}
+                    </Avatar>
+                    <Typography variant="subtitle1">
+                      {stage.name} ({formatDuration(stage.minutes)})
+                    </Typography>
+                  </Box>
+                  <Chip 
+                    size="small" 
+                    label={`${stage.percentage}%`} 
+                    sx={{ bgcolor: stage.color, color: 'white', fontWeight: 'medium' }}
+                  />
+                </Box>
+                <LinearProgress 
+                  variant="determinate" 
+                  value={stage.percentage} 
+                  sx={{ 
+                    height: 8, 
+                    borderRadius: 4,
+                    mb: 0.5,
+                    bgcolor: alpha(stage.color, 0.2),
+                    '& .MuiLinearProgress-bar': { bgcolor: stage.color }
+                  }}
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                  {stage.description}
+                </Typography>
+              </Box>
+            ))}
+          </Stack>
+        </Grid>
+      </Grid>
+    );
   };
   
-  // Get quality level color
-  const getQualityLevelColor = (score) => {
-    const level = getSleepQualityLevel(score);
-    return level?.color || '#9e9e9e';
+  // Render sleep metrics
+  const renderSleepMetrics = () => {
+    return (
+      <Grid container spacing={2} sx={{ mt: 2 }}>
+        <Grid item xs={12} md={6}>
+          <Box sx={{ 
+            p: 3, 
+            borderRadius: 4, 
+            bgcolor: 'background.paper', 
+            boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <AccessTimeIcon color="primary" />
+              Sleep Timing
+            </Typography>
+            
+            <Grid container spacing={3}>
+              <Grid item xs={6} sm={6}>
+                <Box 
+                  component={motion.div}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    p: 2,
+                    borderRadius: 3,
+                    backgroundColor: alpha(theme.palette.primary.dark, 0.05)
+                  }}
+                >
+                  <Avatar
+                    sx={{ 
+                      bgcolor: alpha(theme.palette.primary.dark, 0.8),
+                      mb: 1.5
+                    }}
+                  >
+                    <DarkModeIcon />
+                  </Avatar>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Bedtime
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {formatTime(sleepMetrics.startTime) || 'N/A'}
+                  </Typography>
+                </Box>
+              </Grid>
+              
+              <Grid item xs={6} sm={6}>
+                <Box 
+                  component={motion.div}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.1 }}
+                  sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    p: 2,
+                    borderRadius: 3,
+                    backgroundColor: alpha(theme.palette.warning.light, 0.05)
+                  }}
+                >
+                  <Avatar
+                    sx={{ 
+                      bgcolor: alpha(theme.palette.warning.light, 0.8),
+                      mb: 1.5
+                    }}
+                  >
+                    <LightModeIcon />
+                  </Avatar>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Wake Up
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {formatTime(sleepMetrics.endTime) || 'N/A'}
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+            
+            <Box sx={{ mt: 'auto', pt: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Bedtime Consistency
+                </Typography>
+                <Chip 
+                  size="small" 
+                  label={`${sleepMetrics.bedtimeConsistency}%`} 
+                  color={
+                    sleepMetrics.bedtimeConsistency >= 80 ? "success" :
+                    sleepMetrics.bedtimeConsistency >= 60 ? "info" :
+                    sleepMetrics.bedtimeConsistency >= 40 ? "warning" : "error"
+                  }
+                />
+              </Box>
+              <LinearProgress 
+                variant="determinate" 
+                value={sleepMetrics.bedtimeConsistency || 0} 
+                sx={{ 
+                  height: 6, 
+                  borderRadius: 3,
+                  bgcolor: alpha(theme.palette.primary.main, 0.1)
+                }}
+              />
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                {sleepMetrics.bedtimeConsistency >= 80 
+                  ? 'Excellent consistency in your sleep schedule' 
+                  : sleepMetrics.bedtimeConsistency >= 60
+                    ? 'Good consistency - your body appreciates the routine'
+                    : sleepMetrics.bedtimeConsistency >= 40
+                      ? 'Moderate consistency - try to maintain a more regular schedule'
+                      : 'Irregular sleep schedule - aim for more consistent bedtimes'}
+              </Typography>
+            </Box>
+          </Box>
+        </Grid>
+        
+        <Grid item xs={12} md={6}>
+          <Box sx={{ 
+            p: 3, 
+            borderRadius: 4, 
+            bgcolor: 'background.paper', 
+            boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <SpeedIcon color="primary" />
+              Sleep Quality
+            </Typography>
+            
+            <Grid container spacing={3}>
+              <Grid item xs={6} sm={6}>
+                <Box 
+                  component={motion.div}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.2 }}
+                  sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    p: 2,
+                    borderRadius: 3,
+                    backgroundColor: alpha(theme.palette.success.light, 0.05)
+                  }}
+                >
+                  <Avatar
+                    sx={{ 
+                      bgcolor: alpha(theme.palette.success.light, 0.8),
+                      mb: 1.5
+                    }}
+                  >
+                    <ShowChartIcon />
+                  </Avatar>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Efficiency
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {sleepMetrics.efficiency || 0}%
+                  </Typography>
+                </Box>
+              </Grid>
+              
+              <Grid item xs={6} sm={6}>
+                <Box 
+                  component={motion.div}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.3 }}
+                  sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    p: 2,
+                    borderRadius: 3,
+                    backgroundColor: alpha(theme.palette.info.light, 0.05)
+                  }}
+                >
+                  <Avatar
+                    sx={{ 
+                      bgcolor: alpha(theme.palette.info.light, 0.8),
+                      mb: 1.5
+                    }}
+                  >
+                    <TimerIcon />
+                  </Avatar>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Sleep Cycles
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {Math.floor(sleepMetrics.duration / 90) || 0}
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+            
+            <Box sx={{ mt: 'auto', pt: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    Sleep Score
+                    <Tooltip title="A comprehensive score based on duration, efficiency, and quality of your sleep">
+                      <ScienceIcon fontSize="small" color="action" sx={{ opacity: 0.6 }} />
+                    </Tooltip>
+                  </Typography>
+                </Box>
+                <Chip 
+                  size="small" 
+                  label={sleepQualityLevel?.name || 'Unknown'} 
+                  sx={{ 
+                    bgcolor: sleepQualityLevel?.color || theme.palette.grey[500], 
+                    color: 'white' 
+                  }}
+                />
+              </Box>
+              <LinearProgress 
+                variant="determinate" 
+                value={sleepScore} 
+                sx={{ 
+                  height: 8, 
+                  borderRadius: 3,
+                  mb: 0.5,
+                  bgcolor: alpha(sleepQualityLevel?.color || theme.palette.grey[500], 0.2),
+                  '& .MuiLinearProgress-bar': { 
+                    bgcolor: sleepQualityLevel?.color || theme.palette.grey[500],
+                    backgroundImage: sleepQualityLevel?.gradient
+                  }
+                }}
+              />
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                {sleepQualityLevel?.description || 'No quality data available'}
+              </Typography>
+            </Box>
+          </Box>
+        </Grid>
+      </Grid>
+    );
+  };
+  
+  // Render sleep insights
+  const renderSleepInsights = () => {
+    if (!sleepMetrics || sleepMetrics.duration === 0) {
+      return (
+        <Box sx={{ p: 3, textAlign: 'center' }}>
+          <Typography variant="body2" color="text.secondary">
+            No sleep data available for insights
+          </Typography>
+        </Box>
+      );
+    }
+    
+    // Generate insights based on sleep data
+    const insights = [];
+    
+    // Duration insights
+    if (sleepMetrics.duration >= 420 && sleepMetrics.duration <= 540) {
+      insights.push({
+        type: 'positive',
+        icon: <DoneIcon />,
+        title: 'Optimal Sleep Duration',
+        description: 'Your sleep duration falls within the recommended 7-9 hours for adults.'
+      });
+    } else if (sleepMetrics.duration < 420) {
+      insights.push({
+        type: 'negative',
+        icon: <TrendingDownIcon />,
+        title: 'Insufficient Sleep',
+        description: `You're getting ${formatDuration(sleepMetrics.duration)}, which is below the recommended 7-9 hours for adults.`
+      });
+    } else if (sleepMetrics.duration > 540) {
+      insights.push({
+        type: 'neutral',
+        icon: <TrendingUpIcon />,
+        title: 'Extended Sleep',
+        description: `You're getting ${formatDuration(sleepMetrics.duration)}, which is above the typical recommendation. This might indicate recovery from sleep debt or other factors.`
+      });
+    }
+    
+    // Deep sleep insights
+    const idealDeepSleepPercentage = 20;
+    if (Math.abs(sleepMetrics.deepSleepPercentage - idealDeepSleepPercentage) <= 5) {
+      insights.push({
+        type: 'positive',
+        icon: <NightsStayIcon />,
+        title: 'Ideal Deep Sleep',
+        description: `Your deep sleep percentage (${sleepMetrics.deepSleepPercentage}%) is optimal for physical recovery and memory consolidation.`
+      });
+    } else if (sleepMetrics.deepSleepPercentage < idealDeepSleepPercentage - 5) {
+      insights.push({
+        type: 'negative',
+        icon: <NightsStayIcon />,
+        title: 'Low Deep Sleep',
+        description: `Your deep sleep percentage (${sleepMetrics.deepSleepPercentage}%) is lower than ideal. Deep sleep is crucial for physical recovery and memory consolidation.`
+      });
+    }
+    
+    // Sleep efficiency insights
+    if (sleepMetrics.efficiency >= 90) {
+      insights.push({
+        type: 'positive',
+        icon: <SpeedIcon />,
+        title: 'Excellent Sleep Efficiency',
+        description: `Your sleep efficiency of ${sleepMetrics.efficiency}% indicates high-quality, continuous sleep.`
+      });
+    } else if (sleepMetrics.efficiency < 80) {
+      insights.push({
+        type: 'negative',
+        icon: <SpeedIcon />,
+        title: 'Low Sleep Efficiency',
+        description: `Your sleep efficiency of ${sleepMetrics.efficiency}% suggests frequent disturbances or difficulty staying asleep.`
+      });
+    }
+    
+    // Sleep cycle insights
+    const cycles = Math.floor(sleepMetrics.duration / 90);
+    if (cycles >= 5) {
+      insights.push({
+        type: 'positive',
+        icon: <TimerIcon />,
+        title: 'Complete Sleep Cycles',
+        description: `You completed approximately ${cycles} sleep cycles, which is ideal for feeling refreshed upon waking.`
+      });
+    } else if (cycles < 4) {
+      insights.push({
+        type: 'negative',
+        icon: <TimerIcon />,
+        title: 'Incomplete Sleep Cycles',
+        description: `You completed approximately ${cycles} sleep cycles, which is fewer than the recommended 4-5 cycles per night.`
+      });
+    }
+    
+    // Bedtime consistency insights
+    if (sleepMetrics.bedtimeConsistency >= 80) {
+      insights.push({
+        type: 'positive',
+        icon: <AccessTimeIcon />,
+        title: 'Consistent Sleep Schedule',
+        description: 'Your consistent bedtime helps maintain your circadian rhythm and improves sleep quality.'
+      });
+    } else if (sleepMetrics.bedtimeConsistency < 60) {
+      insights.push({
+        type: 'negative',
+        icon: <AccessTimeIcon />,
+        title: 'Irregular Sleep Schedule',
+        description: 'Your bedtime varies significantly. A more consistent sleep schedule can improve sleep quality and daytime energy.'
+      });
+    }
+    
+    return (
+      <Box sx={{ p: 2 }}>
+        <Grid container spacing={2}>
+          {insights.map((insight, index) => (
+            <Grid item xs={12} md={6} key={index}>
+              <Card 
+                component={motion.div}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+                elevation={1}
+                sx={{ 
+                  borderRadius: 3,
+                  overflow: 'hidden',
+                  height: '100%',
+                  borderLeft: `4px solid ${
+                    insight.type === 'positive' ? theme.palette.success.main :
+                    insight.type === 'negative' ? theme.palette.error.main :
+                    theme.palette.warning.main
+                  }`
+                }}
+              >
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 1 }}>
+                    <Avatar 
+                      sx={{ 
+                        width: 32, 
+                        height: 32,
+                        bgcolor: insight.type === 'positive' ? theme.palette.success.main :
+                                insight.type === 'negative' ? theme.palette.error.main :
+                                theme.palette.warning.main
+                      }}
+                    >
+                      {insight.icon}
+                    </Avatar>
+                    <Typography variant="subtitle1" fontWeight="medium">
+                      {insight.title}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    {insight.description}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+    );
+  };
+  
+  // Render the sleep data visualizations based on current view mode
+  const renderSleepData = () => {
+    if (isLoading) {
+      return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 8 }}>
+          <CircularProgress size={40} thickness={4} />
+        </Box>
+      );
+    }
+    
+    if (!processedData || processedData.length === 0) {
+      return (
+        <Box sx={{ p: 3, textAlign: 'center' }}>
+          <Typography variant="body2" color="text.secondary">
+            No sleep data available for this period
+          </Typography>
+        </Box>
+      );
+    }
+    
+    switch (viewMode) {
+      case 'stages':
+        return renderSleepStagesGraph();
+      case 'timeline':
+        return (
+          <Box
+            sx={{
+              width: '100%',
+              height: 300,
+              position: 'relative',
+              mt: 2
+            }}
+          >
+            <canvas 
+              ref={canvasRef} 
+              style={{ width: '100%', height: '100%' }} 
+              aria-label="Sleep timeline visualization"
+            />
+          </Box>
+        );
+      case 'insights':
+        return renderSleepInsights();
+      default:
+        return renderSleepStagesGraph();
+    }
   };
   
   return (
     <Paper 
       elevation={3} 
       sx={{ 
-        width: '100%', 
-        p: { xs: 2, md: 3 }, 
-        borderRadius: 2,
-        background: 'linear-gradient(to bottom, #ffffff, #f9f9f9)',
+        width: '100%',
+        p: 0,
+        borderRadius: 4,
+        background: 'linear-gradient(170deg, #fafafa, #ffffff)',
         mb: 4,
         position: 'relative',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.05)'
       }}
     >
-      {/* Visual enhancement - decorative gradient accent at top */}
+      {/* Background decorative elements */}
       <Box 
-        sx={{ 
-          position: 'absolute', 
-          top: 0, 
-          left: 0, 
-          right: 0, 
-          height: '6px', 
-          background: 'linear-gradient(90deg, #673ab7, #9c27b0, #e91e63)' 
-        }} 
+        sx={{
+          position: 'absolute',
+          top: -50,
+          right: -50,
+          width: 300,
+          height: 300,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${alpha(sleepQualityLevel?.color || '#5e35b1', 0.03)} 0%, transparent 70%)`,
+          zIndex: 0
+        }}
       />
       
-      {/* Header with current sleep score */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: { xs: 'wrap', md: 'nowrap' }, gap: { xs: 2, md: 0 } }}>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <AnimatedIcon 
-            icon={<BedtimeIcon />} 
-            value={sleepScore} 
-            unit="Score" 
-            size="large" 
-            color={getQualityLevelColor(sleepScore)} 
-          />
+      <Box 
+        sx={{
+          position: 'absolute',
+          bottom: -80,
+          left: -80,
+          width: 200,
+          height: 200,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${alpha(sleepQualityLevel?.color || '#5e35b1', 0.02)} 0%, transparent 70%)`,
+          zIndex: 0
+        }}
+      />
+      
+      {/* Header section */}
+      <Box 
+        sx={{ 
+          position: 'relative',
+          p: { xs: 2, md: 3 },
+          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
+          background: sleepQualityLevel ? sleepQualityLevel.gradient : 'linear-gradient(135deg, #5e35b1 0%, #673ab7 100%)',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+          color: 'white',
+          zIndex: 1
+        }}
+      >
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={6}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={sleepScore || 'loading'}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Badge
+                    overlap="circular"
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    badgeContent={
+                      <Zoom in={Boolean(sleepQualityLevel)}>
+                        <Avatar
+                          sx={{
+                            width: 28,
+                            height: 28,
+                            bgcolor: 'white',
+                            color: sleepQualityLevel?.color || theme.palette.primary.main
+                          }}
+                        >
+                          {sleepQualityLevel?.icon || <BedtimeIcon fontSize="small" />}
+                        </Avatar>
+                      </Zoom>
+                    }
+                  >
+                    <Avatar
+                      sx={{
+                        width: 64,
+                        height: 64,
+                        bgcolor: 'rgba(255, 255, 255, 0.2)',
+                        color: 'white',
+                        fontSize: '1.5rem',
+                        fontWeight: 'bold',
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.15)'
+                      }}
+                    >
+                      {sleepScore || '—'}
+                    </Avatar>
+                  </Badge>
+                </motion.div>
+              </AnimatePresence>
+              
+              <Box sx={{ ml: 2 }}>
+                <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                  Sleep Score
+                </Typography>
+                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  {sleepQualityLevel ? sleepQualityLevel.description : 'Analyzing your sleep data...'}
+                </Typography>
+              </Box>
+            </Box>
+          </Grid>
           
-          {/* Duration information */}
-          <Box 
-            sx={{ 
-              ml: 2,
-              display: { xs: 'none', md: 'block' },
-              bgcolor: alpha(getQualityLevelColor(sleepScore) || theme.palette.primary.main, 0.1),
-              p: 1,
-              px: 2,
-              borderRadius: 2,
-              border: `1px solid ${alpha(getQualityLevelColor(sleepScore) || theme.palette.primary.main, 0.2)}`
-            }}
-          >
-            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
-              <HotelIcon />
-              {formatDuration(sleepDuration)}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {sleepDuration >= 480 ? 'Optimal sleep duration' : 
-               sleepDuration >= 420 ? 'Good sleep duration' : 
-               sleepDuration >= 360 ? 'Fair sleep duration' : 
-               'Below recommended sleep duration'}
-            </Typography>
-          </Box>
-          
-          {/* Diagnostic button - subtle and discreet */}
-          <IconButton 
-            size="small" 
-            onClick={() => setDiagnosticsOpen(true)}
-            sx={{ 
-              ml: 2, 
-              opacity: 0.4, 
-              '&:hover': { opacity: 1 },
-              bgcolor: alpha(theme.palette.primary.main, 0.05),
-            }}
-            title="Open diagnostics console"
-          >
-            <TuneIcon fontSize="small" />
-          </IconButton>
-        </Box>
-        
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>Chart Type</InputLabel>
-            <Select
-              value={chartType}
-              label="Chart Type"
-              onChange={(e) => setChartType(e.target.value)}
-              size="small"
-            >
-              <MenuItem value="area" sx={{ display: 'flex', gap: 1 }}>
-                <ShowChartIcon fontSize="small" /> Area Chart
-              </MenuItem>
-              <MenuItem value="line" sx={{ display: 'flex', gap: 1 }}>
-                <TimelineIcon fontSize="small" /> Line Chart
-              </MenuItem>
-              <MenuItem value="bar" sx={{ display: 'flex', gap: 1 }}>
-                <BarChartIcon fontSize="small" /> Bar Chart
-              </MenuItem>
-            </Select>
-          </FormControl>
-          
-          <FormControl size="small" sx={{ minWidth: 110 }}>
-            <InputLabel>Resolution</InputLabel>
-            <Select
-              value={resolution}
-              label="Resolution"
-              onChange={(e) => setResolution(e.target.value)}
-              size="small"
-            >
-              <MenuItem value="low" sx={{ display: 'flex', gap: 1 }}>
-                <StraightenIcon fontSize="small" /> Low
-              </MenuItem>
-              <MenuItem value="medium" sx={{ display: 'flex', gap: 1 }}>
-                <StraightenIcon fontSize="small" /> Medium
-              </MenuItem>
-              <MenuItem value="high" sx={{ display: 'flex', gap: 1 }}>
-                <StraightenIcon fontSize="small" /> High
-              </MenuItem>
-            </Select>
-          </FormControl>
-          
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={showRange}
-                  onChange={(e) => setShowRange(e.target.checked)}
-                  size="small"
-                />
-              }
-              label="Range"
-              sx={{ m: 0 }}
-            />
-          
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={stagesView}
-                  onChange={(e) => setStagesView(e.target.checked)}
-                  size="small"
-                />
-              }
-              label="Stages"
-              sx={{ m: 0 }}
-            />
-            
-            {/* Compare mode switch with clear labeling */}
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={compareMode}
-                  onChange={(e) => setCompareMode(e.target.checked)}
-                  size="small"
-                />
-              }
-              label="Compare"
-              sx={{ m: 0 }}
-            />
-          </Box>
-        </Box>
+          <Grid item xs={12} md={6}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
+              <Chip
+                icon={<HotelIcon />}
+                label={formatDuration(sleepMetrics.duration)}
+                sx={{
+                  bgcolor: 'rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  backdropFilter: 'blur(4px)',
+                  '& .MuiChip-icon': { color: 'white' }
+                }}
+              />
+              
+              <Chip
+                icon={<AccessTimeIcon />}
+                label={`${formatTime(sleepMetrics.startTime)} - ${formatTime(sleepMetrics.endTime)}`}
+                sx={{
+                  bgcolor: 'rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  backdropFilter: 'blur(4px)',
+                  '& .MuiChip-icon': { color: 'white' }
+                }}
+              />
+              
+              <Chip
+                icon={<SpeedIcon />}
+                label={`${sleepMetrics.efficiency || 0}% Efficiency`}
+                sx={{
+                  bgcolor: 'rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  backdropFilter: 'blur(4px)',
+                  '& .MuiChip-icon': { color: 'white' }
+                }}
+              />
+              
+              <IconButton
+                size="small"
+                onClick={() => setDiagnosticsOpen(true)}
+                sx={{
+                  color: 'white',
+                  opacity: 0.7,
+                  '&:hover': { opacity: 1, bgcolor: 'rgba(255, 255, 255, 0.1)' }
+                }}
+                title="Debug"
+              >
+                <TuneIcon fontSize="small" />
+              </IconButton>
+            </Box>
+          </Grid>
+        </Grid>
       </Box>
       
-      {/* Main chart container */}
-      <Box sx={{ height: 400, width: '100%' }}>
-        {renderChart()}
-      </Box>
-      
-      {/* Data source indicator */}
-      <Box sx={{ mt: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" color="text.secondary">
-          Data source: {dataSource === 'auto' ? 'Auto' : dataSource === 'googleFit' ? 'Google Fit' : dataSource === 'fitbit' ? 'Fitbit' : 'Apple Health'}
-        </Typography>
-        {processedData.length > 0 && (
-          <Typography variant="caption" color="text.secondary">
-            • {processedData.length} data points
-          </Typography>
-        )}
-      </Box>
-      
-      {/* Analysis section */}
-      <Box sx={{ mt: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Fab
-          color="primary"
-          variant="extended"
-          size="medium"
-          onClick={() => setShowAnalysis(prev => !prev)}
+      {/* Main content area */}
+      <Box sx={{ p: { xs: 2, md: 3 }, position: 'relative', zIndex: 1 }}>
+        {/* View mode tabs */}
+        <Tabs
+          value={viewMode}
+          onChange={(_, newValue) => setViewMode(newValue)}
+          centered
           sx={{
-            boxShadow: 3,
-            textTransform: 'none'
+            mb: 3,
+            '& .MuiTabs-indicator': {
+              backgroundColor: sleepQualityLevel?.color || theme.palette.primary.main
+            }
           }}
         >
-          <AnalyticsIcon sx={{ mr: 1 }} />
-          {showAnalysis ? "Hide Analysis" : "Show Detailed Analysis"}
-        </Fab>
+          <Tab 
+            value="stages" 
+            label="Sleep Stages" 
+            icon={<NightsStayIcon />}
+            iconPosition="start"
+            sx={{
+              minHeight: 'unset',
+              py: 1,
+              '&.Mui-selected': {
+                color: sleepQualityLevel?.color || theme.palette.primary.main
+              }
+            }}
+          />
+          <Tab 
+            value="timeline" 
+            label="Sleep Timeline" 
+            icon={<WavesIcon />}
+            iconPosition="start"
+            sx={{
+              minHeight: 'unset',
+              py: 1,
+              '&.Mui-selected': {
+                color: sleepQualityLevel?.color || theme.palette.primary.main
+              }
+            }}
+          />
+          <Tab 
+            value="insights" 
+            label="Sleep Insights" 
+            icon={<AnalyticsIcon />}
+            iconPosition="start"
+            sx={{
+              minHeight: 'unset',
+              py: 1,
+              '&.Mui-selected': {
+                color: sleepQualityLevel?.color || theme.palette.primary.main
+              }
+            }}
+          />
+        </Tabs>
+        
+        {/* Render the active view */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={viewMode}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+          >
+            {renderSleepData()}
+          </motion.div>
+        </AnimatePresence>
+        
+        {/* Sleep metrics section */}
+        <Fade in={true}>
+          <Box sx={{ mt: 3 }}>
+            <Divider sx={{ mb: 3 }}>
+              <Chip 
+                label="Sleep Metrics" 
+                icon={<FitnessCenterIcon />}
+                sx={{ 
+                  fontWeight: 'medium',
+                  bgcolor: alpha(sleepQualityLevel?.color || theme.palette.primary.main, 0.1),
+                  color: sleepQualityLevel?.color || theme.palette.primary.main,
+                  '& .MuiChip-icon': { color: sleepQualityLevel?.color || theme.palette.primary.main }
+                }}
+              />
+            </Divider>
+            
+            {renderSleepMetrics()}
+          </Box>
+        </Fade>
       </Box>
       
-      {/* Sleep analysis panel */}
-      <motion.div
-        initial={{ opacity: 0, height: 0 }}
-        animate={{ 
-          opacity: showAnalysis ? 1 : 0,
-          height: showAnalysis ? 'auto' : 0,
-          marginTop: showAnalysis ? 24 : 0
-        }}
-        transition={{ duration: 0.3 }}
-      >
-        {showAnalysis && <SleepAnalysisPanel data={processedData} period={period} />}
-      </motion.div>
-      
-      {/* Diagnostics Dialog */}
+      {/* Diagnostics dialog */}
       <DiagnosticsDialog 
         open={diagnosticsOpen}
         onClose={() => setDiagnosticsOpen(false)}

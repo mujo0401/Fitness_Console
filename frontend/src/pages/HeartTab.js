@@ -123,6 +123,33 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
   const [userFeedback, setUserFeedback] = useState(null);
   const [compareHistoricalData, setCompareHistoricalData] = useState(false);
   
+  // Set up auto-refresh timers
+  useEffect(() => {
+    console.log('Setting up auto-refresh timers');
+    
+    // Timer to update the current time marker every 2 minutes
+    // This just updates the display without fetching new data
+    const displayRefreshTimer = setInterval(() => {
+      console.log('Display refresh timer triggered');
+      // Just update the current timestamp to force chart to redraw with current time
+      setIsRefreshing(true);
+      setTimeout(() => setIsRefreshing(false), 500);
+    }, 120000); // 2 minutes
+    
+    // Timer to fetch new data only every 15 minutes
+    // This is much gentler on the Google Fit API rate limits
+    const dataRefreshTimer = setInterval(() => {
+      console.log('Data refresh timer triggered - fetching fresh data');
+      fetchAllHeartData();
+    }, 900000); // 15 minutes
+    
+    // Clean up timers on component unmount
+    return () => {
+      clearInterval(displayRefreshTimer);
+      clearInterval(dataRefreshTimer);
+    };
+  }, []);
+  
   // Effect to fetch data when parameters change
   useEffect(() => {
     console.log('HeartTab useEffect triggered, fetching data...');

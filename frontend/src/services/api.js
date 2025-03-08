@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { generateMockActivityData } from '../utils/mockDataGenerator';
 
 // Debounce function implementation
 const debounce = (func, wait) => {
@@ -311,19 +312,54 @@ export const activityService = {
   // Get activity data for a specific period (with debouncing)
   getActivityData: debounce(async (period = 'day', date = new Date().toISOString().split('T')[0]) => {
     try {
-      console.log(`Fetching activity data for ${period} on ${date}`);
+      // Add timestamp for cache busting
+      const timestamp = Date.now();
+      
+      console.log(`CRITICAL: Fetching Fitbit activity data for ${period} on ${date}`);
+      console.log(`Calling Fitbit API endpoint: /fitbit/activity?period=${period}&date=${date}&_ts=${timestamp}`);
+      
       const response = await apiClient.get(`/fitbit/activity`, {
-        params: { period, date }
+        params: { 
+          period, 
+          date,
+          _ts: timestamp // Add cache-busting parameter
+        }
       });
+      
+      // Log the response for debugging
+      console.log("Fitbit activity data FULL response:", response);
+      console.log("Fitbit activity data body:", response.data);
+      
+      // Analyze the data format
+      if (response.data) {
+        if (Array.isArray(response.data)) {
+          console.log(`Got Fitbit array response with ${response.data.length} items`);
+          if (response.data.length > 0) {
+            console.log("Sample item:", response.data[0]);
+          }
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          console.log(`Got Fitbit nested array with ${response.data.data.length} items`);
+          if (response.data.data.length > 0) {
+            console.log("Sample item:", response.data.data[0]);
+          }
+        }
+      }
+      
       return response.data;
     } catch (error) {
       if (error.response?.status === 429) {
         throw new Error('Rate limit exceeded when fetching activity data. Please try again later.');
       }
-      console.error('Error fetching activity data:', error);
+      console.error('Error fetching Fitbit activity data:', error);
       throw error;
     }
-  }, 300), // 300ms debounce
+  }, 0), // Remove debounce for now to ensure we get real data immediately
+  
+  // Fetch mock activity data when needed (for debugging or when no real data is available)
+  getMockActivityData: (period = 'day', date = new Date().toISOString().split('T')[0]) => {
+    console.log(`Generating mock activity data for ${period} on ${date}`);
+    return generateMockActivityData(period, new Date(date));
+  }
 };
 
 // Apple Fitness API calls
@@ -550,10 +586,39 @@ export const googleFitService = {
   // Get activity data from Google Fit
   getActivityData: async (period = 'day', date = new Date().toISOString().split('T')[0]) => {
     try {
+      // Add timestamp to prevent caching issues
+      const timestamp = Date.now();
       console.log(`Fetching Google Fit activity data for ${period} on ${date}`);
+      
+      // CRITICAL DEBUG - log the exact URL we're calling
+      const requestUrl = `/google-fit/activity?period=${period}&date=${date}&_ts=${timestamp}`;
+      console.log("Making Google Fit activity request to:", requestUrl);
+      
       const response = await apiClient.get('/google-fit/activity', {
-        params: { period, date }
+        params: { 
+          period, 
+          date, 
+          _ts: timestamp  // Add cache-busting timestamp
+        }
       });
+      
+      console.log("Google Fit activity data FULL response:", response);
+      console.log("Google Fit activity data response body:", response.data);
+      
+      // Check data format
+      if (response.data && typeof response.data === 'object') {
+        if ('data' in response.data && Array.isArray(response.data.data)) {
+          console.log(`Got Google Fit activity data array with ${response.data.data.length} items`);
+          
+          // Log the first item for debugging
+          if (response.data.data.length > 0) {
+            console.log("First activity data item:", response.data.data[0]);
+          } else {
+            console.log("Google Fit returned empty data array");
+          }
+        }
+      }
+      
       return response.data;
     } catch (error) {
       console.error('Error fetching Google Fit activity data:', error);

@@ -7,7 +7,7 @@ import { getHeartRateZone } from '../../../utils/heartRateUtils';
 /**
  * A stylish custom tooltip component for charts
  */
-const CustomTooltip = ({ active, payload, label, minValue, maxValue }) => {
+const CustomTooltip = ({ active, payload, label, minValue, maxValue, type = 'heartrate' }) => {
   const theme = useTheme();
   
   // Handle invalid or empty data
@@ -32,10 +32,23 @@ const CustomTooltip = ({ active, payload, label, minValue, maxValue }) => {
     return null;
   }
   
-  // Get primary heart rate value (first series) with safety checks
+  // Extract primary value (first series) with safety checks
   const value = payload[0]?.value;
-  const heartRate = value !== undefined && !isNaN(value) ? value : 0;
-  const hrZone = getHeartRateZone(heartRate);
+  const primaryValue = value !== undefined && !isNaN(value) ? value : 0;
+  
+  // Determine the value name and units based on dataKey
+  const dataKey = payload[0]?.dataKey || '';
+  const valueDetails = {
+    steps: { name: 'Steps', unit: '', icon: null, color: theme.palette.success.main },
+    calories: { name: 'Calories', unit: 'kcal', icon: null, color: theme.palette.warning.main },
+    activeMinutes: { name: 'Active Minutes', unit: 'min', icon: null, color: theme.palette.primary.main },
+    distance: { name: 'Distance', unit: 'mi', icon: null, color: theme.palette.info.main },
+    value: { name: 'Heart Rate', unit: 'BPM', icon: <FavoriteIcon fontSize="small" />, color: theme.palette.error.main },
+    avg: { name: 'Heart Rate', unit: 'BPM', icon: <FavoriteIcon fontSize="small" />, color: theme.palette.error.main },
+  };
+  
+  const detail = valueDetails[dataKey] || { name: 'Value', unit: '', icon: null, color: theme.palette.primary.main };
+  const hrZone = dataKey === 'value' || dataKey === 'avg' ? getHeartRateZone(primaryValue) : null;
   
   // Extract date information from the data point
   const dataPoint = payload[0]?.payload || {};
@@ -72,20 +85,22 @@ const CustomTooltip = ({ active, payload, label, minValue, maxValue }) => {
       <style>{pulseKeyframes}</style>
       
       {/* Animated heart indicator */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: '12px',
-          right: '12px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: hrZone?.color || theme.palette.primary.main,
-          animation: 'pulse 1.5s infinite ease-in-out',
-        }}
-      >
-        <FavoriteIcon fontSize="large" />
-      </Box>
+      {(dataKey === 'value' || dataKey === 'avg') && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '12px',
+            right: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: hrZone?.color || theme.palette.primary.main,
+            animation: 'pulse 1.5s infinite ease-in-out',
+          }}
+        >
+          <FavoriteIcon fontSize="large" />
+        </Box>
+      )}
       
       {/* Time and date information */}
       <Box sx={{ mb: 2 }}>
@@ -97,7 +112,7 @@ const CustomTooltip = ({ active, payload, label, minValue, maxValue }) => {
         </Typography>
       </Box>
       
-      {/* Heart rate value with zone */}
+      {/* Main value with units */}
       <Box sx={{ 
         display: 'flex', 
         alignItems: 'baseline', 
@@ -106,31 +121,35 @@ const CustomTooltip = ({ active, payload, label, minValue, maxValue }) => {
       }}>
         <Typography variant="h4" sx={{ 
           fontWeight: 800, 
-          color: hrZone?.color || theme.palette.primary.main 
+          color: detail.color || hrZone?.color || theme.palette.primary.main 
         }}>
-          {Math.round(heartRate)}
+          {Math.round(primaryValue)}
         </Typography>
-        <Typography variant="body1" sx={{ fontWeight: 500, color: theme.palette.text.secondary }}>
-          BPM
-        </Typography>
+        {detail.unit && (
+          <Typography variant="body1" sx={{ fontWeight: 500, color: theme.palette.text.secondary }}>
+            {detail.unit}
+          </Typography>
+        )}
       </Box>
       
-      {/* Heart rate zone */}
-      <Box sx={{ 
-        mt: 1, 
-        p: 1, 
-        borderRadius: 2, 
-        backgroundColor: alpha(hrZone?.color || theme.palette.primary.main, 0.1),
-        border: `1px solid ${alpha(hrZone?.color || theme.palette.primary.main, 0.2)}`,
-        display: 'inline-block'
-      }}>
-        <Typography variant="body2" sx={{ 
-          fontWeight: 700, 
-          color: hrZone?.color || theme.palette.primary.main 
+      {/* Only show heart rate zone for heart rate data */}
+      {hrZone && (
+        <Box sx={{ 
+          mt: 1, 
+          p: 1, 
+          borderRadius: 2, 
+          backgroundColor: alpha(hrZone?.color || theme.palette.primary.main, 0.1),
+          border: `1px solid ${alpha(hrZone?.color || theme.palette.primary.main, 0.2)}`,
+          display: 'inline-block'
         }}>
-          {hrZone?.name || 'Unknown'} Zone
-        </Typography>
-      </Box>
+          <Typography variant="body2" sx={{ 
+            fontWeight: 700, 
+            color: hrZone?.color || theme.palette.primary.main 
+          }}>
+            {hrZone?.name || 'Unknown'} Zone
+          </Typography>
+        </Box>
+      )}
       
       {/* Additional data points */}
       <Box sx={{ mt: 2, borderTop: `1px solid ${alpha(theme.palette.divider, 0.5)}`, pt: 1 }}>
@@ -140,7 +159,7 @@ const CustomTooltip = ({ active, payload, label, minValue, maxValue }) => {
               {entry.name}:
             </Typography>
             <Typography variant="body2" sx={{ fontWeight: 600, color: entry.color || theme.palette.text.primary }}>
-              {Math.round(entry.value)} BPM
+              {Math.round(entry.value)} {entry.dataKey === 'value' || entry.dataKey === 'avg' ? 'BPM' : ''}
             </Typography>
           </Box>
         ))}
