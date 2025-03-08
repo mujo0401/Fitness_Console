@@ -720,12 +720,12 @@ def get_activity():
                             for point in dataset['point']:
                                 if 'value' in point:
                                     for value in point['value']:
-                                        if ('com.google.step_count.delta' in dataset['dataSourceId'] or 
+                                        if ('step_count' in dataset['dataSourceId'] or 
                                             'estimated_steps' in dataset['dataSourceId'] or
                                             'aggregated' in dataset['dataSourceId']) and 'intVal' in value:
                                             day_data['steps'] += value['intVal']
                                             logger.info(f"Added {value['intVal']} steps, total now: {day_data['steps']}")
-                                        elif 'calories.expended' in dataset['dataSourceId'] and 'fpVal' in value:
+                                        elif 'calories' in dataset['dataSourceId'] and 'fpVal' in value:
                                             day_data['calories'] += value['fpVal']
                                             logger.info(f"Added {value['fpVal']} calories, total now: {day_data['calories']}")
                                         elif 'active_minutes' in dataset['dataSourceId'] and 'intVal' in value:
@@ -733,7 +733,7 @@ def get_activity():
                                             logger.info(f"Added {value['intVal']} active minutes, total now: {day_data['activeMinutes']}")
                 
                 # Calculate distance based on steps (approximation if not available)
-                day_data['distance'] = round(day_data['steps'] / 1300, 2)  # Rough approximation: 1300 steps ≈ 1 km
+                day_data['distance'] = round(day_data['steps'] / 2000, 2)  # Rough approximation: 2000 steps ≈ 1 mile
                 
                 logger.info(f"Processed activity data for {day_data['date']}: {day_data}")
                 activity_data.append(day_data)

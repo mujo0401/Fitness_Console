@@ -535,7 +535,13 @@ def process_activity_data(raw_data, period):
     Returns:
         list: Processed data
     """
+    print(f"ACTIVITY DATA PROCESSING START: period={period}, raw_data_keys={list(raw_data.keys() if raw_data else [])}")
     processed_data = []
+    
+    # If raw_data is None, create an empty dict to prevent errors
+    if raw_data is None:
+        raw_data = {}
+        print("CRITICAL: raw_data is None, using empty dict instead")
     
     if period == 'day':
         # Process a single day's activity data
@@ -543,6 +549,11 @@ def process_activity_data(raw_data, period):
             activities = raw_data.get('activities', [])
             summary = raw_data.get('summary', {})
             dateTime = raw_data.get('dateTime', '')
+            
+            # If dateTime is missing, use current date as fallback
+            if not dateTime:
+                dateTime = datetime.now().strftime('%Y-%m-%d')
+                print(f"CRITICAL: Missing dateTime, using current date as fallback: {dateTime}")
             
             # Process the intraday time series data if available
             if 'activities-steps-intraday' in raw_data:
@@ -574,8 +585,8 @@ def process_activity_data(raw_data, period):
                     steps_count = data['steps']
                     # Estimate calories based on steps (rough approximation)
                     calories = int(steps_count * 0.04)
-                    # Estimate distance in km based on steps (rough approximation: 1300 steps ≈ 1km)
-                    distance = round(steps_count / 1300, 2)
+                    # Estimate distance in miles based on steps (rough approximation: 2000 steps ≈ 1 mile)
+                    distance = round(steps_count / 2000, 2)
                     # Estimate floors based on steps (rough approximation)
                     floors = int(steps_count / 500) if steps_count > 200 else 0
                     # Estimate active minutes based on steps
@@ -593,8 +604,31 @@ def process_activity_data(raw_data, period):
                     })
             else:
                 # If no intraday data, use the summary data
+                print(f"CRITICAL: Using summary data for activity: dateTime={dateTime}")
+                print(f"CRITICAL: Summary data: steps={summary.get('steps', 0)}, calories={summary.get('caloriesOut', 0)}")
+                
+                # Dump the full summary for debugging
+                print(f"CRITICAL: Full summary data: {summary}")
+                
+                # Check distances data specifically (common issue area)
+                distances = summary.get('distances', [])
+                print(f"CRITICAL: Distances data: {distances}")
+                
+                # Check activity details
+                activities = raw_data.get('activities', [])
+                print(f"CRITICAL: Activities list length: {len(activities)}")
+                if activities:
+                    print(f"CRITICAL: First activity: {activities[0]}")
+                
+                # Check and log if there's any fitness data in the summary
+                if summary.get('steps', 0) > 0 or summary.get('caloriesOut', 0) > 0:
+                    print(f"CRITICAL: Found non-zero activity data in summary!")
+                else:
+                    print(f"CRITICAL: All summary data is ZERO for activity!")
+                
                 processed_data.append({
                     'dateTime': dateTime,
+                    'date': dateTime,  # Add date field for consistency
                     'steps': summary.get('steps', 0),
                     'calories': summary.get('caloriesOut', 0),
                     'distance': summary.get('distances', [{}])[0].get('distance', 0),
@@ -602,31 +636,46 @@ def process_activity_data(raw_data, period):
                     'activeMinutes': summary.get('fairlyActiveMinutes', 0) + summary.get('veryActiveMinutes', 0)
                 })
         except Exception as e:
-            print(f"Error processing activity data: {e}")
+            print(f"CRITICAL ERROR processing activity data: {e}")
+            import traceback
+            print(traceback.format_exc())
     else:
         # Process multiple days of activity data
         try:
-            for day_data in raw_data.get('activities-steps', []):
+            print(f"CRITICAL: Processing multi-day activity data, period={period}")
+            steps_data = raw_data.get('activities-steps', [])
+            print(f"CRITICAL: Found {len(steps_data)} days of step data")
+            
+            # Log all available dates for debugging
+            available_dates = [day.get('dateTime', '') for day in steps_data]
+            print(f"CRITICAL: Available dates: {available_dates}")
+            
+            # Process each day
+            for day_data in steps_data:
                 date = day_data.get('dateTime', '')
                 steps = int(day_data.get('value', 0))
+                print(f"CRITICAL: Processing day {date}, steps={steps}")
                 
                 # Find corresponding data for other metrics
                 calories = 0
                 for cal_data in raw_data.get('activities-calories', []):
                     if cal_data.get('dateTime') == date:
                         calories = int(cal_data.get('value', 0))
+                        print(f"CRITICAL: Found calories={calories} for {date}")
                         break
                 
                 distance = 0
                 for dist_data in raw_data.get('activities-distance', []):
                     if dist_data.get('dateTime') == date:
                         distance = float(dist_data.get('value', 0))
+                        print(f"CRITICAL: Found distance={distance} for {date}")
                         break
                 
                 floors = 0
                 for floor_data in raw_data.get('activities-floors', []):
                     if floor_data.get('dateTime') == date:
                         floors = int(floor_data.get('value', 0))
+                        print(f"CRITICAL: Found floors={floors} for {date}")
                         break
                 
                 # Active minutes
