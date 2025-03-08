@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { 
   Box, 
   Card, 
@@ -34,15 +34,10 @@ import {
   Tab,
   Tabs,
   Zoom,
-  Fab,
-  Menu,
   Rating,
   Switch,
-  TextField,
-  InputAdornment,
-  Backdrop,
-  AvatarGroup,
-  Stack
+  Stack,
+  Backdrop
 } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { styled } from '@mui/material/styles';
