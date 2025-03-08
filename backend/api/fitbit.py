@@ -632,7 +632,7 @@ def get_activity():
             current_app.logger.warning("All steps data is zero!")
             
             # Additional debug info for troubleshooting zero values
-            current_app.logger.info(f"Raw data summary: {raw_data.get('summary', {})}")
+            current_app.logger.info(f"Raw data summary: {activity_data.get('summary', {})}")
             
             # Check token scopes to ensure activity data access
             token = session.get('oauth_token', {})
