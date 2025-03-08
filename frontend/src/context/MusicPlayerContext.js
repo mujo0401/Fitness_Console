@@ -88,6 +88,7 @@ export const MusicPlayerProvider = ({ children }) => {
   const [repeatMode, setRepeatMode] = useState('none'); // 'none', 'all', 'one'
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const [rockCatalog, setRockCatalog] = useState(generatePlaceholderCatalog());
+  const [youtubeApiReady, setYoutubeApiReady] = useState(false);
   
   const playerRef = useRef(null);
   const progressInterval = useRef(null);
@@ -106,13 +107,26 @@ export const MusicPlayerProvider = ({ children }) => {
       };
     }
     
-    // Load YouTube iframe API
-    const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    const firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-    
-    window.onYouTubeIframeAPIReady = initializeYouTubePlayer;
+    // Load YouTube iframe API only if it hasn't been loaded yet
+    if (!document.getElementById('youtube-api-script')) {
+      const tag = document.createElement('script');
+      tag.id = 'youtube-api-script';
+      tag.src = 'https://www.youtube.com/iframe_api';
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+      
+      // Set up the callback for when the API is ready
+      window.onYouTubeIframeAPIReady = () => {
+        console.log('YouTube API is ready');
+        setYoutubeApiReady(true);
+        initializeYouTubePlayer();
+      };
+    } else if (window.YT && window.YT.Player) {
+      // API already loaded
+      console.log('YouTube API already loaded');
+      setYoutubeApiReady(true);
+      initializeYouTubePlayer();
+    }
     
     return () => {
       // Clean up timer when component unmounts
@@ -162,10 +176,11 @@ export const MusicPlayerProvider = ({ children }) => {
       
       console.log("Created player element:", playerElement);
       
-      // Don't use a placeholder video ID - load an empty player
+      // Use a valid blank placeholder video ID to ensure player initializes properly
       playerRef.current = new window.YT.Player('global-youtube-player', {
         height: '120',
         width: '120',
+        videoId: 'xxxxxxxxxxx', // Invalid ID that will be replaced immediately
         playerVars: {
           'playsinline': 1,
           'controls': 0,
@@ -180,8 +195,13 @@ export const MusicPlayerProvider = ({ children }) => {
           'onStateChange': onPlayerStateChange,
           'onError': (event) => {
             console.error('YouTube player error:', event.data);
-            // Reset the player state on error
-            setIsPlaying(false);
+            // For invalid video ID errors, just ignore - this is expected
+            if (event.data === 2 || event.data === 5 || event.data === 100 || event.data === 101 || event.data === 150) {
+              console.log('Expected error for placeholder video, continuing...');
+            } else {
+              // Reset the player state on other errors
+              setIsPlaying(false);
+            }
           }
         }
       });
@@ -214,7 +234,7 @@ export const MusicPlayerProvider = ({ children }) => {
     // Ensure player is muted initially (will unmute when actually playing)
     try {
       event.target.mute();
-      // Immediately stop the placeholder video
+      // Stop the video to prevent any playback
       event.target.stopVideo();
     } catch (e) {
       console.warn("Could not mute or stop player on init:", e);
@@ -268,6 +288,8 @@ export const MusicPlayerProvider = ({ children }) => {
           // For demo tracks, we still set UI state
           if (isPlaying) {
             setIsPlaying(true);
+            // Start the demo playback simulation
+            startDemoPlayback(window.musicPlayerState.currentSong);
           }
         }
       } catch (error) {
@@ -290,11 +312,15 @@ export const MusicPlayerProvider = ({ children }) => {
       
       progressInterval.current = setInterval(() => {
         if (playerRef.current) {
-          const currentTime = playerRef.current.getCurrentTime();
-          setCurrentTime(currentTime);
-          
-          // Save current state
-          savePlayerState();
+          try {
+            const time = playerRef.current.getCurrentTime();
+            setCurrentTime(time);
+            
+            // Save current state
+            savePlayerState();
+          } catch (error) {
+            console.error("Error getting current time:", error);
+          }
         }
       }, 1000);
     } else if (event.data === window.YT.PlayerState.PAUSED) {
@@ -308,28 +334,81 @@ export const MusicPlayerProvider = ({ children }) => {
     }
   };
   
+  // Start demo playback simulation for non-YouTube tracks
+  const startDemoPlayback = (song) => {
+    if (!song) return;
+    
+    // Clear any existing interval first
+    if (progressInterval.current) {
+      clearInterval(progressInterval.current);
+    }
+    
+    console.log("Starting demo playback simulation for:", song.title);
+    
+    // For demo tracks, we need to manually simulate progress
+    progressInterval.current = setInterval(() => {
+      setCurrentTime(prevTime => {
+        // Simulate playback progress, incrementing 1 second at a time
+        const newTime = prevTime + 1;
+        
+        // If reached the end of the song, loop or play next
+        if (newTime >= song.duration) {
+          if (repeatMode === 'one') {
+            return 0; // Loop the song
+          } else {
+            // Schedule next song to play after this interval completes
+            setTimeout(handleSongEnd, 500);
+            return prevTime; // Keep at end position
+          }
+        }
+        
+        return newTime;
+      });
+      
+      // Save current state periodically
+      savePlayerState();
+    }, 1000);
+  };
+  
   // Handle song selection
   const playSong = (song) => {
     if (!song) return;
     
     console.log("Attempting to play song:", song);
     setCurrentSong(song);
+    setCurrentTime(0); // Reset time when starting a new song
     
-    // If player is initialized, load and play the video
-    if (playerRef.current) {
+    // Check if this is a real YouTube video ID or a demo ID
+    const isRealYouTubeId = song.videoId && 
+                          !song.videoId.startsWith('demo') && 
+                          !song.videoId.startsWith('track_') && 
+                          !song.videoId.startsWith('workout_demo');
+    
+    console.log("Is real YouTube ID:", isRealYouTubeId, "VideoID:", song.videoId);
+    
+    // Clear any existing progress timer
+    if (progressInterval.current) {
+      clearInterval(progressInterval.current);
+    }
+    
+    // If YouTube API is ready and player is initialized
+    if (youtubeApiReady && playerRef.current) {
       try {
-        // Check if this is a real YouTube video ID or a demo ID
-        const isRealYouTubeId = song.videoId && 
-                               !song.videoId.startsWith('demo') && 
-                               !song.videoId.startsWith('track_') && 
-                               !song.videoId.startsWith('workout_demo');
-        
-        console.log("Is real YouTube ID:", isRealYouTubeId, "VideoID:", song.videoId);
-        
         if (isRealYouTubeId) {
           // Load real YouTube video
           console.log("Loading real YouTube video:", song.videoId);
-          playerRef.current.loadVideoById(song.videoId);
+          
+          // Set volume and unmute before playing
+          playerRef.current.setVolume(muted ? 0 : volume);
+          if (!muted) {
+            playerRef.current.unMute();
+          }
+          
+          // Load and play the video
+          playerRef.current.loadVideoById({
+            videoId: song.videoId,
+            startSeconds: 0
+          });
           
           // Force play after a short delay to ensure it starts
           setTimeout(() => {
@@ -337,29 +416,42 @@ export const MusicPlayerProvider = ({ children }) => {
               console.log("Forcing playback to start");
               playerRef.current.playVideo();
             }
-          }, 500);
+          }, 300);
         } else {
           // For demo IDs, we'll show a visual player but not load a real video
-          // This simulates playback without requiring real videos
           console.log("Playing demo track (no actual video loaded):", song.title);
-          // For demos, we'll just stop any currently playing video and show UI
+          // For demos, we'll just stop any currently playing video
           playerRef.current.stopVideo();
           
-          // For demo tracks, we still want to show the player as "playing"
-          setIsPlaying(true);
+          // Start the demo playback simulation
+          startDemoPlayback(song);
         }
         
-        playerRef.current.setVolume(muted ? 0 : volume);
         setIsPlaying(true);
         setShowMiniPlayer(true);
       } catch (error) {
         console.error("Error playing song:", error);
-        // Still set as playing for UI feedback even if real playback fails
-        setIsPlaying(true);
-        setShowMiniPlayer(true);
+        // For demo tracks, we still want to show the player as "playing"
+        if (!isRealYouTubeId) {
+          setIsPlaying(true);
+          setShowMiniPlayer(true);
+          startDemoPlayback(song);
+        }
       }
     } else {
-      console.warn("YouTube player not initialized yet");
+      console.warn("YouTube player not initialized yet, starting UI-only playback");
+      // Still set as playing for UI feedback even without YouTube player
+      setIsPlaying(true);
+      setShowMiniPlayer(true);
+      
+      // For all tracks when player is not ready, simulate playback
+      startDemoPlayback(song);
+      
+      // Try to initialize player again if API is available
+      if (window.YT && window.YT.Player && !playerRef.current) {
+        console.log("Trying to initialize player again");
+        initializeYouTubePlayer();
+      }
     }
     
     // Save player state
@@ -372,101 +464,158 @@ export const MusicPlayerProvider = ({ children }) => {
     
     console.log("Toggle play called, current state:", isPlaying);
     
-    if (playerRef.current) {
-      try {
-        // Check if this is a real YouTube video ID or a demo ID
-        const isRealYouTubeId = currentSong.videoId && 
-                               !currentSong.videoId.startsWith('demo') && 
-                               !currentSong.videoId.startsWith('track_') && 
-                               !currentSong.videoId.startsWith('workout_demo');
-        
-        if (isPlaying) {
-          console.log("Pausing playback");
-          // Pausing works for both real and demo tracks
-          if (isRealYouTubeId) {
-            playerRef.current.pauseVideo();
+    // Check if this is a real YouTube video ID or a demo ID
+    const isRealYouTubeId = currentSong.videoId && 
+                           !currentSong.videoId.startsWith('demo') && 
+                           !currentSong.videoId.startsWith('track_') && 
+                           !currentSong.videoId.startsWith('workout_demo');
+    
+    if (isPlaying) {
+      console.log("Pausing playback");
+      // Pausing works for both real and demo tracks
+      if (youtubeApiReady && playerRef.current && isRealYouTubeId) {
+        try {
+          playerRef.current.pauseVideo();
+        } catch (error) {
+          console.error("Error pausing video:", error);
+        }
+      }
+      
+      // For both real and demo tracks, clear the progress interval when pausing
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current);
+      }
+      
+      setIsPlaying(false);
+    } else {
+      console.log("Resuming playback");
+      
+      // Clear any existing progress timer first
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current);
+      }
+      
+      if (youtubeApiReady && playerRef.current && isRealYouTubeId) {
+        try {
+          // First, make sure the video is loaded
+          const playerState = playerRef.current.getPlayerState();
+          console.log("Current player state:", playerState);
+          
+          // If video is not loaded or cued, reload it
+          if (playerState === -1 || playerState === 5) {
+            console.log("Video not loaded, loading video:", currentSong.videoId);
+            playerRef.current.loadVideoById({
+              videoId: currentSong.videoId,
+              startSeconds: currentTime
+            });
+          } else {
+            // Otherwise just play it
+            console.log("Playing loaded video");
+            playerRef.current.playVideo();
           }
-          setIsPlaying(false);
-        } else {
-          console.log("Resuming playback");
-          if (isRealYouTubeId) {
-            // First, make sure the video is loaded
-            const playerState = playerRef.current.getPlayerState();
-            console.log("Current player state:", playerState);
-            
-            // If video is not loaded or cued, reload it
-            if (playerState === -1 || playerState === 5) {
-              console.log("Video not loaded, loading video:", currentSong.videoId);
-              playerRef.current.loadVideoById(currentSong.videoId, currentTime);
-            } else {
-              // Otherwise just play it
-              console.log("Playing loaded video");
-              playerRef.current.playVideo();
-            }
-            
-            // Ensure volume is set correctly
-            playerRef.current.setVolume(muted ? 0 : volume);
+          
+          // Ensure volume is set correctly
+          playerRef.current.setVolume(muted ? 0 : volume);
+          if (!muted) {
             playerRef.current.unMute();
           }
-          setIsPlaying(true);
+        } catch (error) {
+          console.error("Error playing video:", error);
+          // If YouTube playback fails, fall back to demo playback simulation
+          startDemoPlayback(currentSong);
         }
-        
-        // Save player state
-        savePlayerState();
-      } catch (error) {
-        console.error("Error during play/pause:", error);
-        // Toggle UI state anyway for better UX
-        setIsPlaying(!isPlaying);
+      } else {
+        // For demo tracks or when player is not ready, simulate playback
+        startDemoPlayback(currentSong);
       }
-    } else {
-      console.warn("Player not initialized, toggling UI only");
-      setIsPlaying(!isPlaying);
+      
+      setIsPlaying(true);
     }
+    
+    // Save player state
+    savePlayerState();
   };
   
   // Handle seeking in the song
   const handleSeek = (newValue) => {
-    if (playerRef.current && currentSong) {
-      playerRef.current.seekTo(newValue);
-      setCurrentTime(newValue);
-      
-      // Save player state
-      savePlayerState();
+    if (!currentSong) return;
+    
+    // Check if this is a real YouTube video ID or a demo ID
+    const isRealYouTubeId = currentSong.videoId && 
+                           !currentSong.videoId.startsWith('demo') && 
+                           !currentSong.videoId.startsWith('track_') && 
+                           !currentSong.videoId.startsWith('workout_demo');
+                           
+    if (youtubeApiReady && playerRef.current && isRealYouTubeId) {
+      try {
+        // For real YouTube videos, use the YouTube API
+        playerRef.current.seekTo(newValue);
+      } catch (error) {
+        console.error("Error seeking:", error);
+      }
     }
+    
+    // For all types of tracks, update the UI time
+    setCurrentTime(newValue);
+    
+    // Save player state
+    savePlayerState();
   };
   
   // Handle volume change
   const handleVolumeChange = (newValue) => {
     setVolume(newValue);
-    if (playerRef.current) {
-      playerRef.current.setVolume(newValue);
-      if (newValue === 0) {
-        setMuted(true);
-      } else if (muted) {
-        setMuted(false);
+    if (youtubeApiReady && playerRef.current) {
+      try {
+        playerRef.current.setVolume(newValue);
+        if (newValue === 0) {
+          setMuted(true);
+          playerRef.current.mute();
+        } else if (muted) {
+          setMuted(false);
+          playerRef.current.unMute();
+        }
+      } catch (error) {
+        console.error("Error changing volume:", error);
       }
     }
   };
   
   // Toggle mute
   const toggleMute = () => {
-    if (playerRef.current) {
-      if (muted) {
-        playerRef.current.setVolume(volume);
-      } else {
-        playerRef.current.setVolume(0);
+    if (youtubeApiReady && playerRef.current) {
+      try {
+        if (muted) {
+          playerRef.current.unMute();
+          playerRef.current.setVolume(volume);
+        } else {
+          playerRef.current.mute();
+        }
+      } catch (error) {
+        console.error("Error toggling mute:", error);
       }
-      setMuted(!muted);
     }
+    setMuted(!muted);
   };
   
   // Handle song ending
   const handleSongEnd = () => {
     if (repeatMode === 'one') {
       // Replay the current song
-      if (playerRef.current) {
-        playerRef.current.seekTo(0);
-        playerRef.current.playVideo();
+      if (youtubeApiReady && playerRef.current) {
+        try {
+          playerRef.current.seekTo(0);
+          playerRef.current.playVideo();
+        } catch (error) {
+          console.error("Error replaying song:", error);
+          // Restart demo playback if YouTube fails
+          setCurrentTime(0);
+          startDemoPlayback(currentSong);
+        }
+      } else {
+        // For demo tracks, reset time and continue simulation
+        setCurrentTime(0);
+        startDemoPlayback(currentSong);
       }
     } else {
       playNextSong();
@@ -592,6 +741,7 @@ export const MusicPlayerProvider = ({ children }) => {
       repeatMode,
       shuffleEnabled,
       rockCatalog,
+      youtubeApiReady,
       
       // Methods
       setCurrentSong,
