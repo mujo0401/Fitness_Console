@@ -89,6 +89,17 @@ export const enhanceHeartRateData = (data, source) => {
   // Check the first few data points to understand structure
   if (data.length > 0) {
     console.log("Data structure sample:", JSON.stringify(data[0]));
+    
+    // Debug field presence
+    const firstPoint = data[0];
+    const hasValue = 'value' in firstPoint;
+    const hasAvg = 'avg' in firstPoint;
+    const hasTimestamp = 'timestamp' in firstPoint;
+    const hasDate = 'date' in firstPoint;
+    const hasTime = 'time' in firstPoint;
+    
+    console.log(`Data fields check - value: ${hasValue}, avg: ${hasAvg}, timestamp: ${hasTimestamp}, date: ${hasDate}, time: ${hasTime}`);
+    console.log(`Sample values - value: ${firstPoint.value}, avg: ${firstPoint.avg}`);
   }
   
   // Log time range of data points to help debug time cutoffs
@@ -99,8 +110,14 @@ export const enhanceHeartRateData = (data, source) => {
     console.log(`Data time range: ${new Date(firstTimestamp * 1000).toLocaleString()} to ${new Date(lastTimestamp * 1000).toLocaleString()}`);
   }
   
-  return data.map((item, index) => {
+  // Create a new array for enhanced data
+  const enhancedData = data.map((item, index) => {
     try {
+      // Log first and last item before processing
+      if (index === 0 || index === data.length - 1) {
+        console.log(`Processing ${index === 0 ? 'first' : 'last'} data point:`, JSON.stringify(item));
+      }
+      
       // CRITICAL FIX: Extract heart rate value to ensure ALL data points have BOTH value and avg fields
       // This is important because different chart types use different field access patterns
       const hrValue = item.avg !== undefined ? item.avg : (item.value !== undefined ? item.value : 0);
@@ -218,6 +235,37 @@ export const enhanceHeartRateData = (data, source) => {
       };
     }
   });
+  
+  // Log the final enhanced data
+  if (enhancedData.length > 0) {
+    console.log("FINAL DATA CHECK:");
+    console.log("Total data points after processing:", enhancedData.length);
+    
+    // Verify critical fields in 3 sample points
+    const samplePoints = [
+      enhancedData[0], 
+      enhancedData[Math.floor(enhancedData.length / 2)],
+      enhancedData[enhancedData.length - 1]
+    ];
+    
+    // Check each sample point
+    samplePoints.forEach((point, i) => {
+      const position = i === 0 ? "First" : (i === 1 ? "Middle" : "Last");
+      const hasAvg = 'avg' in point && typeof point.avg === 'number' && !isNaN(point.avg);
+      const hasTime = 'formattedTime' in point && typeof point.formattedTime === 'string';
+      
+      // Log just the critical rendering fields
+      console.log(`${position} point check:`, {
+        avg: point.avg,
+        formattedTime: point.formattedTime,
+        hasValidAvg: hasAvg,
+        hasValidTime: hasTime,
+        timestamp: new Date(point.timestamp * 1000).toLocaleString()
+      });
+    });
+  }
+  
+  return enhancedData;
 };
 
 /**

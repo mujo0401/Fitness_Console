@@ -523,10 +523,23 @@ export const googleFitService = {
   // Get heart rate data from Google Fit
   getHeartRateData: async (period = 'day', date = new Date().toISOString().split('T')[0]) => {
     try {
-      console.log(`Fetching Google Fit heart rate data for ${period} on ${date}`);
+      // Add a timestamp to prevent caching
+      const timestamp = Date.now();
+      console.log(`Fetching Google Fit heart rate data for ${period} on ${date} with timestamp ${timestamp}`);
+      
       const response = await apiClient.get('/google-fit/heart-rate', {
-        params: { period, date }
+        params: { 
+          period, 
+          date,
+          _ts: timestamp  // Add cache-busting timestamp
+        }
       });
+      
+      console.log(`Google Fit heart rate data received: ${response.data.data_points_count} points`);
+      if (response.data.date_counts) {
+        console.log('Data points by date:', response.data.date_counts);
+      }
+      
       return response.data;
     } catch (error) {
       console.error('Error fetching Google Fit heart rate data:', error);

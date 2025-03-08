@@ -109,6 +109,8 @@ const HeartRateChart = ({
     console.log("- Google Fit data length:", googleFitData?.length || 0);
     console.log("- Fitbit data length:", fitbitData?.length || 0);
     console.log("- Data source:", dataSource);
+    console.log("- Current date:", date);
+    console.log("- Current period:", period);
     
     // Calculate data quality scores
     const qualityScores = {
@@ -549,10 +551,25 @@ const HeartRateChart = ({
         height: 400
       };
       
-      // Debug log for chart rendering
+      // Extended debug logging
       console.log(`Rendering ${chartType} chart with ${processedData.length} data points`);
       console.log(`Chart Y-axis range: ${minValue} to ${maxValue}`);
       console.log(`Chart X-axis key: ${commonProps.xAxisDataKey}`);
+      
+      // Add detailed data inspection - log first 2 data points
+      if (processedData && processedData.length > 0) {
+        console.log("CHART DATA SAMPLE:");
+        console.log(processedData.slice(0, 2));
+        
+        // Check for the presence of 'avg' field in data
+        const samplePoint = processedData[0];
+        console.log("First point fields:", Object.keys(samplePoint));
+        console.log("Has 'avg' field:", 'avg' in samplePoint);
+        console.log("Value of 'avg':", samplePoint.avg);
+        
+        // Log the series configuration
+        console.log("Chart series config:", JSON.stringify(commonProps.series, null, 2));
+      }
       
       // Check for potential time range issues
       if (processedData.length > 0) {

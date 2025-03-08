@@ -253,8 +253,19 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
   const handleDateChange = (newDate) => {
     if (newDate && isValid(newDate)) {
       // Fix timezone issues by using the date parts directly
+      const oldDate = date;
+      const oldFormatted = formattedDate;
+      
+      console.log(`Date change: ${format(oldDate, 'yyyy-MM-dd')} -> ${format(newDate, 'yyyy-MM-dd')}`);
+      
       setDate(newDate);
-      setFormattedDate(format(newDate, 'yyyy-MM-dd'));
+      const newFormattedDate = format(newDate, 'yyyy-MM-dd');
+      setFormattedDate(newFormattedDate);
+      
+      console.log(`Date changed: from ${oldFormatted} to ${newFormattedDate}`);
+      console.log(`New date will trigger data fetch: ${oldFormatted !== newFormattedDate}`);
+    } else {
+      console.warn("Invalid date selected:", newDate);
     }
   };
   
@@ -373,7 +384,10 @@ const HeartTab = ({ showAdvancedAnalysis = true }) => {
               response = await heartRateService.getHeartRateData(period, formattedDate);
               break;
             case 'googleFit':
+              // Add a unique timestamp to force new data for each request
+              console.log(`Fetching Google Fit heart rate data with timestamp: ${Date.now()}`);
               response = await googleFitService.getHeartRateData(period, formattedDate);
+              console.log(`Received Google Fit response with ${response?.data?.length || 0} data points for ${formattedDate}`);
               break;
             case 'appleHealth':
               response = await appleFitnessService.getHeartRateData(period, formattedDate);

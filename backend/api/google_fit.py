@@ -265,14 +265,21 @@ def parse_date_param(date_param):
         # Set start time to beginning of the day (midnight)
         start_date = datetime(date_obj.year, date_obj.month, date_obj.day, 0, 0, 0)
         
-        # Set end time based on whether we're requesting today or a past date
+        # Set end time based on whether we're requesting today, yesterday, or an older date
         if date_obj.date() == today.date():
             # For today, use current time plus a small buffer to ensure we get latest data
             end_date = today + timedelta(minutes=5)  # Add 5 minutes buffer
             logger.info(f"Using current time for today's data: {end_date}")
+        elif date_obj.date() == (today.date() - timedelta(days=1)):
+            # For yesterday, ALWAYS extend to the current time to ensure we get overnight data
+            # This ensures we catch data points recorded between midnight and now
+            end_date = today + timedelta(minutes=5)  # Add 5 minutes buffer
+            logger.info(f"Yesterday's data requested - extending to current time to include overnight data: {end_date}")
         else:
-            # For past dates, use end of day
-            end_date = datetime(date_obj.year, date_obj.month, date_obj.day, 23, 59, 59)
+            # For older dates, extend 12 hours past the end of day to ensure we get all data
+            # This helps capture overnight sleep metrics that might cross the midnight boundary
+            end_date = datetime(date_obj.year, date_obj.month, date_obj.day, 23, 59, 59) + timedelta(hours=12)
+            logger.info(f"Historical data requested - extending 12 hours past midnight: {end_date}")
         
         # Convert to Unix timestamps
         start_time = int(start_date.timestamp())
@@ -299,15 +306,27 @@ def get_heart_rate():
     date_param = request.args.get('date')
     period = request.args.get('period', 'day')
     
+    # Add a timestamp to prevent caching issues
+    request_timestamp = request.args.get('_ts', str(int(time.time())))
+    logger.info(f"Request timestamp: {request_timestamp}")
+    
     # Parse and validate date parameter
     start_time, end_time, date_str = parse_date_param(date_param)
     
-    # Check if we have data past 6 AM. If not, request a full day of data.
-    # This is a workaround for the Google Fit API sometimes only returning partial day data
-    if datetime.fromtimestamp(end_time).hour < 12:
-        # Use current time as the end time to get as much data as possible
+    # Generate a unique request ID for debugging
+    request_id = f"{date_str}_{period}_{int(time.time())}"
+    logger.info(f"Request ID: {request_id} - Fetching heart rate data for date: {date_str}, period: {period}")
+    
+    # Check if today's date - always extend to current time for today
+    today_date = datetime.now().strftime('%Y-%m-%d')
+    is_today = date_str == today_date
+    logger.info(f"Today's date: {today_date}, Requested date: {date_str}, Is today: {is_today}")
+    
+    if is_today:
+        # Always use current time as the end time for today
         current_time = datetime.now()
         end_time = int(current_time.timestamp())
+        logger.info(f"Today's data requested - extending end time to current time: {current_time}")
     
     # For multi-day periods, adjust the start time
     if period == 'week':
@@ -316,6 +335,15 @@ def get_heart_rate():
         start_time = end_time - (30 * 86400)  # 30 days in seconds
     
     logger.info(f"Fetching Google Fit heart rate data for period {period} from {start_time} to {end_time}")
+    logger.info(f"Date string parameter: {date_param}, Parsed date: {date_str}")
+    logger.info(f"Date range: {datetime.fromtimestamp(start_time)} to {datetime.fromtimestamp(end_time)}")
+    
+    # Clear any previous data from cache
+    current_app.config.setdefault('GOOGLE_FIT_DATA_CACHE', {})
+    cache_key = f"heart_rate_{date_str}_{period}"
+    if cache_key in current_app.config['GOOGLE_FIT_DATA_CACHE']:
+        logger.info(f"Clearing cached data for {cache_key}")
+        del current_app.config['GOOGLE_FIT_DATA_CACHE'][cache_key]
     
     token_info = session['google_fit_token']
     access_token = token_info.get('access_token')
@@ -333,20 +361,31 @@ def get_heart_rate():
     end_datetime = datetime.fromtimestamp(end_time)
     logger.info(f"Requesting data from {start_datetime} to {end_datetime}")
     
-    # Create body for request
+    # Use different approach based on is_today flag
+    # Always use the aggregate endpoint for consistent behavior
+    logger.info("Using aggregate endpoint for heart rate data")
+    api_url = f"{current_app.config['GOOGLE_FIT_API_BASE_URL']}/users/me/dataset:aggregate"
+    use_raw_endpoint = False
+    
+    # Create body for request (needed for aggregate endpoint)
     body = {
         "aggregateBy": [{
             "dataTypeName": "com.google.heart_rate.bpm",
             "dataSourceId": data_source
         }],
-        "bucketByTime": {"durationMillis": 60000},  # 1-minute intervals
+        "bucketByTime": {"durationMillis": 15000},  # 15-second intervals for higher resolution
         "startTimeMillis": int(start_time) * 1000,
         "endTimeMillis": int(end_time) * 1000
     }
     
     try:
-        api_url = f"{current_app.config['GOOGLE_FIT_API_BASE_URL']}/users/me/dataset:aggregate"
-        response = requests.post(api_url, headers=headers, json=body)
+        # Use the correct API URL based on which endpoint we're using
+        if use_raw_endpoint:
+            # For raw data endpoint
+            response = requests.get(api_url, headers=headers)
+        else:
+            # For aggregate endpoint
+            response = requests.post(api_url, headers=headers, json=body)
         
         if response.status_code != 200:
             logger.error(f"Failed to get heart rate data: {response.text}")
@@ -354,8 +393,54 @@ def get_heart_rate():
             
         data = response.json()
         
+        # Log a sample of the raw response for debugging
+        if data and 'bucket' in data and data['bucket']:
+            sample_bucket = data['bucket'][0]
+            logger.info(f"Sample bucket structure: {json.dumps(sample_bucket, indent=2)[:500]}")
+            
+            # Check if we have points in the dataset
+            if 'dataset' in sample_bucket:
+                for dataset in sample_bucket['dataset']:
+                    if 'point' in dataset and dataset['point']:
+                        sample_point = dataset['point'][0]
+                        logger.info(f"Sample point structure: {json.dumps(sample_point, indent=2)}")
+                        
+                        # Log time format info
+                        if 'startTimeNanos' in sample_point:
+                            start_time_nanos = sample_point['startTimeNanos']
+                            start_time_millis = int(int(start_time_nanos) / 1000000)
+                            logger.info(f"Point time format: nanos={start_time_nanos}, millis={start_time_millis}")
+                        
+                        if 'startTimeMillis' in sample_point:
+                            logger.info(f"Point has direct startTimeMillis: {sample_point['startTimeMillis']}")
+                        break
+            
+            # Additional diagnostics for heartrate data
+            heart_rate_data_points = 0
+            unique_bucket_times = set()
+            unique_point_times = set()
+            
+            for bucket in data['bucket'][:10]:  # Check first 10 buckets
+                bucket_time = bucket.get('startTimeMillis')
+                if bucket_time:
+                    unique_bucket_times.add(bucket_time)
+                
+                if 'dataset' in bucket:
+                    for dataset in bucket['dataset']:
+                        if 'point' in dataset:
+                            for point in dataset['point']:
+                                heart_rate_data_points += 1
+                                point_time = point.get('startTimeMillis') or point.get('startTimeNanos')
+                                if point_time:
+                                    unique_point_times.add(point_time)
+            
+            logger.info(f"First 10 buckets diagnostics: {heart_rate_data_points} points, {len(unique_bucket_times)} unique bucket times, {len(unique_point_times)} unique point times")
+        
         # Process the response to extract heart rate values
         heart_rate_data = []
+        requested_date_start = datetime.fromtimestamp(start_time).replace(hour=0, minute=0, second=0)
+        requested_date_end = requested_date_start + timedelta(days=1)
+        logger.info(f"Filtering data for date range: {requested_date_start} to {requested_date_end}")
         
         if 'bucket' in data:
             for bucket in data['bucket']:
@@ -366,21 +451,64 @@ def get_heart_rate():
                                 if 'value' in point:
                                     for value in point['value']:
                                         if 'fpVal' in value:  # Heart rate value
-                                            timestamp = int(int(bucket['startTimeMillis']) / 1000)  # Convert to seconds
+                                            # CRITICAL CHANGE: Google Fit has several ways of representing time
+                                            # 1. Check for startTimeMillis (milliseconds since epoch)
+                                            # 2. Check for startTimeNanos (nanoseconds since epoch)
+                                            # 3. Fall back to bucket time as last resort
+                                            
+                                            if 'startTimeMillis' in point:
+                                                # Direct millisecond timestamp
+                                                timestamp = int(int(point['startTimeMillis']) / 1000)  # Convert to seconds
+                                                logger.debug(f"Using point startTimeMillis: {point['startTimeMillis']}")
+                                            elif 'startTimeNanos' in point:
+                                                # Nanosecond timestamp (common in Google Fit)
+                                                timestamp = int(int(point['startTimeNanos']) / 1000000000)  # Convert to seconds
+                                                logger.debug(f"Using point startTimeNanos: {point['startTimeNanos']}")
+                                            else:
+                                                # Last resort - bucket time 
+                                                timestamp = int(int(bucket['startTimeMillis']) / 1000)
+                                                logger.debug(f"Falling back to bucket time: {bucket['startTimeMillis']}")
+                                            
                                             heart_rate = value['fpVal']
+                                            
+                                            # Log the timestamp details for debugging
+                                            logger.debug(f"Point timestamp: {timestamp}, Value: {heart_rate}")
                                             
                                             # Convert timestamp to readable time format
                                             time_obj = datetime.fromtimestamp(timestamp)
                                             time_str = time_obj.strftime('%I:%M:%S %p')  # 12-hour format with AM/PM
-                                            date_str = time_obj.strftime('%Y-%m-%d')
+                                            point_date_str = time_obj.strftime('%Y-%m-%d')
+                                            
+                                            # CRITICAL: Check if this point belongs to the requested date
+                                            # When viewing a specific day's data, only include points from that day
+                                            if period == 'day' and point_date_str != date_str and not is_today:
+                                                # Skip points that don't match the requested date (unless today)
+                                                # We include all points for today regardless of date to get real-time updates
+                                                logger.debug(f"Skipping point with date {point_date_str} - doesn't match requested date {date_str}")
+                                                continue
+                                                
+                                            # Add extra debug logging for today's request to verify filtering
+                                            if is_today and point_date_str != date_str:
+                                                logger.info(f"Including non-today point in today's request: date={point_date_str}, time={time_str}, value={heart_rate}")
                                             
                                             # Format for consistency with Fitbit API
                                             heart_rate_data.append({
                                                 "timestamp": timestamp,
                                                 "value": heart_rate,
                                                 "time": time_str,
-                                                "date": date_str
+                                                "date": point_date_str,
+                                                "source": "googleFit"  # Add source for tracking
                                             })
+        
+        # Log data counts by date for debugging
+        date_counts = {}
+        for point in heart_rate_data:
+            date = point['date']
+            if date not in date_counts:
+                date_counts[date] = 0
+            date_counts[date] += 1
+        
+        logger.info(f"Heart rate data points by date: {date_counts}")
         
         # Check if we have data
         if not heart_rate_data:
@@ -392,7 +520,45 @@ def get_heart_rate():
             
             if is_today:
                 logger.info("Request is for current day data. This is normal if no data exists for today yet.")
+        
+        # For today's data, always add a current time marker to extend the chart
+        if is_today:
+            # Check if we already have recent data
+            current_time = datetime.now()
+            current_timestamp = int(current_time.timestamp())
+            current_time_str = current_time.strftime('%I:%M:%S %p')
             
+            # Get the latest data point timestamp
+            latest_timestamp = 0
+            if heart_rate_data:
+                latest_timestamp = max(point['timestamp'] for point in heart_rate_data)
+            
+            # Only add a current time marker if the most recent data is more than 5 minutes old
+            time_gap = current_timestamp - latest_timestamp
+            if time_gap > 300:  # 5 minutes in seconds
+                logger.info(f"Adding current time marker at {current_time_str}")
+                
+                # If there's existing data, use the last value as an approximation
+                last_value = 70  # Default value if no data
+                if heart_rate_data:
+                    # Find the most recent value
+                    last_value = heart_rate_data[-1]['value']
+                
+                # Add current time marker with the last known value
+                heart_rate_data.append({
+                    "timestamp": current_timestamp,
+                    "value": last_value,  # Use last known value
+                    "time": current_time_str,
+                    "date": current_time.strftime('%Y-%m-%d'),
+                    "source": "googleFit",
+                    "isCurrentMarker": True  # Flag to identify this as current time marker
+                })
+                
+                # Log the addition
+                logger.info(f"Added current time marker with value {last_value}")
+            else:
+                logger.info(f"Recent data exists (within 5 minutes), not adding current time marker")
+        
         # Check if we have data for the full day (or at least past noon)
         latest_time = "00:00:00"
         if heart_rate_data:
@@ -403,41 +569,38 @@ def get_heart_rate():
             # Log the time range of data
             earliest_time = heart_rate_data[0]['time'] if heart_rate_data else "unknown"
             logger.info(f"Heart rate data time range: {earliest_time} to {latest_time}")
-            
-            # Check if data stops early in the day
-            is_am_pm_format = "AM" in latest_time or "PM" in latest_time
-            if is_am_pm_format:
-                is_morning = "AM" in latest_time
-                if is_morning:
-                    logger.warning(f"Google Fit data appears to be truncated - only received morning data until {latest_time}")
-            else:
-                time_parts = latest_time.split(':')
-                if len(time_parts) > 0 and int(time_parts[0]) < 12:
-                    logger.warning(f"Google Fit data appears to be truncated - only received data until {latest_time}")
         
-        # For empty data on current day, create a placeholder with current time
-        if not heart_rate_data and date_str == datetime.now().strftime('%Y-%m-%d'):
-            current_time = datetime.now()
-            now_str = current_time.strftime('%I:%M:%S %p')  # 12-hour format with AM/PM
-            logger.info(f"Adding placeholder data point for current time: {now_str}")
+        # IMPORTANT: Apply strict date filtering if we're still seeing incorrect dates
+        # This is a final safety check to ensure we only return data for the requested date
+        if period == 'day' and not is_today:
+            # Filter to keep only data from the requested date
+            filtered_data = [point for point in heart_rate_data if point['date'] == date_str]
+            logger.info(f"Strict date filtering applied: {len(heart_rate_data)} points -> {len(filtered_data)} points")
             
-            # Add a placeholder point with metadata
-            heart_rate_data.append({
-                "timestamp": int(current_time.timestamp()),
-                "value": 0,  # Empty value
-                "time": now_str,
-                "date": date_str,
-                "placeholder": True,  # Flag to identify this as placeholder
-                "message": "No heart rate data available yet for today. Please check back later."
-            })
-            
+            # Replace with filtered data
+            heart_rate_data = filtered_data
+        
         # Format the response to match the Fitbit API format
-        return jsonify({
+        response_data = {
             'data': heart_rate_data,
             'period': period,
             'start_date': datetime.fromtimestamp(start_time).strftime('%Y-%m-%d'),
-            'end_date': datetime.fromtimestamp(end_time).strftime('%Y-%m-%d')
-        })
+            'end_date': datetime.fromtimestamp(end_time).strftime('%Y-%m-%d'),
+            'current_time': datetime.now().strftime('%I:%M:%S %p'),  # Add current time for client reference
+            'data_points_count': len(heart_rate_data),
+            'date_counts': date_counts,
+            'time_range': {
+                'start': datetime.fromtimestamp(start_time).strftime('%Y-%m-%d %I:%M:%S %p'),
+                'end': datetime.fromtimestamp(end_time).strftime('%Y-%m-%d %I:%M:%S %p'),
+            },
+            'requested_date': date_str  # Include the explicitly requested date for reference
+        }
+        
+        # Log detailed information about the response
+        logger.info(f"Returning {len(heart_rate_data)} heart rate data points across {len(date_counts)} days")
+        logger.info(f"Time range: {response_data['time_range']['start']} to {response_data['time_range']['end']}")
+        
+        return jsonify(response_data)
         
     except Exception as e:
         logger.error(f"Error getting heart rate data: {str(e)}")

@@ -13,6 +13,7 @@ import {
   Cell
 } from 'recharts';
 import { useTheme, alpha, Box } from '@mui/material';
+import CustomTooltip from './CustomTooltip';
 
 /**
  * A simplified BarChart component to fix rendering issues
@@ -37,6 +38,32 @@ const BarChart = ({
     dataKey: typeof s.dataKey === 'function' ? 'avg' : s.dataKey,
   }));
   
+  // Get min/max values for Y axis - with safety checks
+  let minValue = 30;
+  let maxValue = 160;
+  
+  try {
+    if (data && data.length > 0) {
+      const allValues = data.flatMap(item => (
+        Object.values(item).filter(val => typeof val === 'number' && !isNaN(val))
+      ));
+      
+      if (allValues.length > 0) {
+        const filteredValues = allValues.filter(v => v > 0);
+        if (filteredValues.length > 0) {
+          minValue = Math.max(30, Math.min(...filteredValues) * 0.9);
+          maxValue = Math.max(160, Math.max(...allValues) * 1.1);
+        }
+      }
+    }
+    console.log(`Chart Y-axis range: ${minValue} to ${maxValue}`);
+  } catch (error) {
+    console.error("Error calculating min/max values:", error);
+    // Use defaults
+    minValue = 30;
+    maxValue = 160;
+  }
+  
   return (
     <Box sx={{ width: '100%', height }}>
       <ResponsiveContainer>
@@ -44,20 +71,37 @@ const BarChart = ({
           data={data}
           margin={margin}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.text.secondary, 0.2)} />
+          <CartesianGrid 
+            strokeDasharray="3 3" 
+            stroke={alpha(theme.palette.text.secondary, 0.1)}
+            vertical={false}
+          />
           
           <XAxis 
             dataKey={xAxisDataKey} 
             tick={{ fill: theme.palette.text.primary, fontSize: 12 }}
+            tickLine={{ stroke: alpha(theme.palette.text.secondary, 0.2) }}
+            axisLine={{ stroke: alpha(theme.palette.text.secondary, 0.3) }}
           />
           
           <YAxis 
             tick={{ fill: theme.palette.text.primary, fontSize: 12 }}
+            tickLine={{ stroke: alpha(theme.palette.text.secondary, 0.2) }}
+            axisLine={{ stroke: alpha(theme.palette.text.secondary, 0.3) }}
+            domain={[30, 200]}
+            tickCount={8}
+            tickFormatter={(value) => Math.round(value)}
           />
           
-          <Tooltip />
+          <Tooltip content={<CustomTooltip minValue={minValue} maxValue={maxValue} />} />
           
-          <Legend />
+          <Legend 
+            wrapperStyle={{ 
+              paddingTop: 10, 
+              fontSize: 12,
+              fontWeight: 500
+            }} 
+          />
           
           {/* Reference lines */}
           {referenceLines.map((line, index) => (
@@ -78,33 +122,42 @@ const BarChart = ({
           {/* Render series */}
           {processedSeries.length > 0 ? (
             processedSeries.map((s, index) => {
-              // Handle item-specific coloring
               const hasItemColors = s.getItemColor || s.itemColors;
               
               return (
                 <Bar
                   key={`bar-${index}`}
-                  dataKey={s.dataKey || 'avg'}
-                  name={s.name || s.dataKey || 'Value'}
+                  dataKey={'avg'}
+                  name={s.name || 'Heart Rate'}
                   fill={s.color || theme.palette.primary.main}
-                  barSize={s.barSize || 20}
-                  radius={s.radius || [0, 0, 0, 0]}
+                  barSize={data.length > 50 ? 5 : 15}
+                  isAnimationActive={true}
+                  radius={[2, 2, 0, 0]}
                 >
                   {hasItemColors && data.map((entry, i) => {
-                    const fieldName = s.dataKey || 'avg';
-                    const value = entry[fieldName];
-                    let itemColor = s.color || theme.palette.primary.main;
+                    if (!entry) return null;
                     
-                    if (typeof s.getItemColor === 'function') {
-                      itemColor = s.getItemColor(entry);
+                    try {
+                      let itemColor = s.color || theme.palette.primary.main;
+                      
+                      if (typeof s.getItemColor === 'function') {
+                        try {
+                          itemColor = s.getItemColor(entry) || itemColor;
+                        } catch (error) {
+                          console.error("Error getting item color:", error);
+                        }
+                      }
+                      
+                      return (
+                        <Cell 
+                          key={`cell-${i}`} 
+                          fill={itemColor}
+                        />
+                      );
+                    } catch (error) {
+                      console.error("Error rendering bar cell:", error);
+                      return null;
                     }
-                    
-                    return (
-                      <Cell 
-                        key={`cell-${i}`} 
-                        fill={itemColor} 
-                      />
-                    );
                   })}
                 </Bar>
               );
@@ -112,9 +165,11 @@ const BarChart = ({
           ) : (
             <Bar
               dataKey="avg"
-              name="Value"
+              name="Heart Rate"
               fill={theme.palette.primary.main}
-              barSize={20}
+              barSize={data.length > 50 ? 5 : 15}
+              isAnimationActive={true}
+              radius={[2, 2, 0, 0]}
             />
           )}
         </RechartsBarChart>
